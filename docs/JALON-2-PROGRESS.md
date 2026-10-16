@@ -25,11 +25,11 @@ Une case cochée signifie code intégré et testé au niveau indiqué, pas recet
 - [x] I14 Réflexion sur traitement réel et noyau piloté par audio diffusé.
 - [x] I15 Centrage et proportions responsives sans déplacement par sous-titres.
 - [x] I16 Fond noir, sélecteur, restauration et contraste automatique persistants.
-- [ ] I17 Spectre émotionnel conservateur, mots sélectifs, quatre modes persistants.
-- [ ] I18 Spectre opérationnel indépendant, texte explicite, aucun droit supplémentaire.
-- [ ] I19 Sous-titres sur audio joué, approximation annoncée, historique/copie.
+- [x] I17 Spectre émotionnel conservateur, mots sélectifs, quatre modes persistants.
+- [x] I18 Spectre opérationnel indépendant, texte explicite, aucun droit supplémentaire.
+- [x] I19 Sous-titres sur audio joué, approximation annoncée, historique/copie.
 - [x] I20 Profils graphiques et réduction du mouvement, ressources bornées.
-- [ ] I21 Préférences vocales/personnalité sans filtrage ni modification des permissions.
+- [x] I21 Préférences vocales/personnalité sans filtrage ni modification des permissions.
 - [ ] I22 Tests ciblés audio et non-régression du jalon 1.
 - [ ] I23 Build Windows vocal séparé, contrôles de démarrage et artefact versionné.
 - [ ] I24 Installation, recette Windows, restauration et reprise documentées.
@@ -41,10 +41,10 @@ Une preuve Linux peut valider un invariant indépendant de l’OS (ex. géométr
 jamais le microphone, l’écoute perceptive ou l’exécutable Windows. Aucune case
 validée par un test ignoré. Preuves dans tests/test_voice_storage.py ; aucune preuve de matériel audio/Windows.
 
-Validés : V04, V14, V15, V16, V18, V20, V21, V23, V24, V25, V30, V34.
+Validés : V04, V14, V15, V16, V18, V20, V21, V23, V24, V25, V27, V28, V29, V30, V31, V34.
 Preuves : tests/test_voice_storage.py et les 15 tests tests/test_presence.py.
 Il s’agit de persistance/invariants graphiques et d’orchestration sous Linux, pas
-de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Windows. Implémentation : **17/24 = 70,83 %**. Validation : **12/34 = 35,29 %**.
+de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Windows. Implémentation : **21/24 = 87,50 %**. Validation : **16/34 = 47,06 %**.
 
 ## Étapes
 
@@ -55,7 +55,7 @@ de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Wind
 | J2.2 | IMPLÉMENTÉ | Piper CPU, 2 profils distincts, PCM à fréquence native, segmentation et lecture ; UI J2.3 ; modèles/licences individuelles/écoute restent à vérifier | commit `J2.2: add Piper synthesis real playback and explicit model installer` ; J2.3 |
 | J2.3 | IMPLÉMENTÉ | UI écoute explicite/devices/préécoute ; STT→LLM→TTS, epochs et arrêt prioritaire ; migration v2/backup ; tests de contrat, pas conversation audio réelle | commit `J2.3: integrate hands-free orchestration cancellation and lossless history` ; J2.4 |
 | J2.4 | TESTÉ | maillage spline unique, états réels, fond/contraste, centre responsive, profils, sommeil et annulation ; 15 tests Linux | commit `J2.4: add single-mesh responsive audio-driven Presence` ; J2.5 |
-| J2.5 | NON COMMENCÉ | spectres/sous-titres | à venir |
+| J2.5 | TESTÉ | spectres indépendants, quatre modes, mots ciblés, sous-titres depuis fraction PCM avec approximation signalée ; profils conversationnels persistants | commit `J2.5: add independent spectra and playback-driven captions` ; J2.6 |
 | J2.6 | NON COMMENCÉ | build/recette | à venir |
 
 ## Décisions et limites initiales
@@ -103,3 +103,10 @@ smoke source réussi. Revue : tampon TTS de 64 phrases alimenté progressivement
 ancien plafond8 ne coupe plus les réponses rapides ; capture libérée si ouverture
 échoue ; transcription sans modèle conservée dans la saisie. Capture écran du
 silence inspectée sous X virtuel : noir et ligne plate ; aucune donnée audio inventée.
+
+J2.5 : 27 tests présence/spectre réussis + 26 tests spectre/flux/desktop réussis
+(certaines suites communes, ne pas additionner comme tests uniques). Aucun échec.
+Estimation de tonalité lexicale conservatrice, négation simple, inertie3s, aucunappelLLM ;
+aucune prétention de ressentir une émotion. Sous-titres : groupesde3 mots estimés
+par durée PCM, pas alignement mots/phonèmes ; précisionaudible à vérifierWindows.
+Profil UNHINGED testé : promptseul, aucuneactivationmicro ni permissionmodifiée.

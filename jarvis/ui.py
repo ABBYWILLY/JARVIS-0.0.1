@@ -134,8 +134,12 @@ class App:
             self.refresh_models()
 
     def set_status(self, text, error=False):
-        self.status.set(text)
-        self.status_label.configure(fg=RED if error else CYAN)
+        from .spectrum import OPERATIONAL
+        self.status.set(("ERREUR · " if error else "") + text)
+        key = "error" if error else "info"
+        self.status_label.configure(fg=OPERATIONAL[key]["color"])
+        if hasattr(self, "presence"):
+            self.presence.update_operation(key, text)
 
     def append(self, text, tag=None):
         at_bottom = self.chat.yview()[1] >= 0.98
@@ -226,6 +230,7 @@ class App:
             return
         if self.presence.state == "dormant":
             self.presence.wake()
+        self.presence.interpret_text(text)
         if not self.settings.model or self.settings.model not in self.models:
             self.set_status("Choisissez un modèle installé. Cliquez sur Actualiser ; si la liste est vide, utilisez « ollama pull qwen2.5:3b ».", True)
             return
@@ -335,6 +340,10 @@ class App:
                     temperature=float(variables["temperature"].get()), context=int(variables["context"].get()),
                     max_tokens=int(variables["max_tokens"].get()), system_prompt=prompt.get("1.0", "end-1c")).validate()
                 self.store.save_settings(settings)
+                if settings.system_prompt != self.settings.system_prompt:
+                    voice_settings = replace(self.voice.settings, personality="Personnalisé")
+                    self.store.set_preference("voice", voice_settings.to_dict())
+                    self.voice.settings = voice_settings
             except (ValueError, sqlite3.Error) as exc:
                 messagebox.showerror("Paramètres invalides", str(exc), parent=dialog)
                 return

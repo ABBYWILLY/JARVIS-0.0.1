@@ -119,6 +119,24 @@ class VoiceFlowTests(unittest.TestCase):
         self.assertIsNone(self.app.operation)
         self.assertIn("Parole sans modèle sélectionné", self.app.input.get("1.0", "end"))
 
+    def test_unhinged_profile_only_changes_prompt_not_microphone_or_endpoint(self):
+        from jarvis.voice_config import PERSONALITY_PROMPTS
+        endpoint = self.app.settings.endpoint
+        with patch("jarvis.audio.device_inventory", return_value={"input": [], "output": []}):
+            self.voice.open_settings()
+        dialog = next(child for child in self.root.winfo_children() if isinstance(child, tk.Toplevel))
+        choice = next(child for child in dialog.winfo_children()
+                      if child.winfo_class() == "TCombobox" and "UNHINGED" in child.cget("values"))
+        choice.set("UNHINGED")
+        save = next(child for child in dialog.winfo_children()
+                    if child.winfo_class() == "TButton" and child.cget("text") == "Enregistrer")
+        save.invoke()
+        self.assertEqual(self.app.settings.system_prompt, PERSONALITY_PROMPTS["UNHINGED"])
+        self.assertEqual(self.app.settings.endpoint, endpoint)
+        self.assertFalse(self.voice.listening)
+        self.assertEqual(self.voice.capture.starts, [])
+        self.assertEqual(self.store.get_preference("voice")["personality"], "UNHINGED")
+
     def test_voice_transcript_uses_real_http_stream_and_sqlite_archive(self):
         with Fixture() as fixture:
             self.app.settings = Settings(endpoint=fixture.endpoint, model="test-abliterated:latest")

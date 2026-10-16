@@ -1,12 +1,13 @@
 """Voice orchestration on Tk's thread; capture, STT and playback run elsewhere."""
 import time
+import sqlite3
 import tkinter as tk
 from collections import deque
 from dataclasses import replace
 from tkinter import filedialog, messagebox, ttk
 
 from .tts import SentenceBuffer
-from .voice_config import VOICES, VoiceSettings
+from .voice_config import PERSONALITY_PROMPTS, VOICES, VoiceSettings
 from .voice_runtime import AudioProcess, audio_error
 
 
@@ -277,11 +278,13 @@ class VoiceControls:
         values = {}
         options = {"input_device": [""] + [d["key"] for d in devices["input"]],
                    "output_device": [""] + [d["key"] for d in devices["output"]],
-                   "voice": list(VOICES), "acoustic_mode": ["speakers", "headphones"]}
+                   "voice": list(VOICES), "acoustic_mode": ["speakers", "headphones"],
+                   "personality": ["Personnalisé", *PERSONALITY_PROMPTS]}
         fields = [("input_device", "Microphone (vide = défaut Windows)"), ("output_device", "Sortie audio (vide = défaut Windows)"),
                   ("voice", "Voix : Tom homme / Siwis femme"), ("speed", "Vitesse (0.5–2)"),
                   ("acoustic_mode", "speakers = haut-parleurs / headphones = casque"),
-                  ("silence_ms", "Silence de fin de tour (300–2500 ms)"), ("models_dir", "Dossier modèles (vide = profil local)")]
+                  ("silence_ms", "Silence de fin de tour (300–2500 ms)"), ("models_dir", "Dossier modèles (vide = profil local)"),
+                  ("personality", "Profil (changer remplace l’instruction système)")]
         for row, (key, label) in enumerate(fields):
             tk.Label(dialog, text=label, bg="#121c29", fg="#e4edf6").grid(row=row, column=0, sticky="w", pady=5)
             values[key] = tk.StringVar(value=str(getattr(self.settings, key)))
@@ -290,15 +293,19 @@ class VoiceControls:
             else:
                 widget = ttk.Entry(dialog, textvariable=values[key], width=48)
             widget.grid(row=row, column=1, sticky="ew", padx=8)
-        ttk.Button(dialog, text="Choisir dossier…", command=lambda: values["models_dir"].set(filedialog.askdirectory(parent=dialog) or values["models_dir"].get())).grid(row=7, column=1, sticky="e")
+        ttk.Button(dialog, text="Choisir dossier…", command=lambda: values["models_dir"].set(filedialog.askdirectory(parent=dialog) or values["models_dir"].get())).grid(row=8, column=1, sticky="e")
 
         def save(close=True):
             try:
                 candidate = replace(self.settings, **{k: v.get() for k, v in values.items() if k not in {"speed", "silence_ms"}},
                                     speed=float(values["speed"].get()), silence_ms=int(values["silence_ms"].get())).validate()
+                if candidate.personality != self.settings.personality and candidate.personality in PERSONALITY_PROMPTS:
+                    model_settings = replace(self.app.settings, system_prompt=PERSONALITY_PROMPTS[candidate.personality])
+                    self.app.store.save_settings(model_settings)
+                    self.app.settings = model_settings
                 self.app.store.set_preference("voice", candidate.to_dict())
                 self.settings = candidate
-            except (ValueError, OSError) as exc:
+            except (ValueError, OSError, sqlite3.Error) as exc:
                 messagebox.showerror("Voix", str(exc), parent=dialog)
                 return
             if close:
@@ -307,6 +314,6 @@ class VoiceControls:
                 self.preview()
 
         tk.Label(dialog, text="Modèles à installer séparément (guide docs/VOICE.md). Aucun téléchargement automatique.\nCasque requis pour interrompre par la voix pendant la lecture. Aucun AEC haut-parleurs annoncé.",
-                 bg="#121c29", fg="#a6b8cb", wraplength=700, justify="left").grid(row=8, column=0, columnspan=2, pady=12, sticky="w")
-        ttk.Button(dialog, text="Préécoute réelle", command=lambda: save(False)).grid(row=9, column=0, sticky="w")
-        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=9, column=1, sticky="e")
+                 bg="#121c29", fg="#a6b8cb", wraplength=700, justify="left").grid(row=9, column=0, columnspan=2, pady=12, sticky="w")
+        ttk.Button(dialog, text="Préécoute réelle", command=lambda: save(False)).grid(row=10, column=0, sticky="w")
+        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=10, column=1, sticky="e")

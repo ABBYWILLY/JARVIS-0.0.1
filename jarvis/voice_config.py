@@ -5,6 +5,10 @@ from pathlib import Path
 from .config import data_directory
 
 VOICES = {"fr_FR-tom-medium": "Tom · masculin français", "fr_FR-siwis-medium": "Siwis · féminin français"}
+PERSONALITY_PROMPTS = {
+    "JARVIS": "Tu es JARVIS. Réponds en français avec calme, précision et concision.",
+    "UNHINGED": "Adopte un ton direct, spontané et franc. Réponds en français.",
+}
 
 
 @dataclass(frozen=True)
@@ -27,6 +31,8 @@ class VoiceSettings:
             raise ValueError("Vitesse (0,5–2) ou seuil VAD (0,3–0,95) invalide.")
         if not 300 <= self.silence_ms <= 2500 or not 1 <= self.cpu_threads <= 8:
             raise ValueError("Silence (300–2500 ms) ou threads CPU (1–8) invalide.")
+        if self.personality not in {"Personnalisé", *PERSONALITY_PROMPTS}:
+            raise ValueError("Profil conversationnel invalide.")
         return self
 
     @property

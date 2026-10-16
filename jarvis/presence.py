@@ -6,10 +6,14 @@ import tkinter as tk
 from dataclasses import asdict, dataclass, replace
 from tkinter import colorchooser, messagebox, ttk
 
+from .spectrum import OPERATIONAL, ToneAnalyzer, caption_group, keyword_spans
+
 
 STATES = {"silent", "listening", "user_speaking", "thinking", "jarvis_speaking", "dormant"}
 PROFILES = {"eco": (16, 1), "balanced": (30, 2), "cinematic": (45, 4)}
 PROFILE_LABELS = {"eco": "Éco", "balanced": "Équilibré", "cinematic": "Cinématique"}
+ACCENT_LABELS = {"adaptive": "Spectre adaptatif", "cyan": "Cyan fixe",
+                 "fixed": "Couleur personnalisée", "none": "Aucun accent émotionnel"}
 STATE_LABELS = {"silent": "SILENCE", "listening": "ÉCOUTE LOCALE",
                 "user_speaking": "VOUS PARLEZ", "thinking": "TRAITEMENT LOCAL",
                 "jarvis_speaking": "JARVIS PARLE", "dormant": "EN SOMMEIL"}
@@ -23,6 +27,8 @@ class PresenceSettings:
     profile: str = "balanced"
     reduced_motion: bool = False
     subtitles: bool = True
+    accent_mode: str = "adaptive"
+    fixed_color: str = "#69edf5"
 
     @classmethod
     def from_dict(cls, values):
@@ -39,6 +45,11 @@ class PresenceSettings:
         for key in ("reduced_motion", "subtitles"):
             if isinstance(values.get(key), bool):
                 valid[key] = values[key]
+        if isinstance(values.get("accent_mode"), str) and values["accent_mode"] in ACCENT_LABELS:
+            valid["accent_mode"] = values["accent_mode"]
+        color = values.get("fixed_color")
+        if isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+            valid["fixed_color"] = color.lower()
         return replace(defaults, **valid)
 
 
@@ -72,6 +83,18 @@ def palette(background):
     button_shade = "#000000" if foreground == "#f2f6fa" else "#ffffff"
     return {"background": background, "foreground": foreground, "muted": muted,
             "accent": accent, "button": mix(background, button_shade, 0.08)}
+
+
+def readable_accent(color, background):
+    """Keep even dark semantic accents visible against a custom background."""
+    if contrast(color, background) >= 3:
+        return color
+    destination = palette(background)["foreground"]
+    for step in range(1, 21):
+        candidate = mix(color, destination, step / 20)
+        if contrast(candidate, background) >= 3:
+            return candidate
+    return destination
 
 
 def core_radius(width, height):
@@ -234,10 +257,17 @@ class PresenceView:
         self._saved_preferences = dict(raw) if isinstance(raw, dict) else {}
         self.settings = PresenceSettings.from_dict(raw)
         self.model = PresenceModel(self.settings)
+        self.analyzer = ToneAnalyzer()
+        self.tone = self.analyzer.current
+        self._last_text = None
+        self.operation = "inactive"
+        self.operation_detail = ""
+        self._operation_explicit = False
         self.window = self.canvas = None
         self.after_id = None
         self.caption_text = ""
         self.caption_data = None
+        self._rendered_caption = None
         self.paths = []
         self.settings_dialog = None
         self._slow_until = 0.0
@@ -277,6 +307,10 @@ class PresenceView:
         self.state_label.place(relx=0.045, rely=0.105, anchor="nw")
         self.mic_label = tk.Label(window, font=(family, 9), anchor="w")
         self.mic_label.place(relx=0.045, rely=0.15, anchor="nw")
+        self.tone_label = tk.Label(window, font=(family, 9), anchor="w")
+        self.tone_label.place(relx=0.045, rely=0.195, anchor="nw")
+        self.operation_label = tk.Label(window, font=(family, 9), anchor="ne", justify="right")
+        self.operation_label.place(relx=0.955, rely=0.15, anchor="ne", relwidth=0.43)
         self.header_controls = tk.Frame(window)
         self.header_controls.place(relx=0.955, rely=0.045, anchor="ne")
         self.buttons = []
@@ -291,8 +325,16 @@ class PresenceView:
         self.sleep_button.pack(side="left", padx=4)
         self._button(self.controls, "COMMAND OS", self.return_to_command).pack(side="left", padx=4)
         # Overlays use place: their requested size never participates in core layout.
-        self.caption_label = tk.Label(window, text="", font=(family, 13), justify="center",
-                                      height=3, anchor="n", padx=8)
+        self.caption_label = tk.Text(window, font=(family, 13), wrap="word", height=2,
+                                     state="disabled", borderwidth=0, highlightthickness=0,
+                                     padx=8, pady=0, takefocus=True)
+        self.caption_label.tag_configure("center", justify="center")
+        self.caption_footer = tk.Frame(window)
+        self.caption_note = tk.Label(self.caption_footer, font=(family, 8),
+                                     text="Synchronisation estimée depuis l’audio")
+        self.caption_note.pack(side="left", padx=6)
+        self._button(self.caption_footer, "Copier l’extrait", self.copy_caption).pack(side="left", padx=6)
+        self._rendered_caption = None
         self._apply_colors()
         window.update_idletasks()
         self.canvas.focus_set()
@@ -309,14 +351,48 @@ class PresenceView:
         if state not in STATES or self.state == "dormant" and state != "dormant":
             return
         self.model.update_event(state, signal)
-        if caption is not None:
+        if not self._operation_explicit:
+            self.operation = "inactive" if state in {"silent", "dormant"} else "info"
+        if isinstance(caption, dict) and state == "jarvis_speaking":
             self.caption_data = caption
-            self.caption_text = str(caption.get("text", "")) if isinstance(caption, dict) else str(caption)
-        elif state in {"silent", "listening", "dormant"}:
+            text = str(caption.get("text", ""))
+            self.interpret_text(text, render=False)
+            # Fractions come only from the PCM playback callback, never LLM tokens.
+            self.caption_text = caption_group(text, caption.get("fraction", 0))
+        elif state != "jarvis_speaking":
             self.caption_text = ""
             self.caption_data = None
         if self._visible():
             self._render()
+
+    def interpret_text(self, text, render=True):
+        text = str(text)
+        now = time.monotonic()
+        if text != self._last_text or now >= getattr(self, "_tone_recheck_at", float("inf")):
+            self.tone = self.analyzer.update(text)
+            self._last_text = text
+            hold_until = self.analyzer.changed_at + self.analyzer.hold_seconds
+            self._tone_recheck_at = hold_until if self.tone.name != "neutralité" and hold_until > now else float("inf")
+        if render and self._visible():
+            self._render()
+        return self.tone
+
+    def mesh_accent(self):
+        mode = self.settings.accent_mode
+        if mode == "none":
+            return palette(self.settings.background)["muted"]
+        color = (self.settings.fixed_color if mode == "fixed" else
+                 "#69edf5" if mode == "cyan" else self.tone.color)
+        return readable_accent(color, self.settings.background)
+
+    def update_operation(self, key, detail=""):
+        if key not in OPERATIONAL:
+            return
+        self.operation = key
+        self.operation_detail = str(detail)
+        self._operation_explicit = True
+        if self._visible():
+            self._update_overlays(self.canvas.winfo_width())
 
     def _visible(self):
         return self.window is not None and bool(self.window.winfo_exists() and self.window.winfo_viewable())
@@ -338,7 +414,7 @@ class PresenceView:
         count = PROFILES[self.settings.profile][1]
         if self.settings.reduced_motion:
             count = 1
-        accent = colors["accent"]
+        accent = self.mesh_accent()
         strength = 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
         # Every halo uses precisely the same coordinates, never another visualizer.
         for index, path in enumerate(self.paths):
@@ -369,11 +445,43 @@ class PresenceView:
         self.mic_label.configure(text="MICRO AUTORISÉ · LOCAL" if listening else "MICRO DÉSACTIVÉ · LOCAL")
         self.listen_button.configure(text="Désactiver l’écoute" if listening else "Activer l’écoute")
         self.sleep_button.configure(text="Réveiller" if self.state == "dormant" else "Sommeil")
-        self.caption_label.configure(text=self.caption_text, wraplength=max(200, round(width * 0.76)))
-        if self.settings.subtitles and self.caption_text and self.state != "dormant":
-            self.caption_label.place(relx=0.5, rely=0.76, relwidth=0.82, anchor="n")
+        mode = self.settings.accent_mode
+        self.tone_label.configure(text=("Tonalité estimée : " + self.tone.name if mode == "adaptive"
+                                        else ACCENT_LABELS[mode]))
+        operational = OPERATIONAL[self.operation]
+        symbol = {"allowed": "✓", "info": "●", "caution": "!", "confirm": "?", "error": "!", "inactive": "○"}[self.operation]
+        detail = self.operation_detail.strip()
+        if len(detail) > 140:
+            detail = detail[:137] + "…"
+        label = symbol + " " + operational["label"] + ("\n" + detail if detail else "")
+        self.operation_label.configure(text=label, wraplength=max(180, round(width * 0.40)),
+                                       fg=readable_accent(operational["color"], self.settings.background))
+        self._render_caption()
+        if self.settings.subtitles and self.caption_text and self.state == "jarvis_speaking":
+            self.caption_label.place(relx=0.5, rely=0.74, relwidth=0.82, anchor="n")
+            self.caption_footer.place(relx=0.5, rely=0.855, anchor="center")
         else:
             self.caption_label.place_forget()
+            self.caption_footer.place_forget()
+
+    def _render_caption(self):
+        key = (self.caption_text, self.tone.words, self.mesh_accent(), self.settings.accent_mode)
+        if key == self._rendered_caption:
+            return
+        self._rendered_caption = key
+        self.caption_label.configure(state="normal")
+        self.caption_label.delete("1.0", "end")
+        self.caption_label.insert("1.0", self.caption_text, "center")
+        self.caption_label.tag_configure("keyword", foreground=self.mesh_accent())
+        if self.settings.accent_mode != "none":
+            for start, end in keyword_spans(self.caption_text, self.tone.words):
+                self.caption_label.tag_add("keyword", f"1.0+{start}c", f"1.0+{end}c")
+        self.caption_label.configure(state="disabled")
+
+    def copy_caption(self):
+        if self.caption_text:
+            self.app.root.clipboard_clear()
+            self.app.root.clipboard_append(self.caption_text)
 
     def _apply_colors(self):
         if self.window is None:
@@ -382,12 +490,15 @@ class PresenceView:
         bg, fg = colors["background"], colors["foreground"]
         self.window.configure(bg=bg)
         self.canvas.configure(bg=bg)
-        for widget in (self.controls, self.header_controls):
+        for widget in (self.controls, self.header_controls, self.caption_footer):
             widget.configure(bg=bg)
-        for widget in (self.identity, self.state_label, self.mic_label, self.caption_label):
+        for widget in (self.identity, self.state_label, self.mic_label, self.tone_label,
+                       self.operation_label, self.caption_label, self.caption_note):
             widget.configure(bg=bg, fg=fg)
         self.state_label.configure(fg=colors["accent"])
         self.mic_label.configure(fg=colors["muted"])
+        self.tone_label.configure(fg=colors["muted"])
+        self.caption_note.configure(fg=colors["muted"])
         for button in self.buttons:
             button.configure(bg=colors["button"], fg=fg,
                              activebackground=mix(bg, fg, 0.15), activeforeground=fg,
@@ -444,6 +555,22 @@ class PresenceView:
                            fg=colors["foreground"], selectcolor=colors["button"],
                            activebackground=colors["background"], activeforeground=colors["foreground"],
                            command=lambda v=variable, k=key: self.set_options(**{k: v.get()})).pack(anchor="w", pady=5)
+        tk.Label(dialog, text="Accents de tonalité (estimation, sans effet sur les permissions)",
+                 bg=colors["background"], fg=colors["foreground"]).pack(anchor="w", pady=(12, 4))
+        accent = tk.StringVar(value=ACCENT_LABELS[self.settings.accent_mode])
+        accent_choice = ttk.Combobox(dialog, state="readonly", values=list(ACCENT_LABELS.values()), textvariable=accent, width=35)
+        accent_choice.pack(fill="x", pady=4)
+        accent_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
+            accent_mode=next(key for key, label in ACCENT_LABELS.items() if label == accent.get())))
+
+        def choose_accent():
+            _rgb_value, color = colorchooser.askcolor(self.settings.fixed_color,
+                                                    title="Accent personnalisé", parent=dialog)
+            if color:
+                self.set_options(fixed_color=color, accent_mode="fixed")
+                accent.set(ACCENT_LABELS["fixed"])
+
+        ttk.Button(dialog, text="Choisir la couleur d’accent…", command=choose_accent).pack(fill="x", pady=4)
         ttk.Button(dialog, text="Choisir le fond…", command=self.choose_background).pack(fill="x", pady=(12, 4))
         ttk.Button(dialog, text="Rétablir le noir", command=self.reset_background).pack(fill="x", pady=4)
         ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(fill="x", pady=(12, 0))
@@ -458,6 +585,7 @@ class PresenceView:
         self.app.voice.emergency()
         if self.state != "dormant":
             self.update_event("silent")
+        self.update_operation("error", "Arrêt demandé : microphone, génération et lecture arrêtés.")
 
     def toggle_sleep(self):
         if self.state == "dormant":
@@ -469,11 +597,13 @@ class PresenceView:
         # Stop real audio/inference first; no visual transition delays cancellation.
         self.app.voice.emergency()
         self.update_event("dormant")
+        self.update_operation("inactive", "Microphone, génération et lecture arrêtés.")
 
     def wake(self):
         self.app.voice.stop_listening()
         self.model.update_event("silent")
         self.caption_text, self.caption_data = "", None
+        self.update_operation("inactive", "Microphone désactivé. Activez l’écoute pour parler.")
         self._render()
 
     def toggle_fullscreen(self, _event=None):
