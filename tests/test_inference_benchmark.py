@@ -1,5 +1,6 @@
 """Real loopback HTTP and CLI execution; no inference model is installed or run."""
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -228,9 +229,12 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["complete_pairs"], 0)
 
     def cli(self, output, endpoint, *extra):
+        # Match the child's redirected streams to the strict UTF-8 decoder.
+        # Windows otherwise uses its locale code page for French errors.
         return subprocess.run([sys.executable, "-m", "jarvis.inference_benchmark", "--model", MODEL,
                                "--output", str(output), "--endpoint", endpoint, *extra],
-                              cwd=REPO, capture_output=True, text=True, encoding="utf-8", timeout=30)
+                              cwd=REPO, capture_output=True, text=True, encoding="utf-8", timeout=30,
+                              env={**os.environ, "PYTHONIOENCODING": "utf-8"})
 
     def test_cli_default_one_repeat_uses_real_loopback_adapter(self):
         with tempfile.TemporaryDirectory() as temporary, Fixture() as fixture:
