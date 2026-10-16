@@ -1,5 +1,34 @@
 # Jalon 2 — progression vérifiable
 
+## J2.8 — lot 1 : génération Ollama
+
+L’ancien `JARVIS-SOURCES-v0.5/jarvis_core.py` (`ABBYWILLY/JARVIS`, b6066c4)
+envoyait `think:false` par défaut. Le nouveau client omettait ce champ : les
+modèles à raisonnement pouvaient épuiser leur budget sans texte visible.
+Cause vérifiée dans le code ; aucun chronométrage Qwen réel effectué ici.
+
+- Paramètres persistants Rapide/Automatique/Approfondi : `think:false`, omission,
+  `think:true` au niveau racine HTTP. Rapide par défaut, y compris voix ; le
+  choix explicite Approfondi reste possible. Budget indépendant : vocal256,
+  discussion1024, mission4096 demandés, effectif plafonné à la moitié du contexte.
+- Repli une seule fois sans `think` uniquement sur rejet explicite HTTP400/422,
+  avertissement et statut conservés ; aucune relance d’un flux partiellement reçu.
+- `message.thinking` reste privé ; présence observée signalée, contenu non stocké.
+  TTFT du premier contenu non blanc ; réponse vide = erreur, limite atteinte =
+  réponse partielle archivée, exclue du contexte complet. Lecture du fragment
+  visible possible, arrêt manuel toujours prioritaire.
+- Statistiques masquables : génération totale, prompt/temps de prompt, TTFT,
+  débit, état du raisonnement. Tokens visibles indisponibles si Ollama ne fournit
+  pas de compteur séparé : aucune estimation par caractères/soustraction.
+- **74 tests ciblés distincts réussis, aucun ignoré** : test_request_settings,
+  test_reasoning, test_reasoning_ui, test_metrics, test_jarvis.SettingsTests,
+  ProtocolTests, DesktopTests et test_voice_flow. HTTP/Tk/SQLite et IPC réels ;
+  réponses de fixtures, aucun modèle Qwen ni micro utilisé.
+
+Pas de migration ni dépendance nouvelle. Aucune mesure de gain matériel ou
+validation Windows annoncée. Actions API refuse la consultation (`Forbidden`) ;
+workflow Windows existant conservé. Lots2–4 J2.8 à poursuivre dans cet ordre.
+
 Branche : `feat/jalon-2-voice-presence`, issue de `origin/main` `dcc327b`.
 Le jalon 1 a été validé sur Windows par le propriétaire ; ce n’est pas une validation
 Windows du présent jalon. Spécifications : DOCX existants + `JALON-2-SPEC.md`.

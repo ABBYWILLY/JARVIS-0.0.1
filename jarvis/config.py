@@ -1,6 +1,6 @@
 """Validated, non-secret model settings. No external endpoint in this milestone."""
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -13,6 +13,10 @@ class Settings:
     context: int = 4096
     max_tokens: int = 1024
     system_prompt: str = ""
+    reasoning_mode: str = "fast"
+    usage: str = "chat"
+    voice_tokens: int = 256
+    mission_tokens: int = 4096
 
     def validate(self):
         try:
@@ -32,7 +36,27 @@ class Settings:
             raise ValueError("La réponse doit réserver entre 1 token et la moitié du contexte.")
         if len(self.system_prompt.encode("utf-8")) > self.context // 2:
             raise ValueError("L’instruction système est trop longue pour ce contexte.")
+        if self.reasoning_mode not in {"fast", "auto", "deep"}:
+            raise ValueError("Choisissez un raisonnement Rapide, Automatique ou Approfondi.")
+        if self.usage not in {"voice", "chat", "mission"}:
+            raise ValueError("Choisissez un budget vocal, discussion ou mission.")
+        for value in (self.voice_tokens, self.mission_tokens):
+            if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 65536:
+                raise ValueError("Les budgets vocal et mission doivent être compris entre 1 et 65536 tokens.")
         return self
+
+    def for_request(self, source="text"):
+        """Output budgets are independent of thinking; never change the profile.
+
+        Old saved profiles acquire defaults without a database migration. A
+        voice turn uses its own budget; all budgets respect the context cap.
+        Explicit deep reasoning remains available, including during voice use.
+        """
+        self.validate()
+        usage = "voice" if source == "voice" else self.usage
+        limit = {"voice": self.voice_tokens, "chat": self.max_tokens,
+                 "mission": self.mission_tokens}[usage]
+        return replace(self, usage=usage, max_tokens=min(limit, self.context // 2))
 
     def to_dict(self):
         return asdict(self)

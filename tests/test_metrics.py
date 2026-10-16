@@ -77,6 +77,10 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("Tokens/s : 6.0", label)
         self.assertIn("Génération Ollama : 2.00 s", label)
         self.assertIn("TTFT reçu : 1.25 s", label)
+        self.assertIn("Tokens de génération totaux : 12", label)
+        self.assertIn("Tokens de réponse visibles : indisponibles", label)
+        self.assertIn("Tokens du prompt : 30", label)
+        self.assertIn("Traitement du prompt : 1.00 s", label)
 
     def test_missing_and_invalid_values_are_never_estimated(self):
         for invalid in (None, -1, True, "12", 1.5, float("nan"), float("inf")):
@@ -87,7 +91,24 @@ class MetricsTests(unittest.TestCase):
                                       "tokens_per_second": 12345})
         self.assertEqual(metrics, {"eval_count": 0, "eval_duration": 0})
         self.assertIn("Tokens/s : —", metrics_label(metrics))
-        self.assertEqual(metrics_label(None), "Modèle : — · Tokens : — · Tokens/s : — · Génération Ollama : — · TTFT reçu : —")
+        self.assertEqual(metrics_label(None), "Modèle : — · Tokens : — · Tokens/s : — · Génération Ollama : — · TTFT reçu : —"
+                         " · Tokens de génération totaux : — · Tokens de réponse visibles : indisponibles"
+                         " · Tokens du prompt : — · Traitement du prompt : — · Raisonnement : indisponible")
+
+    def test_reasoning_and_visible_tokens_are_distinct_validated_observations(self):
+        values = {**STATS, "reasoning_status": "requested_disabled", "thinking_observed": True,
+                  "outcome": "length", "done_reason": "length", "response_tokens": 4}
+        metrics = generation_metrics(values)
+        self.assertEqual(metrics["response_tokens"], 4)
+        self.assertEqual(metrics["eval_count"], 12)
+        label = metrics_label(metrics)
+        self.assertIn("Tokens de réponse visibles : 4", label)
+        self.assertIn("désactivation demandée ; pensée interne reçue", label)
+        self.assertIn("Limite de génération atteinte", label)
+        for key, invalid in (("reasoning_status", []), ("outcome", []),
+                             ("thinking_observed", 1), ("response_tokens", True)):
+            with self.subTest(key=key):
+                self.assertEqual(generation_metrics({key: invalid}), {})
 
     def test_http_done_preserves_real_stats_and_received_ttft(self):
         with MetricsFixture() as fixture, patch("jarvis.ollama.time") as clock:
@@ -95,9 +116,12 @@ class MetricsTests(unittest.TestCase):
             events = list(Ollama(fixture.endpoint).chat([], Settings(model="requested-alias")))
         self.assertEqual([event.kind for event in events], ["chunk", "done"])
         self.assertEqual(events[0].payload, "Bonjour été 🚀")
-        self.assertEqual(events[0].metadata, {"model": "stream-model", "ttft_seconds": 1.25})
+        self.assertEqual(events[0].metadata, {"model": "stream-model", "ttft_seconds": 1.25,
+                                             "reasoning_status": "requested_disabled", "thinking_observed": True})
         self.assertEqual(events[-1].payload, {**STATS, "ttft_seconds": 1.25,
-                                             "tokens_per_second": 6, "done_reason": "stop"})
+                                             "tokens_per_second": 6, "done_reason": "stop",
+                                             "reasoning_status": "requested_disabled", "thinking_observed": True,
+                                             "outcome": "complete"})
         self.assertEqual(clock.monotonic.call_count, 2)
 
     def test_http_empty_output_has_no_ttft_or_invented_stats(self):
@@ -107,7 +131,8 @@ class MetricsTests(unittest.TestCase):
                                        {"done": True, "eval_count": "5", "eval_duration": -1,
                                         "load_duration": True, "total_duration": None}]
             events = list(Ollama(fixture.endpoint).chat([], Settings(model="requested-alias")))
-        self.assertEqual([(event.kind, event.payload) for event in events], [("done", {})])
+        self.assertEqual([(event.kind, event.payload) for event in events], [("done", {
+            "reasoning_status": "requested_disabled", "thinking_observed": True, "outcome": "empty"})])
         self.assertEqual(clock.monotonic.call_count, 1)
 
     def test_http_whitespace_is_preserved_but_ttft_waits_for_visible_text(self):
@@ -117,9 +142,10 @@ class MetricsTests(unittest.TestCase):
                                        {"message": {"content": "été 🚀"}}, {"done": True}]
             events = list(Ollama(fixture.endpoint).chat([], Settings()))
         self.assertEqual(events[0].payload, " \n")
-        self.assertEqual(events[0].metadata, {})
-        self.assertEqual(events[1].metadata, {"ttft_seconds": 2})
-        self.assertEqual(events[-1].payload, {"ttft_seconds": 2})
+        flags = {"reasoning_status": "requested_disabled", "thinking_observed": False}
+        self.assertEqual(events[0].metadata, flags)
+        self.assertEqual(events[1].metadata, {**flags, "ttft_seconds": 2})
+        self.assertEqual(events[-1].payload, {**flags, "ttft_seconds": 2, "outcome": "complete"})
 
 
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")

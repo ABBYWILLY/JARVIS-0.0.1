@@ -260,7 +260,8 @@ class App:
             self.set_status("Choisissez un modèle installé. Cliquez sur Actualiser ; si la liste est vide, utilisez « ollama pull qwen2.5:3b ».", True)
             return
         try:
-            messages, omitted = active_context(self.store.context(self.session_id) + [{"role": "user", "content": text}], self.settings)
+            request_settings = self.settings.for_request(source)
+            messages, omitted = active_context(self.store.context(self.session_id) + [{"role": "user", "content": text}], request_settings)
         except ValueError as exc:
             self.set_status(str(exc), True)
             return
@@ -273,16 +274,19 @@ class App:
             self.input.delete("1.0", "end")
         self.reload_history()
         self.render_session()
-        self.worker.start("chat", self.settings, messages)
+        self.worker.start("chat", request_settings, messages)
         self.busy("chat")
         self.set_status("Génération locale…" + (f" {omitted} anciens messages hors contexte actif, conservés dans l’historique." if omitted else ""))
 
-    def finish(self, status, text, error=False):
+    def finish(self, status, text, error=False, read_partial=False):
         if self.operation == "chat" and self.message_id is not None:
+            if status == "complete" and not self.response.strip():
+                status, error = "error", True
+                text = "Aucun texte visible reçu. Le modèle a terminé sans réponse ; consultez les statistiques de raisonnement et la limite de génération."
             self.store.update_response(self.message_id, self.response, status)
-            self.voice.finish_turn(status)
-            if not self.response and status == "complete":
-                text = "Réponse terminée sans texte visible. Vérifiez les capacités ou augmentez la limite de réponse du modèle."
+            # Finish playback of the visible fragment, while its archive remains
+            # explicitly incomplete. Manual cancellation still stops audio.
+            self.voice.finish_turn("complete" if read_partial and self.response.strip() else status)
             self.append("\n", "meta")
             self.append(metrics_label(self.response_metrics) + "\n", "metrics")
         self.worker.stop()
@@ -324,8 +328,20 @@ class App:
                         break
                     elif event.kind == "done":
                         self.remember_generation_metrics(event.payload)
-                        self.finish("complete", "Réponse terminée · historique enregistré.")
+                        outcome = self.response_metrics.get("outcome")
+                        if not self.response.strip() or outcome in {"empty", "empty_length"}:
+                            detail = ("Limite de génération atteinte sans texte visible. "
+                                      if outcome == "empty_length" else "Aucun texte visible reçu. ")
+                            self.finish("error", detail + "Le modèle n’a fourni aucune réponse utilisable ; consultez les statistiques de raisonnement.", True)
+                        elif outcome == "length" or self.response_metrics.get("done_reason") == "length":
+                            self.append("\nRéponse partielle : limite de génération atteinte.\n", "meta")
+                            self.finish("cancelled", "Réponse partielle conservée : limite de génération atteinte. Augmentez le budget du mode choisi si nécessaire.", read_partial=True)
+                        else:
+                            self.finish("complete", "Réponse terminée · historique enregistré.")
                         break
+                    elif event.kind == "notice":
+                        self.remember_generation_metrics(event.metadata)
+                        self.set_status(str(event.payload))
                     elif event.kind == "error":
                         self.finish("error", str(event.payload), True)
                         break
@@ -350,25 +366,43 @@ class App:
         dialog.grab_set()
         variables = {}
         fields = [("endpoint", "Adresse Ollama locale"), ("temperature", "Température (0–2)"),
-                  ("context", "Contexte (tokens)"), ("max_tokens", "Limite de réponse (tokens)")]
+                  ("context", "Contexte total (tokens)"), ("max_tokens", "Budget discussion (tokens)"),
+                  ("voice_tokens", "Budget réponse vocale (tokens)"),
+                  ("mission_tokens", "Budget mission complexe (tokens)")]
         for i, (key, label) in enumerate(fields):
-            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=i, column=0, sticky="w", pady=8, padx=(0, 16))
+            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=i, column=0, sticky="w", pady=5, padx=(0, 16))
             variables[key] = tk.StringVar(value=str(getattr(self.settings, key)))
             ttk.Entry(dialog, textvariable=variables[key], width=34).grid(row=i, column=1, sticky="ew")
-        tk.Label(dialog, text="Instruction système (facultative)", bg=PANEL, fg=TEXT).grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 6))
-        prompt = tk.Text(dialog, height=5, width=58, bg=FIELD, fg=TEXT, insertbackground=CYAN, wrap="word", font=(self.font_family, 10))
-        prompt.grid(row=5, column=0, columnspan=2, sticky="ew")
+        choices = {
+            "reasoning_mode": {"Rapide": "fast", "Automatique": "auto", "Approfondi": "deep"},
+            "usage": {"Discussion": "chat", "Réponse vocale": "voice", "Mission complexe": "mission"},
+        }
+        for row, (key, label) in enumerate((("reasoning_mode", "Raisonnement"), ("usage", "Utilisation")), start=len(fields)):
+            values = choices[key]
+            variables[key] = tk.StringVar(value=next(name for name, value in values.items() if value == getattr(self.settings, key)))
+            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=row, column=0, sticky="w", pady=5, padx=(0, 16))
+            ttk.Combobox(dialog, textvariable=variables[key], values=list(values), state="readonly", width=32).grid(row=row, column=1, sticky="ew")
+        prompt_row = len(fields) + len(choices)
+        tk.Label(dialog, text="Instruction système (facultative)", bg=PANEL, fg=TEXT).grid(row=prompt_row, column=0, columnspan=2, sticky="w", pady=(10, 6))
+        prompt = tk.Text(dialog, height=4, width=58, bg=FIELD, fg=TEXT, insertbackground=CYAN, wrap="word", font=(self.font_family, 10))
+        prompt.grid(row=prompt_row + 1, column=0, columnspan=2, sticky="ew")
         prompt.insert("1.0", self.settings.system_prompt)
         tk.Label(dialog, text="Historique et paramètres : " + str(self.store.db.execute("PRAGMA database_list").fetchone()[2]) +
                  "\nStockage local non chiffré. Aucun accès système accordé au modèle."
-                 "\nTTFT reçu : envoi HTTP → premier texte reçu, chargement et réseau inclus ; ce n’est pas un temps de premier token côté serveur.",
-                 bg=PANEL, fg=MUTED, wraplength=500, justify="left").grid(row=6, column=0, columnspan=2, pady=12, sticky="w")
+                 "\nRapide demande think:false ; Approfondi demande think:true. Automatique laisse le choix au modèle. Un paramètre refusé produit un avertissement."
+                 "\nLe budget vocal s’applique aux demandes du microphone. Chaque budget effectif est plafonné à la moitié du contexte."
+                 "\nTTFT reçu : envoi HTTP → premier texte visible, chargement et réseau inclus. Les tokens de génération peuvent inclure la pensée interne.",
+                 bg=PANEL, fg=MUTED, wraplength=620, justify="left", font=(self.font_family, 9)).grid(row=prompt_row + 2, column=0, columnspan=2, pady=12, sticky="w")
 
         def save():
             try:
                 settings = replace(self.settings, endpoint=variables["endpoint"].get().strip().rstrip("/"),
                     temperature=float(variables["temperature"].get()), context=int(variables["context"].get()),
-                    max_tokens=int(variables["max_tokens"].get()), system_prompt=prompt.get("1.0", "end-1c")).validate()
+                    max_tokens=int(variables["max_tokens"].get()), voice_tokens=int(variables["voice_tokens"].get()),
+                    mission_tokens=int(variables["mission_tokens"].get()),
+                    reasoning_mode=choices["reasoning_mode"][variables["reasoning_mode"].get()],
+                    usage=choices["usage"][variables["usage"].get()],
+                    system_prompt=prompt.get("1.0", "end-1c")).validate()
                 self.store.save_settings(settings)
                 if settings.system_prompt != self.settings.system_prompt:
                     voice_settings = replace(self.voice.settings, personality="Personnalisé")
@@ -381,8 +415,8 @@ class App:
             dialog.destroy()
             self.refresh_models()
 
-        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=7, column=1, sticky="e")
-        ttk.Button(dialog, text="Annuler", command=dialog.destroy).grid(row=7, column=0, sticky="w")
+        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=prompt_row + 3, column=1, sticky="e")
+        ttk.Button(dialog, text="Annuler", command=dialog.destroy).grid(row=prompt_row + 3, column=0, sticky="w")
 
     def callback_error(self, _kind, exc, _trace):
         self.voice.halt_without_persistence()
