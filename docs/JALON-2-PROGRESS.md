@@ -281,3 +281,27 @@ créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne 
   léger ;625Kio maximum par WAV demandé, rien supprimé. VAD et garde350ms conservés
   faute de preuve justifiant réduction ; délai acoustique Bluetooth non mesuré.
 - Lot1 codé/testé, recette matérielle Windows ouverte ; lots2–5 non commencés.
+
+## Lot 2 — COMMAND OS / PRESENCE
+
+- Métriques sous chaque réponse : modèle reçu, tokens, tokens/s et durée eval
+  issus des statistiques finales Ollama ; TTFT observé avant HTTP→premier texte
+  visible, sans exposer ni inventer l’activité interne du modèle. Valeurs absentes
+  ou invalides = —. Préférence de masquage persistante, métadonnées SQLite v2
+  enrichies sans migration, historique et annulations/erreurs testés.
+- PRESENCE : moniteur latéral superposé (pas de déplacement du canvas), Chrono
+  masquable/persistant, STT, attente LLM, premier texte→audio, fin de tour→audio et
+  fin de parole estimée→audio. DAC estimé, Bluetooth acoustique non mesuré.
+  Courbe historique12 tours réels, aucun signal biologique ou calcul LLM simulé.
+- THINKING : déformations harmoniques arrondies plus marquées et halo doux sur
+  le même maillage ; fermeture exacte pour spline continue. Réduction mouvement,
+  micro réel, plat au silence, transitions/interruption et lot1 conservés.
+- **75 tests ciblés réussis, 0 ignoré**, commande : `DISPLAY=:99
+  LD_LIBRARY_PATH=/tmp/j2-portaudio/usr/lib/x86_64-linux-gnu .venv-voice/bin/python
+  -m unittest tests.test_metrics tests.test_presence tests.test_voice_flow
+  tests.test_presence_integration tests.test_jarvis.ProtocolTests
+  tests.test_jarvis.DesktopTests -v`. Données serveur de test, audio simulé ;
+  HTTP/Tk/SQLite et transports spawn réels. Test live Ollama non exécuté.
+- Rendu inspecté sous X virtuel avec valeurs de test explicitement contrôlées.
+  Pas de microphone/benchmark matériel ni EXE Windows validé ici. Aucun poids
+  ou paquet supplémentaire. Lot3 ensuite ; lots4/5 non commencés.

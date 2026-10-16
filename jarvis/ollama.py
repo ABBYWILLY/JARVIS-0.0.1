@@ -2,11 +2,13 @@
 import http.client
 import json
 import socket
+import time
 from dataclasses import dataclass
 from typing import Iterator, Literal, Protocol
 from urllib.parse import urlsplit
 
 from .config import Settings
+from .metrics import generation_metrics
 
 MAX_LINE = 2 * 1024 * 1024
 
@@ -20,6 +22,7 @@ class Event:
     kind: Literal["models", "chunk", "done", "error"]
     payload: object
     version: int = 1
+    metadata: dict | None = None
 
 
 class InferenceProvider(Protocol):
@@ -65,6 +68,9 @@ class Ollama:
             connection.close()
 
     def chat(self, messages, settings):
+        # Client-observed latency: includes request, loading, thinking and network.
+        started = time.monotonic()
+        observed = {}
         connection, response = self._request("POST", "/api/chat", {
             "model": settings.model, "messages": messages, "stream": True,
             "options": {"temperature": settings.temperature, "num_ctx": settings.context,
@@ -82,13 +88,21 @@ class Ollama:
                 data = json.loads(line)
                 if data.get("error"):
                     raise OllamaError("Ollama signale une erreur de génération. Vérifiez le modèle et sa mémoire disponible.")
+                received_model = generation_metrics({"model": data.get("model")})
+                observed.update(received_model)
                 content = data.get("message", {}).get("content", "")
                 if not isinstance(content, str):
                     raise OllamaError("Format de réponse Ollama invalide.")
                 if content:
-                    yield Event("chunk", content)
+                    if content.strip() and "ttft_seconds" not in observed:
+                        observed.update(generation_metrics({"ttft_seconds": time.monotonic() - started}))
+                    yield Event("chunk", content, metadata=dict(observed))
                 if data.get("done") is True:
-                    yield Event("done", {key: data.get(key) for key in ("eval_count", "eval_duration", "done_reason")})
+                    observed.update(generation_metrics(data))
+                    final = generation_metrics(observed)
+                    if isinstance(data.get("done_reason"), str):
+                        final["done_reason"] = data["done_reason"]
+                    yield Event("done", final)
                     return
         finally:
             connection.close()

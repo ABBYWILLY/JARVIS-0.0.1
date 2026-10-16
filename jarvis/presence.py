@@ -30,6 +30,7 @@ class PresenceSettings:
     accent_mode: str = "adaptive"
     fixed_color: str = "#69edf5"
     wave_expressivity: int = 65
+    timing_monitor: bool = True
 
     @classmethod
     def from_dict(cls, values):
@@ -43,7 +44,7 @@ class PresenceSettings:
             valid["background"] = color.lower()
         if isinstance(values.get("profile"), str) and values["profile"] in PROFILES:
             valid["profile"] = values["profile"]
-        for key in ("reduced_motion", "subtitles"):
+        for key in ("reduced_motion", "subtitles", "timing_monitor"):
             if isinstance(values.get(key), bool):
                 valid[key] = values[key]
         if isinstance(values.get("accent_mode"), str) and values["accent_mode"] in ACCENT_LABELS:
@@ -210,8 +211,13 @@ class PresenceModel:
                 angle = -math.pi / 2 + math.tau * t
                 radius = core_radius(width, height)
                 if self.state == "thinking" and not self.settings.reduced_motion:
-                    phase = (now - self.state_since) * 0.45
-                    radius *= 1 + 0.012 * math.sin(2 * angle + phase)
+                    phase = (now - self.state_since) * 1.35
+                    # Smooth, low-frequency deformations of this same closed mesh.
+                    # This indicates active processing, never fictitious audio.
+                    radius *= (1 + 0.035 * math.sin(phase * 0.7)
+                               + 0.10 * math.sin(2 * angle + phase)
+                               + 0.045 * math.sin(3 * angle - phase * 0.65))
+                    angle += 0.07 * math.sin(phase * 0.55)
                 elif self.state == "jarvis_speaking" and active:
                     # Opposite radii share data, so speech never moves the core's centre.
                     j = (i + (POINT_COUNT - 1) // 2) % (POINT_COUNT - 1)
@@ -224,7 +230,10 @@ class PresenceModel:
                     # The sine is an endpoint window, never an invented audio carrier.
                     y += wave_line[i] * amplitude * (0.55 if self.settings.reduced_motion else 1)
             points.append((x, y))
-        return _center(points, width, height)
+        points = _center(points, width, height)
+        if self.state in {"thinking", "jarvis_speaking"}:
+            points[-1] = points[0]  # Exact closure enables Tk's continuous closed spline.
+        return points
 
     def frame(self, width, height, now=None):
         now = time.monotonic() if now is None else now
@@ -242,6 +251,8 @@ class PresenceModel:
             amount = 1 - math.exp(-delta / duration)
             self.points = [(x + (tx - x) * amount, y + (ty - y) * amount)
                            for (x, y), (tx, ty) in zip(self.points, target)]
+            if self.state in {"thinking", "jarvis_speaking"} and math.dist(self.points[0], self.points[-1]) < 1:
+                self.points[-1] = self.points[0]
             self.points = _center(self.points, width, height)
             if max(math.dist(point, goal) for point, goal in zip(self.points, target)) < 0.15:
                 self.points = target
@@ -282,6 +293,10 @@ class PresenceView:
         self.paths = []
         self.settings_dialog = None
         self._slow_until = 0.0
+        self.timings = {}
+        self.timing_history = []
+        self._timing_recorded = False
+        self._timing_render_key = None
 
     @property
     def state(self):
@@ -325,7 +340,8 @@ class PresenceView:
         self.header_controls = tk.Frame(window)
         self.header_controls.place(relx=0.955, rely=0.045, anchor="ne")
         self.buttons = []
-        for label, command in (("Fond", self.choose_background), ("Réglages", self.open_settings)):
+        for label, command in (("Fond", self.choose_background), ("Chrono", self.toggle_timing),
+                               ("Réglages", self.open_settings)):
             self._button(self.header_controls, label, command).pack(side="left", padx=4)
         self.controls = tk.Frame(window)
         self.controls.place(relx=0.5, rely=0.92, anchor="center")
@@ -345,6 +361,17 @@ class PresenceView:
                                      text="Synchronisation estimée depuis l’audio")
         self.caption_note.pack(side="left", padx=6)
         self._button(self.caption_footer, "Copier l’extrait", self.copy_caption).pack(side="left", padx=6)
+        self.timing_panel = tk.Frame(window, padx=10, pady=8, highlightthickness=1)
+        self.timing_title = tk.Label(self.timing_panel, text="CHRONO · LOCAL / ms", anchor="w", font=(family, 9, "bold"))
+        self.timing_title.pack(fill="x")
+        self.timing_values = tk.Label(self.timing_panel, anchor="w", justify="left", font=(family, 9))
+        self.timing_values.pack(fill="x", pady=4)
+        self.timing_chart = tk.Canvas(self.timing_panel, height=45, highlightthickness=0)
+        self.timing_chart.pack(fill="x")
+        self.timing_note = tk.Label(self.timing_panel, anchor="w", justify="left", font=(family, 8),
+                                   text="≈ DAC PortAudio · Bluetooth acoustique inconnu\nCourbe : derniers échanges, aucune donnée biologique")
+        self.timing_note.pack(fill="x", pady=(4, 0))
+        self._timing_render_key = None
         self._rendered_caption = None
         self._apply_colors()
         window.update_idletasks()
@@ -405,6 +432,63 @@ class PresenceView:
         if self._visible():
             self._update_overlays(self.canvas.winfo_width())
 
+    def update_timing(self, values, new_turn=False, complete=False):
+        """Measured durations only; missing stages stay absent, never simulated."""
+        if new_turn:
+            self.timings = {}
+            self._timing_recorded = False
+        for key in ("vad_silence_ms", "stt_ms", "llm_wait_ms", "token_to_audio_ms",
+                    "turn_to_audio_ms", "speech_to_audio_ms"):
+            value = values.get(key) if isinstance(values, dict) else None
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
+                self.timings[key] = round(value)
+        if complete and not self._timing_recorded and "speech_to_audio_ms" in self.timings:
+            self.timing_history = (self.timing_history + [self.timings["speech_to_audio_ms"]])[-12:]
+            self._timing_recorded = True
+        if self._visible():
+            self._render_timing(self.canvas.winfo_width(), self.canvas.winfo_height())
+
+    def toggle_timing(self):
+        self.set_options(timing_monitor=not self.settings.timing_monitor)
+
+    def _render_timing(self, width, height):
+        key = (width, height, self.settings, tuple(sorted(self.timings.items())),
+               tuple(self.timing_history), self.state == "dormant")
+        if key == self._timing_render_key:
+            return
+        self._timing_render_key = key
+        if not self.settings.timing_monitor or self.state == "dormant":
+            self.timing_panel.place_forget()
+            return
+        # An overlay in the side gutter: never changes the canvas or mesh centre.
+        available = width / 2 - core_radius(width, height) - width * 0.045 - 14
+        panel_width = max(100, min(300, round(available)))
+        self.timing_panel.place(relx=0.955, rely=0.28, anchor="ne", width=panel_width)
+        rows = (("vad_silence_ms", "Silence VAD"), ("stt_ms", "STT"),
+                ("llm_wait_ms", "Attente LLM"), ("token_to_audio_ms", "Texte → son ≈"),
+                ("turn_to_audio_ms", "Fin tour → son ≈"), ("speech_to_audio_ms", "Parole → son ≈"))
+        self.timing_values.configure(text="\n".join(
+            f"{label}  {self.timings[key]}" if key in self.timings else f"{label}  —" for key, label in rows))
+        self.timing_note.configure(wraplength=max(80, panel_width - 20))
+        chart = self.timing_chart
+        chart.delete("all")
+        chart_width = max(60, panel_width - 20)
+        colors = palette(self.settings.background)
+        grid = mix(colors["background"], colors["foreground"], 0.13)
+        for y in (9, 22, 35):
+            chart.create_line(0, y, chart_width, y, fill=grid)
+        for x in range(0, chart_width, 30):
+            chart.create_line(x, 0, x, 44, fill=grid)
+        if self.timing_history:
+            maximum = max(1, max(self.timing_history))
+            points = [(5 + i * (chart_width - 10) / 11, 40 - value / maximum * 34)
+                      for i, value in enumerate(self.timing_history)]
+            if len(points) > 1:
+                chart.create_line(*[v for point in points for v in point], fill=colors["accent"],
+                                  width=2, smooth=True, splinesteps=12)
+            x, y = points[-1]
+            chart.create_oval(x - 2, y - 2, x + 2, y + 2, fill=colors["accent"], outline="")
+
     def _visible(self):
         return self.window is not None and bool(self.window.winfo_exists() and self.window.winfo_viewable())
 
@@ -427,6 +511,10 @@ class PresenceView:
             count = 1
         accent = self.mesh_accent()
         strength = 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
+        breath = 0.0
+        if self.state == "thinking" and not self.settings.reduced_motion:
+            breath = math.sin((started - self.model.state_since) * 1.1)
+            strength = 0.9 + breath * 0.08
         # Every halo uses precisely the same coordinates, never another visualizer.
         for index, path in enumerate(self.paths):
             visible = index < count
@@ -434,7 +522,8 @@ class PresenceView:
             opacity = strength if is_edge else (0.06 + index * 0.04) * strength
             self.canvas.coords(path, *coords)
             self.canvas.itemconfigure(path, state="normal" if visible else "hidden",
-                                      width=2 if is_edge else 16 - index * 3,
+                                      width=2 if is_edge else 16 - index * 3 + (
+                                          2 + breath * 2 if self.state == "thinking" and not self.settings.reduced_motion else 0),
                                       fill=mix(self.settings.background, accent, opacity))
         self._update_overlays(width)
         elapsed = time.monotonic() - started
@@ -468,6 +557,7 @@ class PresenceView:
         self.operation_label.configure(text=label, wraplength=max(180, round(width * 0.40)),
                                        fg=readable_accent(operational["color"], self.settings.background))
         self._render_caption()
+        self._render_timing(width, self.canvas.winfo_height())
         if self.settings.subtitles and self.caption_text and self.state == "jarvis_speaking":
             self.caption_label.place(relx=0.5, rely=0.74, relwidth=0.82, anchor="n")
             self.caption_footer.place(relx=0.5, rely=0.855, anchor="center")
@@ -501,6 +591,11 @@ class PresenceView:
         bg, fg = colors["background"], colors["foreground"]
         self.window.configure(bg=bg)
         self.canvas.configure(bg=bg)
+        self.timing_panel.configure(bg=bg, highlightbackground=mix(bg, fg, 0.2))
+        self.timing_chart.configure(bg=bg)
+        for widget in (self.timing_title, self.timing_values, self.timing_note):
+            widget.configure(bg=bg, fg=colors["muted"])
+        self.timing_title.configure(fg=colors["accent"])
         for widget in (self.controls, self.header_controls, self.caption_footer):
             widget.configure(bg=bg)
         for widget in (self.identity, self.state_label, self.mic_label, self.tone_label,

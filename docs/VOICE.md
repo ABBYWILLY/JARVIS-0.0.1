@@ -150,6 +150,21 @@ exporter un unique WAV sur demande explicite. La base texte reste non chiffrée.
 
 ## Compilation et récupération de l’artefact
 
+Lot 2 : la case **Métriques**, près du choix du modèle COMMAND OS, masque/affiche
+les statistiques sous chaque réponse, avec préférence persistante. Tokens et durée
+de génération proviennent de `eval_count`/`eval_duration` d’Ollama ; tokens/s =
+tokens ÷ durée en secondes. Le **TTFT reçu** est le délai HTTP jusqu’au premier
+texte visible (chargement/réflexion/réseau inclus), pas le premier token interne.
+Les valeurs absentes restent `—`. Les mesures sont conservées avec la réponse
+dans SQLite, y compris les observations disponibles après arrêt/erreur.
+
+Dans PRESENCE, **Chrono** masque/affiche le moniteur latéral sans déplacer le noyau.
+STT/attente LLM sont des temps observés ; texte→son et fin de tour→son utilisent
+l’estimation DAC PortAudio. Parole→son ajoute le silence VAD : estimation de fin
+de parole, pas mesure acoustique/Bluetooth. La courbe montre les 12 derniers tours
+mesurés, sans mouvement inventé ni donnée biologique. Le THINKING plus organique
+reste limité au traitement réel ; réduction du mouvement et silence plat conservés.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -WithVoice
 ```

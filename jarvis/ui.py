@@ -1,10 +1,12 @@
 """COMMAND OS: Tk main thread owns widgets/storage; inference is isolated."""
+import json
 import sqlite3
 import tkinter as tk
 from dataclasses import replace
 from tkinter import font, messagebox, ttk
 
 from .config import Settings, active_context
+from .metrics import generation_metrics, metrics_label
 from .worker import Worker
 
 BG, PANEL, FIELD = "#0b1019", "#121c29", "#192638"
@@ -18,6 +20,7 @@ class App:
         self.operation = None
         self.message_id = None
         self.response = ""
+        self.response_metrics = {}
         self.models = []
         self.dead_polls = 0
         self.closed = False
@@ -103,6 +106,9 @@ class App:
         scroll.pack(side="right", fill="y")
         self.chat.tag_configure("speaker", foreground=CYAN, font=(self.font_family, 10, "bold"), spacing1=18, spacing3=8)
         self.chat.tag_configure("meta", foreground=MUTED, font=(self.font_family, 9), spacing3=10)
+        self.metrics_visible = tk.BooleanVar(value=store.get_preference("show_generation_metrics", True) is not False)
+        self.chat.tag_configure("metrics", foreground=MUTED, font=(self.font_family, 9),
+                                spacing3=10, elide=not self.metrics_visible.get())
         compose = tk.Frame(root, bg=BG, padx=20, pady=14)
         compose.grid(row=2, column=1, sticky="ew")
         self.input = tk.Text(compose, height=4, bg=FIELD, fg=TEXT, insertbackground=CYAN,
@@ -114,6 +120,11 @@ class App:
         actions.pack(fill="x", pady=(10, 0))
         tk.Label(actions, text="Ctrl + Entrée : envoyer · Entrée : nouvelle ligne",
                  bg=BG, fg=MUTED, font=(self.font_family, 9)).pack(side="left")
+        style.configure("Metrics.TCheckbutton", background=BG, foreground=MUTED,
+                        font=(self.font_family, 9))
+        self.metrics_toggle = ttk.Checkbutton(model_row, text="Métriques", variable=self.metrics_visible,
+            command=self.toggle_metrics, style="Metrics.TCheckbutton")
+        self.metrics_toggle.pack(side="right", padx=(10, 0))
         self.send_button = ttk.Button(actions, text="Envoyer", command=self.send)
         self.send_button.pack(side="right")
         self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled")
@@ -157,6 +168,17 @@ class App:
             if row["id"] == self.session_id:
                 self.history.selection_set(index)
 
+    def toggle_metrics(self):
+        self.store.set_preference("show_generation_metrics", self.metrics_visible.get())
+        # Elision only changes presentation, including during an active stream.
+        self.chat.tag_configure("metrics", elide=not self.metrics_visible.get())
+
+    def remember_generation_metrics(self, values):
+        metrics = generation_metrics({**self.response_metrics, **generation_metrics(values)})
+        if metrics != self.response_metrics:
+            self.store.update_message_metadata(self.message_id, {"generation_metrics": metrics})
+            self.response_metrics = metrics
+
     def render_session(self):
         self.chat.configure(state="normal")
         self.chat.delete("1.0", "end")
@@ -172,6 +194,9 @@ class App:
             if row["status"] not in {"complete", "streaming"}:
                 self.append({"streaming": "En cours", "cancelled": "Arrêtée", "error": "Échec",
                              "interrupted": "Interrompue à la fermeture"}[row["status"]] + "\n", "meta")
+            if row["role"] == "assistant" and row["status"] != "streaming":
+                metadata = json.loads(row["metadata"])
+                self.append(metrics_label(metadata.get("generation_metrics")) + "\n", "metrics")
         self.chat.see("end")
 
     def new_session(self):
@@ -243,6 +268,7 @@ class App:
         self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model, source=source, metadata=metadata)
         self.voice.begin_turn(self.message_id, source)
         self.response = ""
+        self.response_metrics = {}
         if from_input:
             self.input.delete("1.0", "end")
         self.reload_history()
@@ -258,6 +284,7 @@ class App:
             if not self.response and status == "complete":
                 text = "Réponse terminée sans texte visible. Vérifiez les capacités ou augmentez la limite de réponse du modèle."
             self.append("\n", "meta")
+            self.append(metrics_label(self.response_metrics) + "\n", "metrics")
         self.worker.stop()
         self.busy(None)
         if not self.voice.tts_active:
@@ -279,6 +306,7 @@ class App:
                 changed = False
                 for event in self.worker.poll():
                     if event.kind == "chunk":
+                        self.remember_generation_metrics(event.metadata)
                         self.response += event.payload
                         changed = True
                         if len(self.response) > 1_000_000:
@@ -295,6 +323,7 @@ class App:
                         self.finish("complete", f"Ollama connecté · {len(self.models)} modèle(s) installé(s)." if self.models else "Ollama connecté, aucun modèle. Installez-en un avec « ollama pull qwen2.5:3b », puis Actualiser.")
                         break
                     elif event.kind == "done":
+                        self.remember_generation_metrics(event.payload)
                         self.finish("complete", "Réponse terminée · historique enregistré.")
                         break
                     elif event.kind == "error":
@@ -331,7 +360,8 @@ class App:
         prompt.grid(row=5, column=0, columnspan=2, sticky="ew")
         prompt.insert("1.0", self.settings.system_prompt)
         tk.Label(dialog, text="Historique et paramètres : " + str(self.store.db.execute("PRAGMA database_list").fetchone()[2]) +
-                 "\nStockage local non chiffré. Aucun accès système accordé au modèle.",
+                 "\nStockage local non chiffré. Aucun accès système accordé au modèle."
+                 "\nTTFT reçu : envoi HTTP → premier texte reçu, chargement et réseau inclus ; ce n’est pas un temps de premier token côté serveur.",
                  bg=PANEL, fg=MUTED, wraplength=500, justify="left").grid(row=6, column=0, columnspan=2, pady=12, sticky="w")
 
         def save():

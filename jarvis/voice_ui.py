@@ -334,10 +334,15 @@ class VoiceControls:
                 continue
             if event.kind == "played":
                 view = event.payload
-                if self.first_pcm_at is None and self.tts_requested_at is not None:
+                if not self.playing_sample and self.first_pcm_at is None and self.tts_requested_at is not None:
                     self.first_pcm_at = view.get("started_at", view["emitted_at"] + view["delay"])
                     self.mark_latency("Phrase TTS → premier PCM (DAC estimé)", self.tts_requested_at, self.first_pcm_at)
                     self.mark_latency("Fin de tour détectée → premier PCM (DAC estimé)", self.turn_ended_at, self.first_pcm_at)
+                    self.mark_latency("Premier texte → premier PCM (DAC estimé)", self.first_llm_at, self.first_pcm_at)
+                    if self.turn_ended_at is not None and "Silence de fin de tour (PCM)" in self.latencies:
+                        self.set_latency("Fin de parole VAD → premier PCM (estimé)",
+                            (self.first_pcm_at - self.turn_ended_at) * 1000 + self.latencies["Silence de fin de tour (PCM)"])
+                    self.publish_timing(complete=True)
                 self.pending_visuals.append((view["emitted_at"] + view["delay"], view, self.epoch))
                 self.pending_visuals = self.pending_visuals[-64:]
             elif event.kind == "tts_pcm_ready":
@@ -384,10 +389,23 @@ class VoiceControls:
         self.latencies = {}
         self.turn_ended_at = self.llm_started_at = self.first_llm_at = None
         self.tts_requested_at = self.first_pcm_at = None
+        self.publish_timing(new_turn=True)
 
     def set_latency(self, label, milliseconds):
         self.latencies[label] = max(0, round(milliseconds))
         self.refresh_diagnostics()
+        self.publish_timing()
+
+    def publish_timing(self, new_turn=False, complete=False):
+        if not hasattr(self.app, "presence"):
+            return
+        names = {"vad_silence_ms": "Silence de fin de tour (PCM)", "stt_ms": "Whisper : transcription",
+                 "llm_wait_ms": "Ollama : envoi → premier texte reçu",
+                 "token_to_audio_ms": "Premier texte → premier PCM (DAC estimé)",
+                 "turn_to_audio_ms": "Fin de tour détectée → premier PCM (DAC estimé)",
+                 "speech_to_audio_ms": "Fin de parole VAD → premier PCM (estimé)"}
+        self.app.presence.update_timing({key: self.latencies[label] for key, label in names.items()
+                                       if label in self.latencies}, new_turn=new_turn, complete=complete)
 
     def mark_latency(self, label, start, end):
         if start is not None and end is not None:

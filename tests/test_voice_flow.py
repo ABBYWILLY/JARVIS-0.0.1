@@ -205,8 +205,13 @@ class VoiceFlowTests(unittest.TestCase):
                     "Whisper : attente en file": 40, "Ollama : envoi → premier texte reçu": 200,
                     "Premier texte → première phrase TTS": 300, "Chargement Piper (worker)": 120,
                     "Piper : synthèse du premier bloc": 80, "Phrase TTS → premier PCM (DAC estimé)": 400,
-                    "Fin de tour détectée → premier PCM (DAC estimé)": 1900}
+                    "Fin de tour détectée → premier PCM (DAC estimé)": 1900,
+                    "Premier texte → premier PCM (DAC estimé)": 700,
+                    "Fin de parole VAD → premier PCM (estimé)": 2700}
         self.assertEqual(self.voice.latencies, expected)
+        values = self.app.presence.update_timing.call_args.args[0]
+        self.assertEqual(values["token_to_audio_ms"], 700)
+        self.assertEqual(values["speech_to_audio_ms"], 2700)
         old_epoch = self.voice.epoch
         self.voice.cancel_speech()
         self.voice.speech.events.extend([

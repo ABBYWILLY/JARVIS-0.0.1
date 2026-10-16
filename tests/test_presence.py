@@ -22,6 +22,17 @@ def bounds(points):
 
 
 class GeometryTests(unittest.TestCase):
+    def test_thinking_has_visible_organic_deformation_on_the_same_closed_mesh(self):
+        model = PresenceModel()
+        model.update_event("thinking", now=1)
+        first = model.target_geometry(1000, 700, now=1)
+        later = model.target_geometry(1000, 700, now=2.2)
+        self.assertEqual(len(first), POINT_COUNT)
+        self.assertGreater(max(math.dist(a, b) for a, b in zip(first, later)), core_radius(1000, 700) * 0.12)
+        self.assertEqual(first[0], first[-1])
+        self.assert_centered(first, 1000, 700)
+        self.assert_centered(later, 1000, 700)
+
     def test_expressivity_is_nonlinear_bounded_and_uses_only_real_audio(self):
         heights = []
         for expressivity in (0, 65, 100):
@@ -195,6 +206,42 @@ def display_available():
 
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")
 class PresenceTkTests(unittest.TestCase):
+    def test_timing_monitor_uses_measured_history_hides_and_preserves_core_centre(self):
+        self.view.set_options(reduced_motion=True)
+        self.view.show()
+        self.view.update_event("thinking")
+        self.root.update()
+        canvas_size = (self.view.canvas.winfo_width(), self.view.canvas.winfo_height())
+        core = list(self.view.canvas.coords(self.view.paths[0]))
+        self.view.update_timing({"stt_ms": 250, "llm_wait_ms": 700, "token_to_audio_ms": 400,
+                                 "turn_to_audio_ms": 1500, "speech_to_audio_ms": 2300}, new_turn=True, complete=True)
+        self.root.update()
+        self.assertIn("STT  250", self.view.timing_values.cget("text"))
+        self.assertIn("Silence VAD  —", self.view.timing_values.cget("text"))
+        self.assertIn("Bluetooth", self.view.timing_note.cget("text"))
+        self.assertEqual(self.view.timing_history, [2300])
+        self.view.update_timing({}, complete=True)
+        self.assertEqual(self.view.timing_history, [2300])
+        self.view.toggle_timing()
+        self.root.update()
+        self.assertEqual(self.view.timing_panel.winfo_manager(), "")
+        self.assertFalse(self.store.get_preference("presence")["timing_monitor"])
+        self.assertEqual(self.view.canvas.coords(self.view.paths[0]), core)
+        self.assertEqual((self.view.canvas.winfo_width(), self.view.canvas.winfo_height()), canvas_size)
+        self.view.toggle_timing()
+        self.root.update()
+        self.assertEqual(self.view.timing_panel.winfo_manager(), "place")
+        reopened = PresenceView(self.app)
+        self.addCleanup(reopened.close)
+        self.assertTrue(reopened.settings.timing_monitor)
+        self.view.update_timing({"stt_ms": float("nan"), "llm_wait_ms": -5}, new_turn=True)
+        self.assertEqual(self.view.timings, {})
+        for i in range(20):
+            self.view.update_timing({"speech_to_audio_ms": i * 100}, new_turn=True, complete=True)
+        self.assertEqual(len(self.view.timing_history), 12)
+        self.view.update_event("dormant")
+        self.assertEqual(self.view.timing_panel.winfo_manager(), "")
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

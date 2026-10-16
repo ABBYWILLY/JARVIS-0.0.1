@@ -2,9 +2,24 @@
 
 - Dépôt : https://github.com/ABBYWILLY/JARVIS-0.0.1
 - Branche : `feat/jalon-2-voice-presence`. Aucun changement direct de main/force push.
-- Dernier lot : `perf(voice): reuse Piper and add opt-in French audio diagnostics`.
+- Dernier lot : `feat(ui): show real generation and voice timing metrics`.
   Retrouver son SHA par `git log -5 --oneline`.
 - J2.0–J2.6 et jalon 1 préservés. Lire JALON-2-PROGRESS.md et VOICE.md pour les preuves.
+
+## Lot 2 livré après d90fd5a
+
+COMMAND OS : stats réelles finales Ollama, tokens/s/eval_duration/eval_count/modèle
+reçu et TTFT HTTP premier texte visible ; SQLite metadata.generation_metrics,
+case Métriques persistante, historique restauré, valeurs absentes = —.
+PRESENCE : Chrono masquable/persistant, délais STT/LLM/texte→DAC/fin VAD→DAC,
+historique12 tours réels, estimation audio/Bluetooth clairement distinguée.
+THINKING plus organique, même maillage fermé exact, halos de même géométrie,
+réduction mouvement, silence plat et centre responsive préservés.
+75 tests ciblés réussis, aucun ignoré ; HTTP/Tk/SQLite réels, données de test et
+audio simulés explicitement. Contrôle visuel Linux, aucune nouvelle validation Windows.
+Lot1 conservé. Prochain lot prioritaire : voix premium (sélection vérifiée et un
+seul adaptateur), aucun téléchargement volumineux avant accord. Lots4/5 restent
+à implémenter. Les anciens paragraphes ci-dessous sont des bilans historiques.
 
 ## Optimisation audio — lot 1 livré, recette Windows ouverte
 
