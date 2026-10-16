@@ -17,6 +17,8 @@ class Settings:
     usage: str = "chat"
     voice_tokens: int = 256
     mission_tokens: int = 4096
+    targeted_context: bool = True
+    retrieval_budget: int = 768
 
     def validate(self):
         try:
@@ -43,6 +45,11 @@ class Settings:
         for value in (self.voice_tokens, self.mission_tokens):
             if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 65536:
                 raise ValueError("Les budgets vocal et mission doivent être compris entre 1 et 65536 tokens.")
+        if not isinstance(self.targeted_context, bool):
+            raise ValueError("Le contexte ciblé doit être activé ou désactivé.")
+        if (not isinstance(self.retrieval_budget, int) or isinstance(self.retrieval_budget, bool)
+                or not 0 <= self.retrieval_budget <= 8192):
+            raise ValueError("Le budget des extraits doit être compris entre 0 et 8192 tokens estimés.")
         return self
 
     def for_request(self, source="text"):
@@ -71,32 +78,7 @@ def data_directory():
 
 
 def active_context(messages, settings):
-    """Conservative UTF-8 byte estimate, NOT an exact model tokenizer.
-
-    Keep whole completed turns, reserve output + template overhead, never
-    mutate the archive. The UI reports omitted messages explicitly.
-    """
-    system = ([{"role": "system", "content": settings.system_prompt}]
-              if settings.system_prompt else [])
-    budget = settings.context - settings.max_tokens - 256
-    cost = lambda m: len(m["content"].encode("utf-8")) + 32
-    budget -= sum(cost(m) for m in system)
-    if not messages or messages[-1]["role"] != "user":
-        raise ValueError("Un message utilisateur est requis.")
-    last = messages[-1]
-    if cost(last) > budget:
-        raise ValueError("Message trop long pour ce contexte. Réduisez-le ou augmentez le contexte.")
-    selected = [last]
-    budget -= cost(last)
-    # Only contiguous complete user/assistant pairs enter the active history.
-    previous = messages[:-1]
-    for index in range(len(previous) - 2, -1, -2):
-        pair = previous[index:index + 2]
-        if [m["role"] for m in pair] != ["user", "assistant"]:
-            break
-        size = sum(cost(m) for m in pair)
-        if size > budget:
-            break
-        selected[0:0] = pair
-        budget -= size
-    return system + selected, len(messages) - len(selected)
+    """Compatibility facade; all callers share the same context accounting."""
+    from .context import ContextBuilder
+    result = ContextBuilder(settings).build(messages)
+    return result.messages, result.stats["omitted_messages"]

@@ -112,13 +112,22 @@ class Store:
         return self.db.execute("SELECT * FROM messages WHERE session_id=? ORDER BY id", (sid,)).fetchall()
 
     def context(self, sid):
+        return [{"role": row["role"], "content": row["content"]}
+                for row in self.context_records(sid)]
+
+    def message(self, mid):
+        """Read the canonical original for a context provenance reference."""
+        return self.db.execute("SELECT * FROM messages WHERE id=?", (mid,)).fetchone()
+
+    def context_records(self, sid):
         # Failed/cancelled turns are archived, but never silently treated as complete.
         rows = self.messages(sid)
         result = []
         for i in range(0, len(rows) - 1, 2):
             user, assistant = rows[i:i + 2]
             if user["role"] == "user" and assistant["role"] == "assistant" and assistant["status"] == "complete":
-                result.extend({"role": r["role"], "content": r["content"]} for r in (user, assistant))
+                result.extend({key: row[key] for key in ("id", "session_id", "role", "content", "created")}
+                              for row in (user, assistant))
         return result
 
     def begin_turn(self, sid, text, model, source="text", metadata=None):

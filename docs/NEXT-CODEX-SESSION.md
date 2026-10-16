@@ -6,7 +6,10 @@ La demande J2.8 remplace l’ordre des lots J2.7 ci-dessous :
 1. Livré : raisonnement Ollama et budgets de génération, 74 tests ciblés sans
    ignoré, démarrage de contrôle vocal Linux réussi. Retrouver le SHA par
    `git log --oneline --grep='control Ollama reasoning'`.
-2. Context Builder centralisé, recherche ciblée et résumés contrôlés.
+2. Livré : Context Builder centralisé, budget UTF-8 prudent/réserve, derniers
+   tours complets, allègement des questions autonomes, rappels lexicaux et
+   résumés extractifs non exhaustifs. Bouton Contexte : sélection historique,
+   statistiques et originaux consultables. 100 tests ciblés distincts réussis.
 3. Mémoire persistante inspectable/approuvée, FTS5 et migrations sauvegardées.
 4. Observabilité et comparaison à configuration identique.
 Voix premium, Semantic Morphing et stockage restent différés, sans effacer leurs
@@ -18,6 +21,15 @@ envoyaient `think:false` par défaut ; ce contrôle manquait au nouveau client.
 L’ancien contexte estimait 2,4 caractères/token, tronquait le système et pouvait
 garder des messages isolés ; ne pas copier ces limites. Son FTS5/BM25 local est
 réutilisable, sans le considérer comme recherche sémantique complète.
+
+J2.8 lot1 publié **bbe88af**. Lot2 sans migration, index ou dépendance nouvelle ;
+les rappels concernent la conversation active. Les souvenirs durables approuvés,
+recherche FTS5 interconversations/documents, corrections/désactivation/suppression
+avec sauvegarde et migration sûre appartiennent au lot3 restant. Aucun souvenir
+durable n’est créé automatiquement. Les résumés sont des citations exactes de
+phrases originales, jamais une synthèse LLM systématique ; phrases trop longues
+omises plutôt que découpées en affirmations trompeuses. L’estimation UTF-8 reste
+prudente, pas une tokenisation exacte. Gains de tokens/latence Windows à mesurer.
 
 - Dépôt : https://github.com/ABBYWILLY/JARVIS-0.0.1
 - Branche : `feat/jalon-2-voice-presence`. Aucun changement direct de main/force push.

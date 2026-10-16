@@ -5,7 +5,8 @@ import tkinter as tk
 from dataclasses import replace
 from tkinter import font, messagebox, ttk
 
-from .config import Settings, active_context
+from .config import Settings
+from .context import ContextBuilder
 from .metrics import generation_metrics, metrics_label
 from .worker import Worker
 
@@ -125,6 +126,8 @@ class App:
         self.metrics_toggle = ttk.Checkbutton(model_row, text="Métriques", variable=self.metrics_visible,
             command=self.toggle_metrics, style="Metrics.TCheckbutton")
         self.metrics_toggle.pack(side="right", padx=(10, 0))
+        self.context_button = ttk.Button(model_row, text="Contexte", command=self.open_context)
+        self.context_button.pack(side="right", padx=(10, 0))
         self.send_button = ttk.Button(actions, text="Envoyer", command=self.send)
         self.send_button.pack(side="right")
         self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled")
@@ -261,12 +264,14 @@ class App:
             return
         try:
             request_settings = self.settings.for_request(source)
-            messages, omitted = active_context(self.store.context(self.session_id) + [{"role": "user", "content": text}], request_settings)
+            context = ContextBuilder(request_settings).build(
+                self.store.context_records(self.session_id) + [{"role": "user", "content": text}])
         except ValueError as exc:
             self.set_status(str(exc), True)
             return
         metadata = {"final_transcript": text} if source == "voice" else None
         self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model, source=source, metadata=metadata)
+        self.store.update_message_metadata(self.message_id, {"context": {**context.stats, "sources": context.sources}})
         self.voice.begin_turn(self.message_id, source)
         self.response = ""
         self.response_metrics = {}
@@ -274,9 +279,104 @@ class App:
             self.input.delete("1.0", "end")
         self.reload_history()
         self.render_session()
-        self.worker.start("chat", request_settings, messages)
+        self.worker.start("chat", request_settings, context.messages)
         self.busy("chat")
+        omitted = context.stats["omitted_messages"]
         self.set_status("Génération locale…" + (f" {omitted} anciens messages hors contexte actif, conservés dans l’historique." if omitted else ""))
+
+    def open_context(self):
+        """Inspect the recorded selection and its originals without altering it."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Contexte envoyé à Ollama")
+        dialog.configure(bg=PANEL, padx=16, pady=14)
+        dialog.transient(self.root)
+        dialog.geometry("820x660")
+        dialog.minsize(600, 480)
+        rows = [row for row in self.store.messages(self.session_id) if row["role"] == "assistant"]
+        recorded = [(row, json.loads(row["metadata"])) for row in rows]
+        recorded = [(row, metadata) for row, metadata in recorded if isinstance(metadata.get("context"), dict)]
+        if not recorded:
+            tk.Label(dialog, text="Aucun contexte instrumenté dans cette conversation.\nLes conversations déjà archivées restent conservées.",
+                     bg=PANEL, fg=MUTED, justify="left").pack(anchor="w", pady=14)
+            ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(anchor="e")
+            return
+        labels = [f"Réponse #{row['id']} · {row['created']} · {row['content'][:45]}" for row, _ in recorded]
+        picker = ttk.Combobox(dialog, name="responses", values=labels, state="readonly")
+        picker.pack(fill="x")
+        summary = tk.StringVar()
+        summary_label = tk.Label(dialog, name="summary", textvariable=summary, bg=PANEL, fg=MUTED,
+                 justify="left", anchor="w", wraplength=760, font=(self.font_family, 10))
+        summary_label.pack(fill="x", pady=12)
+        dialog.bind("<Configure>", lambda event: summary_label.configure(wraplength=max(300, event.width - 32))
+                    if event.widget is dialog else None)
+        tk.Label(dialog, text="Sources retenues — sélectionnez un passage pour consulter son original", bg=PANEL,
+                 fg=TEXT, anchor="w").pack(fill="x")
+        source_list = tk.Listbox(dialog, name="sources", height=5, bg=FIELD, fg=TEXT,
+            selectbackground="#244055", selectforeground=CYAN, exportselection=False, activestyle="dotbox")
+        source_list.pack(fill="x", pady=(6, 10))
+        detail_frame = tk.Frame(dialog, name="detail", bg=PANEL)
+        detail_frame.pack(fill="both", expand=True)
+        details = tk.Text(detail_frame, name="details", bg=FIELD, fg=TEXT, wrap="word", state="disabled",
+            font=(self.font_family, 10), padx=10, pady=10, borderwidth=0)
+        scrollbar = ttk.Scrollbar(detail_frame, command=details.yview)
+        details.configure(yscrollcommand=scrollbar.set)
+        details.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        sources = []
+
+        def write_details(text):
+            details.configure(state="normal")
+            details.delete("1.0", "end")
+            details.insert("1.0", text)
+            details.configure(state="disabled")
+
+        def show_source(_event=None):
+            indices = source_list.curselection()
+            if not indices:
+                write_details("Aucun message historique sélectionné pour cette demande.")
+                return
+            source = sources[indices[0]]
+            mid = source.get("message_id")
+            original = self.store.message(mid) if isinstance(mid, int) else None
+            heading = (f"Message #{mid if mid is not None else '—'} · {source.get('role', '—')} · "
+                       f"{source.get('created', '—')}\nConversation : {source.get('session_id', '—')}\n"
+                       f"Sélection : {'extrait ciblé' if source.get('method') == 'extractive' else 'échange récent'}\n")
+            if source.get("method") == "recent":
+                text = heading + ("\nOriginal archivé et injecté intégralement :\n" + original["content"]
+                                  if original is not None else "\nAperçu conservé (original indisponible) :\n" + source.get("excerpt", ""))
+            else:
+                text = heading + "\nPassage injecté :\n" + source.get("excerpt", "")
+                text += "\n\nOriginal archivé :\n" + (original["content"] if original is not None else "Original indisponible ; le passage injecté reste conservé.")
+            write_details(text)
+
+        def show_response(_event=None):
+            _, metadata = recorded[picker.current()]
+            context = metadata["context"]
+            metrics = generation_metrics(metadata.get("generation_metrics"))
+            duration = metrics.get("prompt_eval_duration")
+            prompt_time = f"{duration / 1_000_000:.1f} ms" if duration is not None else "—"
+            summary.set(
+                f"Estimation prudente UTF-8, pas un comptage exact : {context.get('context_estimate_tokens', '—')} tokens.\n"
+                f"Contexte total : {context.get('context_limit_tokens', '—')} · Réserve réponse : {context.get('output_reserved_tokens', '—')} · "
+                f"Stratégie : {context.get('context_strategy', '—')}\n"
+                f"Messages récents : {context.get('recent_messages', '—')} · Rappels ciblés : {context.get('retrieved_messages', '—')} · "
+                f"Résumés extractifs : {context.get('summary_messages', '—')} · Hors contexte : {context.get('omitted_messages', '—')}\n"
+                f"Prompt réellement évalué par Ollama : {metrics.get('prompt_eval_count', '—')} tokens · Traitement : {prompt_time}\n"
+                "Le rappel lexical et les extraits sélectionnés ne constituent pas une compréhension sémantique complète.")
+            sources[:] = [source for source in context.get("sources", []) if isinstance(source, dict)]
+            source_list.delete(0, "end")
+            for source in sources:
+                label = "Extrait" if source.get("method") == "extractive" else "Récent"
+                source_list.insert("end", f"{label} · #{source.get('message_id', '—')} · {source.get('role', '—')} · {source.get('excerpt', '')[:85]}")
+            if sources:
+                source_list.selection_set(0)
+            show_source()
+
+        picker.bind("<<ComboboxSelected>>", show_response)
+        source_list.bind("<<ListboxSelect>>", show_source)
+        picker.current(len(recorded) - 1)
+        show_response()
+        ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(anchor="e", pady=(10, 0))
 
     def finish(self, status, text, error=False, read_partial=False):
         if self.operation == "chat" and self.message_id is not None:
@@ -361,7 +461,7 @@ class App:
             return
         dialog = tk.Toplevel(self.root)
         dialog.title("Paramètres locaux")
-        dialog.configure(bg=PANEL, padx=20, pady=20)
+        dialog.configure(bg=PANEL, padx=20, pady=14)
         dialog.transient(self.root)
         dialog.grab_set()
         variables = {}
@@ -370,7 +470,7 @@ class App:
                   ("voice_tokens", "Budget réponse vocale (tokens)"),
                   ("mission_tokens", "Budget mission complexe (tokens)")]
         for i, (key, label) in enumerate(fields):
-            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=i, column=0, sticky="w", pady=5, padx=(0, 16))
+            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=i, column=0, sticky="w", pady=3, padx=(0, 16))
             variables[key] = tk.StringVar(value=str(getattr(self.settings, key)))
             ttk.Entry(dialog, textvariable=variables[key], width=34).grid(row=i, column=1, sticky="ew")
         choices = {
@@ -380,18 +480,27 @@ class App:
         for row, (key, label) in enumerate((("reasoning_mode", "Raisonnement"), ("usage", "Utilisation")), start=len(fields)):
             values = choices[key]
             variables[key] = tk.StringVar(value=next(name for name, value in values.items() if value == getattr(self.settings, key)))
-            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=row, column=0, sticky="w", pady=5, padx=(0, 16))
+            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=row, column=0, sticky="w", pady=3, padx=(0, 16))
             ttk.Combobox(dialog, textvariable=variables[key], values=list(values), state="readonly", width=32).grid(row=row, column=1, sticky="ew")
-        prompt_row = len(fields) + len(choices)
-        tk.Label(dialog, text="Instruction système (facultative)", bg=PANEL, fg=TEXT).grid(row=prompt_row, column=0, columnspan=2, sticky="w", pady=(10, 6))
+        context_row = len(fields) + len(choices)
+        variables["targeted_context"] = tk.BooleanVar(value=self.settings.targeted_context)
+        ttk.Checkbutton(dialog, name="targeted_context", text="Contexte ciblé et rappel lexical des anciens échanges",
+            variable=variables["targeted_context"]).grid(row=context_row, column=0, columnspan=2, sticky="w", pady=3)
+        variables["retrieval_budget"] = tk.StringVar(value=str(self.settings.retrieval_budget))
+        tk.Label(dialog, text="Budget des rappels ciblés (tokens estimés)", bg=PANEL, fg=TEXT).grid(
+            row=context_row + 1, column=0, sticky="w", pady=3, padx=(0, 16))
+        ttk.Entry(dialog, name="retrieval_budget", textvariable=variables["retrieval_budget"], width=34).grid(
+            row=context_row + 1, column=1, sticky="ew")
+        prompt_row = context_row + 2
+        tk.Label(dialog, text="Instruction système (facultative)", bg=PANEL, fg=TEXT).grid(row=prompt_row, column=0, columnspan=2, sticky="w", pady=(6, 4))
         prompt = tk.Text(dialog, height=4, width=58, bg=FIELD, fg=TEXT, insertbackground=CYAN, wrap="word", font=(self.font_family, 10))
         prompt.grid(row=prompt_row + 1, column=0, columnspan=2, sticky="ew")
         prompt.insert("1.0", self.settings.system_prompt)
         tk.Label(dialog, text="Historique et paramètres : " + str(self.store.db.execute("PRAGMA database_list").fetchone()[2]) +
-                 "\nStockage local non chiffré. Aucun accès système accordé au modèle."
-                 "\nRapide demande think:false ; Approfondi demande think:true. Automatique laisse le choix au modèle. Un paramètre refusé produit un avertissement."
-                 "\nLe budget vocal s’applique aux demandes du microphone. Chaque budget effectif est plafonné à la moitié du contexte."
-                 "\nTTFT reçu : envoi HTTP → premier texte visible, chargement et réseau inclus. Les tokens de génération peuvent inclure la pensée interne.",
+                 "\nStockage local non chiffré ; aucun accès système accordé au modèle."
+                 "\nRapide : think:false · Approfondi : think:true · Automatique : choix du modèle."
+                 "\nMicrophone : budget vocal. Budgets effectifs plafonnés à la moitié du contexte."
+                 "\nTTFT : envoi HTTP → texte visible. Les tokens de génération peuvent inclure la pensée interne.",
                  bg=PANEL, fg=MUTED, wraplength=620, justify="left", font=(self.font_family, 9)).grid(row=prompt_row + 2, column=0, columnspan=2, pady=12, sticky="w")
 
         def save():
@@ -402,6 +511,8 @@ class App:
                     mission_tokens=int(variables["mission_tokens"].get()),
                     reasoning_mode=choices["reasoning_mode"][variables["reasoning_mode"].get()],
                     usage=choices["usage"][variables["usage"].get()],
+                    targeted_context=variables["targeted_context"].get(),
+                    retrieval_budget=int(variables["retrieval_budget"].get()),
                     system_prompt=prompt.get("1.0", "end-1c")).validate()
                 self.store.save_settings(settings)
                 if settings.system_prompt != self.settings.system_prompt:

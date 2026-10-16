@@ -1,5 +1,43 @@
 # Jalon 2 — progression vérifiable
 
+## J2.8 — lot 2 : contexte ciblé et inspectable
+
+`ContextBuilder` centralise le budget total, la réserve de réponse effective,
+les instructions système intactes, la demande intacte et les tours récents
+complets. Estimation UTF-8 prudente +32/message +256 de marge, jamais assimilée
+au tokenizer Qwen. Questions autonomes : fenêtre allégée ; suivis : plus de
+tours ; missions : fenêtre élargie. Déduplication exacte/NFC sans altérer casse
+ou indentation du code. Aucun appel supplémentaire au LLM.
+
+Rappel lexical ciblé dans la conversation active, pondéré par rareté des mots ;
+phrases originales contiguës en résumé extractif explicitement non exhaustif,
+sans couper une longue phrase potentiellement négative. Budget incluant les
+marquages JSON/citations. Sources par ID/date/rôle/conversation ; aperçu récent
+borné pour éviter de recopier tout l’historique dans chaque métadonnée.
+
+COMMAND OS : bouton Contexte, sélection d’une réponse ancienne, détail de son
+contexte, originaux consultables, comparaison à `prompt_eval_count` et au temps
+de traitement réel. Réglages persistants ciblage/budget des extraits ; ciblage
+désactivable. PRESENCE et voix inchangées. Schéma SQLite2 conservé sans migration.
+
+**100 tests ciblés distincts réussis, aucun ignoré** : test_context20,
+test_context_ui6, test_reasoning_ui6, test_context_storage3,
+test_request_settings4, test_jarvis.SettingsTests4/StoreTests4/DesktopTests3,
+test_voice_storage8, test_metrics10, test_voice_flow28, test_presence_integration4.
+Revue supplémentaire de 1000 variantes : 908 constructions dans le budget,
+92 refusées explicitement pour budget insuffisant (hors compte de tests).
+Windows, tokens réels et gain de latence toujours à mesurer sur Ollama local.
+
+Comparaison reproductible sur les six tours de la fixture `test_context.py`,
+contexte4096/réserve1024 identiques, ciblage désactivé puis activé : estimation
+UTF-8 incluant256 de marge, « 2+2? » 1609→514 (−68,1 %), suivi « Et le premier ? »
+1617→960 (−40,6 %), rappel du port Zephyr1598→892 (−44,2 %), deux sources
+anciennes effectivement retenues, port8765 et négation préservés. Ce sont des
+tailles estimées de prompts de test, pas des tokens ou délais mesurés sur Qwen.
+
+Lot1 publié `bbe88af`. Prochaine étape J2.8 : mémoire approuvée/FTS5/migration
+sauvegardée, puis comparaison instrumentée à configuration identique.
+
 ## J2.8 — lot 1 : génération Ollama
 
 L’ancien `JARVIS-SOURCES-v0.5/jarvis_core.py` (`ABBYWILLY/JARVIS`, b6066c4)
