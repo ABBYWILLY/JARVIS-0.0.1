@@ -145,7 +145,8 @@ Les sous-titres commencent sur les callbacks du PCM envoyé au périphérique, a
 prise en compte de l’horloge de sortie. Les groupes de mots sont une **approximation
 par durée**, signalée dans l’interface, sans timestamps mot à mot. Le bouton Copier
 copie le groupe visible ; COMMAND OS conserve l’intégralité des textes dans SQLite.
-Les fichiers audio micro ne sont pas enregistrés. La base texte reste non chiffrée.
+Les fichiers audio micro ne sont pas enregistrés par défaut. Le diagnostic peut
+exporter un unique WAV sur demande explicite. La base texte reste non chiffrée.
 
 ## Compilation et récupération de l’artefact
 
@@ -212,3 +213,52 @@ Kokoro a été consulté comme alternative Apache-2.0, mais seule sa voix FR ff_
 était vérifiable : il n’a pas été retenu pour garantir deux timbres FR. Un contrat
 SpeechProvider isole le TTS ; **Piper est le seul moteur livré dans cette version**.
 Aucun code ni asset des références AGPL/CC BY-NC n’a été copié.
+
+## Lot 1 : moteur réutilisé et diagnostic français
+
+Piper se prépare pendant Ollama, sans lecture ni suspension micro. Après fin
+normale, la voix reste chargée pendant l’écoute ; interruption active, erreur,
+arrêt de l’écoute ou nouveau profil libèrent le moteur. `tts_engine /
+ready_before_phrase` indique s’il était prêt ; aucun faux temps de chargement nul.
+Une première clause assez longue part à sa virgule avant la limite de96 caractères.
+
+Dans **Diagnostic micro / STT**, le brut Whisper et le texte conservé sont comparables,
+langue demandée `fr`. Pour inspecter le signal : **Enregistrer le prochain tour en
+WAV…**, choisir un chemin neuf et confirmer. Un tour, mono PCM16/16kHz,625Kio maximum.
+Aucun écrasement ni envoi. **Réécouter** suspend le micro, utilise la sortie choisie
+et reste arrêtable. Les fichiers restent aux chemins choisis jusqu’à votre suppression.
+Une demande affectée à un tour abandonné est signalée comme annulée.
+RMS/pic/écrêtage/DC sont mesurés ; énergie aux bords = simple indice de coupure,
+jamais preuve (le bruit peut le déclencher). `max_duration` indique la limite20s.
+Choisir une des cinq références françaises, la lire, puis **Comparer** calcule le
+WER du dernier résultat (accents conservés, casse/ponctuation normalisées).
+
+Depuis les sources Windows, fermer JARVIS pour éviter la concurrence CPU, puis :
+
+```powershell
+.\.venv-voice\Scripts\python.exe -m jarvis.audio_diagnostics --benchmark-tts --models-dir "$env:LOCALAPPDATA\Jarvis\models"
+```
+
+JSON : deux chargements Piper contre un chargement pour deux synthèses identiques,
+Tom par défaut ; chargement, premier PCM, synthèse totale. Aucun son joué/spawn :
+pas une latence audible. Caches et ordre des essais peuvent influencer le résultat.
+Aucun téléchargement. Remplacer le dossier si vos modèles sont ailleurs.
+
+Pour le corpus STT, lire/exporter les cinq références vers des WAV distincts.
+Créer `corpus-fr.json` UTF-8 avec la liste des fichiers et textes réellement lus :
+
+```json
+[{"wav":"phrase-1.wav","reference":"Bonjour JARVIS, peux-tu me dire quelle heure il est ?"}]
+```
+
+Ajouter les quatre autres références du diagnostic, puis lancer :
+
+```powershell
+.\.venv-voice\Scripts\python.exe -m jarvis.audio_diagnostics --corpus .\corpus-fr.json --models-dir "$env:LOCALAPPDATA\Jarvis\models"
+```
+
+Whisper chargé une fois ; JSON par fichier + WER global pondéré et temps. Comparer
+le même corpus avant/après. La fidélité réelle ne se déduit pas des tests simulés.
+Garder silence VAD et garde speakers350ms pour comparer ; aucun changement aveugle
+de threads/GPU. PortAudio estime le DAC, pas le délai Bluetooth XTREME140 : comparer
+à une sortie filaire avec même configuration avant d’attribuer un délai au moteur.

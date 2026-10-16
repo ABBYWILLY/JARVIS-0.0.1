@@ -258,3 +258,26 @@ créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne 
   tours à configuration constante, reprise pendant STT, barge-in casque, retour
   micro speakers. Build Windows/artefact à vérifier, aucune validation Windows
   du présent correctif annoncée. Moteurs, seuils, modèles et visualiseur conservés.
+
+## J2.7 optimisation audio — lot 1
+
+- Piper préparé pendant Ollama, réutilisé au repos après fin normale, générations
+  par commande. Lecture active distincte du worker chargé : Stop/PRESENCE/reprise
+  speakers préservés. Interruption active/urgence/erreur ferment le processus ;
+  arrêt écoute/sommeil/fermeture libèrent aussi un moteur encore en chargement.
+  Première clause assez longue envoyée à sa virgule avant96 caractères.
+- STT brut/conservé, fr, export exclusif d’un seul WAV demandé/confirmé, réécoute
+  sans Piper, échec d’export sans perte de conversation et demande annulée signalée.
+  Qualité PCM et bords heuristiques, cinq références/WER ; CLI corpus/benchmark.
+- **80 tests distincts réussis, aucun ignoré** :75 audio/diagnostic/flux/PRESENCE,
+  3 desktop J1, 2 nouveaux cas réécoute sans Piper/demande WAV remplacée. Reprises
+  non additionnées. Smoke source vocal réussi avec profil temporaire sous /tmp ;
+  premier essai sur profil par défaut hors droits refusé, corrigé par isolation.
+  Silero/SOXR/Tk/SQLite/HTTP réels ; reconnaissance/voix/callbacks de tests simulés.
+- Avant/après contrôlé : deux tours→2 chargements auparavant,1 en réutilisation.
+  **Aucun gain Windows en secondes ni WER réel mesuré** sans modèles et microphone.
+  Commandes exactes et limites dans VOICE.md ; modèles absents refusés sans téléchargement.
+- Aucun poids, moteur alternatif, paquet, thread ou GPU ajouté. Disque : code
+  léger ;625Kio maximum par WAV demandé, rien supprimé. VAD et garde350ms conservés
+  faute de preuve justifiant réduction ; délai acoustique Bluetooth non mesuré.
+- Lot1 codé/testé, recette matérielle Windows ouverte ; lots2–5 non commencés.

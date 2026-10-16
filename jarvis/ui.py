@@ -210,7 +210,7 @@ class App:
         for widget in (self.new_button, self.delete_button, self.settings_button, self.refresh_button, self.send_button, self.history):
             widget.configure(state=state)
         self.model_combo.configure(state="disabled" if operation else "readonly")
-        speech_active = hasattr(self, "voice") and self.voice.speech.process is not None
+        speech_active = hasattr(self, "voice") and self.voice.tts_active
         self.stop_button.configure(state="normal" if operation or speech_active else "disabled")
         self.dead_polls = 0
 
@@ -260,7 +260,7 @@ class App:
             self.append("\n", "meta")
         self.worker.stop()
         self.busy(None)
-        if self.voice.speech.process is None:
+        if not self.voice.tts_active:
             self.voice.notify_presence("listening" if self.voice.listening else "silent")
         self.message_id = None
         self.set_status(text, error)
@@ -268,7 +268,7 @@ class App:
     def cancel(self):
         if self.operation:
             self.finish("cancelled", "Arrêt demandé ; réponse partielle conservée. Ollama peut mettre un instant à libérer le modèle.")
-        elif self.voice.speech.process is not None:
+        elif self.voice.tts_active:
             self.voice.cancel_speech()
             self.set_status("Lecture vocale arrêtée ; texte conservé.")
 

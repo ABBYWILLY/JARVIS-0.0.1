@@ -268,7 +268,8 @@ class VoiceFlowTests(unittest.TestCase):
             self.voice.speech.events.append(AudioEvent("speech_done", generation=self.voice.epoch))
             self.voice.poll()
             self.assertEqual(json.loads(self.store.messages(self.app.session_id)[1]["metadata"])["audio_status"], "complete")
-            self.assertFalse(self.voice.speech.alive())
+            self.assertTrue(self.voice.speech.alive())  # Idle voice is reused, audio is finished.
+            self.assertFalse(self.voice.tts_active)
             self.pump_until(lambda: self.voice.capture.commands[-1] == {"kind": "mute", "value": False})
 
     def test_headphone_voice_interrupt_stops_audio_and_invalidates_old_visuals(self):
@@ -291,6 +292,88 @@ class VoiceFlowTests(unittest.TestCase):
         self.voice.poll()
         self.app.presence.update_event.assert_not_called()
         self.assertEqual(self.store.messages(self.app.session_id)[1]["id"], mid)
+
+    def test_preload_overlaps_llm_without_muting_then_reuses_idle_voice(self):
+        self.activate()
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.assertTrue(self.voice.speech.alive())
+        self.assertFalse(self.voice.tts_active)
+        self.assertEqual(self.voice.speech.commands, [])
+        self.assertNotIn({"kind": "mute", "value": True}, self.voice.capture.commands)
+        self.assertNotIn("audio_status", json.loads(self.store.messages(self.app.session_id)[1]["metadata"]))
+        self.voice.speech.events.append(AudioEvent("tts_ready", {"load_ms": 120}, self.voice.epoch))
+        self.voice.poll()
+        self.voice.chunk("Première réponse.")
+        self.voice.finish_turn("complete")
+        self.voice.poll()
+        self.voice.speech.events.append(AudioEvent("speech_done", generation=self.voice.epoch))
+        self.voice.poll()
+        self.assertTrue(self.voice.speech.alive())
+        self.assertFalse(self.voice.tts_active)
+        second = self.store.begin_turn(self.app.session_id, "Autre question", "local", source="voice")
+        self.voice.begin_turn(second, "voice")
+        self.voice.chunk("Seconde réponse.")
+        self.assertEqual(len(self.voice.speech.starts), 1)
+        self.assertTrue(self.voice.tts_ready)
+        self.assertTrue(self.voice.tts_active)
+        self.voice.stop_listening()
+        self.assertFalse(self.voice.speech.alive())
+
+    def test_preload_failure_is_reported_and_next_turn_restarts_engine(self):
+        self.activate()
+        first = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(first, "voice")
+        self.voice.speech.events.append(AudioEvent("tts_load_error", "Voix absente", self.voice.epoch))
+        self.voice.poll()
+        self.assertIn("Voix absente", self.voice.status.get())
+        self.assertFalse(self.voice.speech.alive())
+        second = self.store.begin_turn(self.app.session_id, "Réessayer", "local", source="voice")
+        self.voice.begin_turn(second, "voice")
+        self.assertTrue(self.voice.speech.alive())
+        self.assertEqual(len(self.voice.speech.starts), 2)
+
+    def test_sample_request_requires_confirmation_and_replay_mutes_microphone(self):
+        self.activate()
+        self.voice.open_diagnostics()
+        path = str(Path(self.temp.name) / "requested.wav")
+        with patch("jarvis.voice_ui.filedialog.asksaveasfilename", return_value=path), \
+                patch("jarvis.voice_ui.messagebox.askyesno", return_value=False):
+            self.voice.request_sample()
+        self.assertNotIn({"kind": "sample_next", "path": path}, self.voice.capture.commands)
+        with patch("jarvis.voice_ui.filedialog.asksaveasfilename", return_value=path), \
+                patch("jarvis.voice_ui.messagebox.askyesno", return_value=True):
+            self.voice.request_sample()
+        self.assertEqual(self.voice.capture.commands[-1], {"kind": "sample_next", "path": path})
+        self.voice.capture.events.append(AudioEvent("sample_saved", {"path": path, "quality": {"rms": 0.02}}))
+        self.voice.poll()
+        self.voice.replay_sample()
+        self.assertEqual(self.voice.speech.starts[-1][0], "sample")
+        self.assertEqual(self.voice.speech.commands, [path])
+        self.assertEqual(self.voice.capture.commands[-1], {"kind": "mute", "value": True})
+        self.assertTrue(self.voice.tts_active)
+        self.voice.speech.events.append(AudioEvent("speech_done", generation=self.voice.epoch))
+        self.voice.poll()
+        self.assertFalse(self.voice.speech.alive())
+        self.assertFalse(self.voice.tts_active)
+        self.pump_until(lambda: self.voice.capture.commands[-1] == {"kind": "mute", "value": False})
+        self.voice.reference.set("Bonjour, été !")
+        self.voice.stt_details = {"result": "bonjour été"}
+        self.voice.compare_reference()
+        self.assertIn("0.0%", self.voice.reference_result)
+        self.voice.reference.set("...")
+        self.voice.compare_reference()
+        self.assertIn("au moins un mot", self.voice.reference_result)
+        self.assertTrue(self.voice.listening)
+
+    def test_stopping_listening_releases_a_still_loading_idle_engine(self):
+        self.activate()
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.voice.stop_listening()
+        self.assertFalse(self.voice.speech.alive())
+        self.assertFalse(self.voice.tts_ready)
+        self.assertFalse(self.voice.tts_active)
 
     def test_manual_stop_also_stops_audio_after_llm_finished(self):
         self.activate()
@@ -454,6 +537,63 @@ class VoiceFlowTests(unittest.TestCase):
 
 
 class RuntimeContractTests(unittest.TestCase):
+    def test_explicit_sample_replay_reads_wav_without_loading_piper(self):
+        from jarvis.audio_diagnostics import save_wav
+        from jarvis.voice_config import VoiceSettings
+        from jarvis.voice_runtime import sample_worker
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sample.wav"
+            save_wav(path, [0.25] * 1600)
+            commands, outbox = queue.Queue(), queue.Queue()
+            commands.put(str(path))
+            with patch("jarvis.tts.AudioPlayer") as player, patch("jarvis.tts.PiperSpeech") as piper:
+                sample_worker(outbox, commands, VoiceSettings().to_dict(), 7)
+            piper.assert_not_called()
+            pcm = player.return_value.play.call_args.args[0]
+            self.assertEqual(pcm.sample_rate, 16000)
+            self.assertEqual(pcm.samples, [0.25] * 1600)
+            event = outbox.get_nowait()
+            self.assertEqual((event.kind, event.generation), ("speech_done", 7))
+
+    def test_persistent_worker_loads_once_for_two_generations(self):
+        from jarvis.tts import PCM
+        from jarvis.voice_config import VoiceSettings
+        from jarvis.voice_runtime import speech_worker
+        from tests.test_capture_turns import EndCapture
+
+        class Commands:
+            def __init__(self):
+                self.commands = iter([{"text": text, "generation": generation}
+                    for text, generation in (("Bonjour.", 4), (None, 4), ("Rebonjour.", 9), (None, 9))])
+
+            def get(self):
+                try:
+                    return next(self.commands)
+                except StopIteration:
+                    raise EndCapture
+
+        outbox = queue.Queue()
+        with patch("jarvis.tts.PiperSpeech") as speech, patch("jarvis.tts.AudioPlayer") as player:
+            speech.return_value.synthesize.side_effect = [[PCM([0.1], 16000)], [PCM([0.2], 16000)]]
+            with self.assertRaises(EndCapture):
+                speech_worker(outbox, Commands(), VoiceSettings().to_dict(), 4, persistent=True)
+        speech.assert_called_once()
+        self.assertEqual(player.return_value.play.call_count, 2)
+        events = list(outbox.queue)
+        self.assertEqual([e.generation for e in events if e.kind == "speech_done"], [4, 9])
+        self.assertEqual([call.args[3] for call in player.return_value.play.call_args_list], [4, 9])
+
+    def test_speech_transport_freezes_generation_with_each_command(self):
+        transport = AudioProcess()
+        transport.kind = "speech"
+        transport.commands = queue.Queue(maxsize=2)
+        transport.generation = 4
+        self.assertTrue(transport.send("Bonjour"))
+        transport.generation = 9
+        self.assertTrue(transport.send(None))
+        self.assertEqual(transport.commands.get_nowait(), {"text": "Bonjour", "generation": 4})
+        self.assertEqual(transport.commands.get_nowait(), {"text": None, "generation": 9})
+
     def test_speech_worker_reports_load_and_first_block_timing_in_epoch(self):
         from jarvis.tts import PCM
         from jarvis.voice_config import VoiceSettings

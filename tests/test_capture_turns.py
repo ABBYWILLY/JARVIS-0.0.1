@@ -5,7 +5,9 @@ No microphone or real speech recognition is claimed by these regression tests.
 import queue
 import threading
 import time
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from jarvis.audio import FRAME, TurnDetector
@@ -19,8 +21,10 @@ class EndCapture(BaseException):
 
 def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=False,
                 finish_on_start=False, hold_until_turns=0, mute_when_queued=False,
-                worker=capture_worker):
+                initial_commands=(), commands_after_first_turn=(), worker=capture_worker):
     commands = queue.Queue()
+    for command in initial_commands:
+        commands.put(command)
     events, calls = [], []
     current = [0.0]
     release = threading.Event()
@@ -28,6 +32,9 @@ def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=F
     class Outbox:
         def put(self, event, **kwargs):
             events.append(event)
+            if event.kind == "turn_end" and sum(e.kind == "turn_end" for e in events) == 1:
+                for command in commands_after_first_turn:
+                    commands.put(command)
             if event.kind == "turn_end" and sum(e.kind == "turn_end" for e in events) >= hold_until_turns:
                 release.set()
             if event.kind == "stt_queued" and mute_when_queued:
@@ -93,6 +100,44 @@ def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=F
 
 
 class CaptureTurnTests(unittest.TestCase):
+    def test_superseded_queued_sample_reports_cancellation_without_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cancelled.wav"
+            events, _ = run_capture(([0.95] * 10 + [0.01] * 30) * 3, hold_until_turns=3,
+                commands_after_first_turn=[{"kind": "sample_next", "path": str(path)}])
+            self.assertFalse(path.exists())
+            self.assertIn("annulée", next(e.payload for e in events if e.kind == "sample_error"))
+
+    def test_wav_never_written_without_an_explicit_request(self):
+        with patch("jarvis.audio_diagnostics.save_wav") as save:
+            run_capture([0.95] * 10 + [0.01] * 30)
+        save.assert_not_called()
+
+    def test_explicit_sample_exports_one_real_wav_even_when_stt_fails(self):
+        from jarvis.audio_diagnostics import read_wav
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "sample.wav"
+            events, calls = run_capture(([0.95] * 10 + [0.01] * 30) * 2, fail_first=True,
+                initial_commands=[{"kind": "sample_next", "path": str(path)}])
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(path.exists())
+            self.assertEqual(len(read_wav(path)), len(calls[0]))
+            self.assertEqual(len([e for e in events if e.kind == "sample_saved"]), 1)
+            report = next(e.payload for e in events if e.kind == "sample_saved")
+            self.assertGreater(report["quality"]["rms"], 0)
+            self.assertEqual(report["end_reason"], "silence")
+            self.assertIn("stt_error", [e.kind for e in events])
+
+    def test_sample_export_failure_preserves_existing_file_and_conversation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "keep.wav"
+            path.write_bytes(b"preserved")
+            events, _ = run_capture([0.95] * 10 + [0.01] * 30,
+                initial_commands=[{"kind": "sample_next", "path": str(path)}])
+            self.assertEqual(path.read_bytes(), b"preserved")
+            self.assertIn("sample_error", [e.kind for e in events])
+            self.assertIn("transcript", [e.kind for e in events])
+
     def test_muting_discards_queued_stt_before_it_can_start(self):
         sequence = ([0.95] * 10 + [0.01] * 30) * 2
         events, calls = run_capture(sequence, hold_until_turns=2, mute_when_queued=True)

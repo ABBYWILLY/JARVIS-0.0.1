@@ -10,6 +10,12 @@ from jarvis.voice_config import VOICES, VoiceSettings
 
 
 class SegmentTests(unittest.TestCase):
+    def test_opening_can_start_at_a_natural_clause_without_tiny_fragments(self):
+        buffer = SentenceBuffer()
+        opening = "Bonjour, voici une première explication claire, "
+        self.assertEqual(buffer.feed(opening), [opening.strip()])
+        self.assertEqual(buffer.feed("puis la suite de la phrase.", final=True), ["puis la suite de la phrase."])
+
     def test_first_phrase_starts_before_240_characters_without_losing_french_text(self):
         buffer = SentenceBuffer()
         text = "Je vous propose une réponse détaillée et précise qui commence sans ponctuation et garde tous les mots français "

@@ -51,8 +51,11 @@ class SentenceBuffer:
             # characters. Following phrases retain the existing batching bound.
             limit = 240 if self.emitted else 96
             match = re.search(r"[.!?;:\n](?:\s|$)", self.pending)
+            clause = re.search(r",\s", self.pending[40:limit]) if not self.emitted else None
             if match and match.end() <= limit:
                 end = match.end()
+            elif clause:
+                end = 40 + clause.end()
             elif len(self.pending) >= limit:
                 end = self.pending.rfind(" ", 0, limit)
                 if end <= 0:

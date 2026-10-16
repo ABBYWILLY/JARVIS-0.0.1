@@ -58,6 +58,22 @@ class TurnTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec("faster_whisper"), "Dépendances vocales non installées")
 class RealVadTests(unittest.TestCase):
+    def test_raw_french_diagnostic_does_not_change_existing_no_speech_policy(self):
+        from jarvis.audio import FrenchWhisper
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "model.bin").touch()
+            with patch("faster_whisper.WhisperModel") as model:
+                model.return_value.transcribe.return_value = (iter([
+                    SimpleNamespace(text=" Bonjour été ", no_speech_prob=0.1),
+                    SimpleNamespace(text=" Bruit ignoré ", no_speech_prob=0.95),
+                ]), SimpleNamespace(language="fr"))
+                engine = FrenchWhisper(directory)
+                self.assertEqual(engine.transcribe([0.0] * RATE), "Bonjour été")
+                self.assertEqual(engine.last_result["raw_result"], "Bonjour été Bruit ignoré")
+                self.assertEqual(engine.last_result["language_requested"], "fr")
+                self.assertEqual(engine.last_result["discarded_segments"], 1)
+                self.assertEqual(model.return_value.transcribe.call_args.kwargs["language"], "fr")
+
     def test_native_pcm_resampling_preserves_audio_and_512_sample_frames(self):
         import numpy as np
         import soxr

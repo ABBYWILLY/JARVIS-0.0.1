@@ -2,9 +2,41 @@
 
 - Dépôt : https://github.com/ABBYWILLY/JARVIS-0.0.1
 - Branche : `feat/jalon-2-voice-presence`. Aucun changement direct de main/force push.
-- Dernier correctif : `fix(voice): retain pending STT turns and measure response latency`.
+- Dernier lot : `perf(voice): reuse Piper and add opt-in French audio diagnostics`.
   Retrouver son SHA par `git log -5 --oneline`.
 - J2.0–J2.6 et jalon 1 préservés. Lire JALON-2-PROGRESS.md et VOICE.md pour les preuves.
+
+## Optimisation audio — lot 1 livré, recette Windows ouverte
+
+Base0b47997 ; propriétaire : STT/conversation légèrement améliorés, latence encore
+perceptible, qualité Piper insuffisante. Ryzen7800X3D/RTX3070 8Go/32Go RAM,
+Qwen3.5 Abliterated4B, peu de disque. Aucun chiffre de latence PC fourni.
+
+- Piper préchauffé pendant Ollama et réutilisé après fin normale ; worker chargé
+  distinct de lecture active, epochs par commande, arrêt fort sur interruption.
+  Arrêt écoute/sommeil/fermeture libèrent le moteur ; profil nouveau invalide le cache.
+- Première clause à sa virgule si assez longue ; seuil initial96 conservé.
+  Aucun changement aveugle de VAD/garde350ms/threads/GPU.
+- Diagnostic STT brut/conservé, fr, un WAV explicite confirmé avec chemin neuf,
+  réécoute arrêtable, qualité PCM/indices de bords, cinq références et WER.
+  CLI corpus et benchmark Piper avant/après : commandes dans VOICE.md.
+- 80 tests distincts réussis, smoke source vocal isolé réussi sous Linux.
+  Deux tours→un chargement plutôt que deux contrôlé à moteur simulé, aucun gain
+  Windows en secondes ni WER réel annoncé sans poids/enregistrements ici.
+  Zéro poids ajouté, maximum625Kio par WAV demandé, rien supprimé.
+
+Prochaine action : sur le PC, exécuter le benchmark Piper de VOICE.md et conserver
+le JSON ; compléter ensuite corpus/recette matérielle. Vérifier l’artefact Windows.
+
+Ordre restant, aucun autre lot commencé :
+2. Statistiques réelles Ollama sous réponse : modèle/tokens/tok-s/TTFT/durée ; panneau
+   temporel PRESENCE compact, masquable, aucune fausse activité biologique/interne.
+3. Comparer Chatterbox Multilingual V3/Qwen3-TTS0.6B/Pocket TTS : français, prosodie,
+   timbres, ressources avec Qwen4B/3070 ; vérifier licences code/poids/voix, un seul
+   candidat et préécoute avant remplacement. Inventaire tailles/chemins et retrait
+   confirmé après validation seulement, sans toucher données/Ollama/dépendances partagées.
+4. THINKING plus marqué sur visualiseur unique, diagnostic/test du spectre émotionnel.
+5. Emoji-aware puis100 vrais symboles : spécification existante ci-dessous à réutiliser.
 
 ## État actuel J2.7 — priorités techniques
 

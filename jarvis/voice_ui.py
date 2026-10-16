@@ -25,6 +25,12 @@ class VoiceControls:
         self.epoch = self.heard = 0
         self.mid = None
         self.reading = self.end_pending = False
+        self.tts_active = self.tts_ready = False
+        self.tts_profile = None
+        self.playing_sample = False
+        self.last_sample = None
+        self.stt_details = {}
+        self.reference_result = ""
         self.segmenter = SentenceBuffer()
         self.last_capture = self.last_speech = 0.0
         self.pending_visuals = []
@@ -98,7 +104,9 @@ class VoiceControls:
         self.pending_visuals.clear()
         self.pending_phrases.clear()
         self.end_pending = self.reading = self.listening = False
+        self.tts_active = self.tts_ready = False
         self.transcribing = False
+        self.playing_sample = False
         self.mid = None
         if self.resume_id is not None:
             self.app.root.after_cancel(self.resume_id)
@@ -115,14 +123,29 @@ class VoiceControls:
         self.reading = self.listening
         self.segmenter = SentenceBuffer()
         self.notify_presence("thinking")
+        if self.reading:
+            self.prepare_speech()
+
+    def prepare_speech(self):
+        # Warm loading overlaps Ollama. It never opens/mutes the microphone and
+        # opens no output stream until an actual phrase is available.
+        if (self.speech.process is None or not self.speech.alive()
+                or self.tts_profile != self.settings):
+            self.speech.start("speech", self.settings, self.epoch)
+            self.tts_profile = self.settings
+            self.tts_ready = False
+            self.last_speech = time.monotonic()
+        self.speech.generation = self.epoch
 
     def submit_phrase(self, phrase):
         if not self.reading:
             return
-        if self.speech.process is None:
+        if not self.tts_active:
             self.tts_requested_at = time.monotonic()
             self.mark_latency("Premier texte → première phrase TTS", self.first_llm_at, self.tts_requested_at)
-            self.speech.start("speech", self.settings, self.epoch)
+            self.prepare_speech()
+            self.record_diagnostic("tts_engine", {"ready_before_phrase": self.tts_ready})
+            self.tts_active = True
             self.app.stop_button.configure(state="normal")
             self.last_speech = time.monotonic()
             self.app.store.update_message_metadata(self.mid, {"tts_engine": "piper", "voice": self.settings.voice, "audio_status": "synthesizing"})
@@ -160,21 +183,25 @@ class VoiceControls:
         if self.reading:
             for phrase in self.segmenter.feed("", final=True):
                 self.submit_phrase(phrase)
-            if self.speech.process is not None:
+            if self.tts_active:
                 self.end_pending = True
             else:
                 self.reading = False
                 self.mid = None
                 self.notify_presence("listening" if self.listening else "silent")
-        elif not self.speech.alive():
+        elif not self.tts_active:
             self.notify_presence("listening" if self.listening else "silent")
 
     def cancel_speech(self, status="interrupted"):
         if self.resume_id is not None:
             self.app.root.after_cancel(self.resume_id)
             self.resume_id = None
-        had_audio = self.speech.process is not None
-        self.speech.stop()
+        had_audio = self.tts_active
+        if had_audio or not self.listening or status == "error":
+            self.speech.stop()
+            self.tts_ready = False
+        self.tts_active = False
+        self.playing_sample = False
         self.epoch += 1
         self.pending_visuals.clear()
         self.pending_phrases.clear()
@@ -195,7 +222,7 @@ class VoiceControls:
 
     def _resume_microphone(self, epoch):
         self.resume_id = None
-        if self.listening and epoch == self.epoch and self.speech.process is None:
+        if self.listening and epoch == self.epoch and not self.tts_active:
             self.capture.send({"kind": "mute", "value": False})
             self.status.set("Écoute locale active")
             if not self.app.operation:
@@ -213,6 +240,13 @@ class VoiceControls:
             if event.kind == "diagnostic":
                 self.diagnostics = event.payload
                 self.refresh_diagnostics()
+            elif event.kind in {"sample_armed", "sample_saved", "sample_error"}:
+                self.record_diagnostic(event.kind, event.payload)
+                if event.kind == "sample_saved":
+                    self.last_sample = event.payload
+                    self.status.set("Échantillon PCM enregistré sur votre demande ; réécoute disponible dans le diagnostic.")
+                elif event.kind == "sample_error":
+                    self.status.set("Échantillon non enregistré : " + str(event.payload))
             elif event.kind in {"turn_end", "stt_complete", "capture_error", "stt_superseded"}:
                 self.record_diagnostic(event.kind, event.payload)
                 if event.generation == self.heard:
@@ -222,6 +256,7 @@ class VoiceControls:
                             self.set_latency("Silence de fin de tour (PCM)", event.payload["silence_ms"])
                     elif event.kind == "stt_complete":
                         self.transcribing = False
+                        self.stt_details = event.payload
                         self.stt_latency(event.payload)
                     elif event.kind == "stt_superseded":
                         self.transcribing = False
@@ -239,6 +274,8 @@ class VoiceControls:
                 self.cancel_speech()
                 self.transcribing = False
                 self.reset_turn_latency()
+                self.stt_details = {}
+                self.reference_result = ""
                 if self.app.operation == "chat":
                     self.app.cancel()
                 self.status.set("Voix détectée")
@@ -266,7 +303,7 @@ class VoiceControls:
             elif event.kind == "mic_level":
                 if event.payload.get("speaking"):
                     self.notify_presence("user_speaking", signal=event.payload)
-                elif self.listening and not self.transcribing and not self.app.operation and not self.speech.alive():
+                elif self.listening and not self.transcribing and not self.app.operation and not self.tts_active:
                     self.notify_presence("listening", signal=event.payload)
             elif event.kind == "listening":
                 if event.payload:
@@ -283,6 +320,16 @@ class VoiceControls:
             self.status.set("Processus micro arrêté. Réactivez l’écoute après vérification audio.")
         for event in self.speech.poll():
             self.last_speech = now
+            if event.kind == "tts_ready":
+                self.tts_ready = True
+                self.record_diagnostic("tts_loaded", event.payload)
+                if event.generation == self.epoch and event.payload:
+                    self.set_latency("Chargement Piper (worker)", event.payload["load_ms"])
+                continue
+            if event.kind == "tts_load_error":
+                self.cancel_speech(status="error")
+                self.status.set(str(event.payload))
+                continue
             if event.generation != self.epoch:
                 continue
             if event.kind == "played":
@@ -293,9 +340,6 @@ class VoiceControls:
                     self.mark_latency("Fin de tour détectée → premier PCM (DAC estimé)", self.turn_ended_at, self.first_pcm_at)
                 self.pending_visuals.append((view["emitted_at"] + view["delay"], view, self.epoch))
                 self.pending_visuals = self.pending_visuals[-64:]
-            elif event.kind == "tts_ready":
-                if event.payload:
-                    self.set_latency("Chargement Piper (worker)", event.payload["load_ms"])
             elif event.kind == "tts_pcm_ready":
                 if "Piper : synthèse du premier bloc" not in self.latencies:
                     self.set_latency("Piper : synthèse du premier bloc", event.payload["elapsed_ms"])
@@ -303,7 +347,11 @@ class VoiceControls:
                 if self.mid is not None:
                     self.app.store.update_message_metadata(self.mid, {"audio_status": "complete"})
                 self.mid = None
-                self.speech.stop()
+                self.tts_active = False
+                if not self.listening or self.playing_sample:
+                    self.speech.stop()
+                    self.tts_ready = False
+                self.playing_sample = False
                 self.reading = False
                 if not self.app.operation:
                     self.app.stop_button.configure(state="disabled")
@@ -364,6 +412,11 @@ class VoiceControls:
                 + "Latences du dernier tour (ms) :\n"
                 + ("\n".join(f"{label} : {value}" for label, value in self.latencies.items()) or "En attente de mesures")
                 + "\nDAC estimé par PortAudio ; délai acoustique/Bluetooth non mesuré.\n\n"
+                + f"STT conservé : {self.stt_details.get('result', '—')}\n"
+                + f"STT brut : {self.stt_details.get('raw_result', '—')}\n"
+                + f"Langue demandée : {self.stt_details.get('language_requested', '—')} ; segments écartés : {self.stt_details.get('discarded_segments', '—')}\n"
+                + (f"Qualité du dernier WAV : {self.last_sample.get('quality', {})} ; fin : {self.last_sample.get('end_reason', '—')}\n" if self.last_sample else "")
+                + self.reference_result + "\n\n"
                 + "\n".join(self.diagnostic_events))
         self.diagnostic_text.configure(state="normal")
         self.diagnostic_text.delete("1.0", "end")
@@ -377,15 +430,68 @@ class VoiceControls:
             return
         dialog = self.diagnostic_window = tk.Toplevel(self.app.root)
         dialog.title("Diagnostic local · micro → VAD → STT")
-        dialog.geometry("760x450")
+        dialog.geometry("820x670")
         dialog.configure(bg="#121c29", padx=12, pady=12)
-        tk.Label(dialog, text="Mesures réelles, actualisées 4 fois/s. Trace locale en mémoire, sans fichier audio ni envoi réseau.",
+        tk.Label(dialog, text="Mesures réelles, actualisées 4 fois/s. Trace en mémoire ; WAV uniquement sur demande explicite. Aucun envoi réseau.",
                  bg="#121c29", fg="#e4edf6", wraplength=720, justify="left").pack(anchor="w")
         from tkinter.scrolledtext import ScrolledText
         self.diagnostic_text = ScrolledText(dialog, wrap="word", bg="#0b1019", fg="#e4edf6", height=14)
         self.diagnostic_text.pack(fill="both", expand=True, pady=8)
         ttk.Button(dialog, text="Terminer le tour courant (si VAD reste actif)",
                    command=lambda: self.capture.send({"kind": "finish_turn"})).pack(anchor="w")
+        ttk.Button(dialog, text="Enregistrer le prochain tour en WAV… (sur demande)",
+                   command=self.request_sample).pack(anchor="w", pady=3)
+        ttk.Button(dialog, text="Réécouter le dernier WAV demandé", command=self.replay_sample).pack(anchor="w", pady=3)
+        from .audio_diagnostics import REFERENCE_PHRASES
+        tk.Label(dialog, text="Référence française à lire avant la comparaison (modifiable) :",
+                 bg="#121c29", fg="#e4edf6").pack(anchor="w", pady=(8, 2))
+        self.reference = tk.StringVar(value=REFERENCE_PHRASES[0])
+        ttk.Combobox(dialog, textvariable=self.reference, values=REFERENCE_PHRASES).pack(fill="x")
+        ttk.Button(dialog, text="Comparer référence / dernière transcription (WER)",
+                   command=self.compare_reference).pack(anchor="w", pady=3)
+        self.refresh_diagnostics()
+
+    def request_sample(self):
+        if not self.listening:
+            self.status.set("Activez explicitement l’écoute avant de demander un échantillon.")
+            return
+        path = filedialog.asksaveasfilename(parent=self.diagnostic_window, title="PCM micro local, un seul tour (20 s maximum)",
+                                           defaultextension=".wav", filetypes=[("Audio WAV", "*.wav")])
+        if path and messagebox.askyesno("Enregistrer un échantillon microphone", f"Enregistrer le prochain tour transcrit dans :\n{path}\n\nUn seul WAV mono 16 kHz, 20 s maximum (environ 625 Kio). Aucun envoi réseau. Fichier conservé jusqu’à votre suppression. Ne pas utiliser cet enregistrement pour mesurer la latence normale.", parent=self.diagnostic_window):
+            if not self.capture.send({"kind": "sample_next", "path": path}):
+                self.status.set("Demande non transmise : file micro occupée, réessayez.")
+
+    def replay_sample(self):
+        if not self.last_sample:
+            self.status.set("Aucun échantillon demandé et enregistré dans cette session.")
+            return
+        self.cancel_speech()
+        self.playing_sample = self.tts_active = True
+        self.tts_ready = False
+        self.tts_profile = None
+        if self.listening and not self.capture.send({"kind": "mute", "value": True}):
+            self.cancel_speech(status="error")
+            self.status.set("Réécoute annulée : suspension du microphone impossible.")
+            return
+        self.speech.start("sample", self.settings, self.epoch)
+        self.last_speech = time.monotonic()
+        if not self.speech.send(self.last_sample["path"]):
+            self.cancel_speech(status="error")
+            self.status.set("Réécoute non transmise, réessayez.")
+        else:
+            self.app.stop_button.configure(state="normal")
+            self.status.set("Réécoute du PCM microphone demandé ; Arrêter coupe le son.")
+
+    def compare_reference(self):
+        from .audio_diagnostics import word_error
+        if "result" not in self.stt_details or not self.reference.get().strip():
+            self.reference_result = "Lire une référence, puis attendre sa transcription avant de comparer."
+        else:
+            score = word_error(self.reference.get(), self.stt_details["result"])
+            if not score["words"]:
+                self.reference_result = "La référence doit contenir au moins un mot pour calculer le WER."
+            else:
+                self.reference_result = f"WER (référence saisie) : {score['wer']:.1%} ; {score['errors']} erreur(s) / {score['words']} mots."
         self.refresh_diagnostics()
 
     def preview(self):
@@ -394,7 +500,8 @@ class VoiceControls:
         self.cancel_speech()
         self.reset_turn_latency()
         self.tts_requested_at = time.monotonic()
-        self.speech.start("speech", self.settings, self.epoch)
+        self.prepare_speech()
+        self.tts_active = True
         self.app.stop_button.configure(state="normal")
         self.last_speech = time.monotonic()
         self.speech.send("Bonjour. Je suis JARVIS. Voici un aperçu de ma voix française.")
@@ -446,6 +553,7 @@ class VoiceControls:
                     self.app.store.save_settings(model_settings)
                     self.app.settings = model_settings
                 self.app.store.set_preference("voice", candidate.to_dict())
+                self.cancel_speech()
                 self.settings = candidate
             except (ValueError, OSError, sqlite3.Error) as exc:
                 messagebox.showerror("Voix", str(exc), parent=dialog)

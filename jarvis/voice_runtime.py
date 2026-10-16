@@ -51,8 +51,18 @@ def capture_worker(outbox, commands, profile):
             last_level = 0.0
             last_diagnostic = 0.0
             last_stt = "Aucun segment soumis"
+            sample_path = None
 
             def transcribe(job):
+                if job.get("sample_path"):
+                    from .audio_diagnostics import save_wav, signal_quality
+                    try:
+                        quality = signal_quality(job["samples"])
+                        save_wav(job["sample_path"], job["samples"])
+                        job["sample_result"] = {"path": job["sample_path"], "quality": quality,
+                                                "end_reason": job["reason"]}
+                    except Exception as exc:
+                        job["sample_error"] = f"{type(exc).__name__}: {exc}"
                 job["started_at"] = time.monotonic()
                 try:
                     return stt.transcribe(job["samples"])
@@ -68,7 +78,7 @@ def capture_worker(outbox, commands, profile):
                 emit_event(outbox, AudioEvent("transcribing", generation=future_generation))
 
             def submit(event):
-                nonlocal pending_job, last_stt
+                nonlocal pending_job, last_stt, sample_path
                 ended_at = time.monotonic()
                 emit_event(outbox, AudioEvent("turn_end", {
                     "reason": detector.last_end_reason, "duration": detector.last_duration,
@@ -78,6 +88,9 @@ def capture_worker(outbox, commands, profile):
                     emit_event(outbox, AudioEvent("warning", "Tour limité à 20 s : segment envoyé au STT. Attendez un silence avant de reprendre.", generation))
                     vad.reset()
                 job = {"samples": event.payload, "generation": generation, "ended_at": ended_at}
+                if sample_path:
+                    job.update(sample_path=sample_path, reason=detector.last_end_reason)
+                    sample_path = None
                 if future is not None:
                     # One bounded latest-turn slot, never an unbounded stale backlog.
                     pending_job = job
@@ -99,10 +112,15 @@ def capture_worker(outbox, commands, profile):
                                 vad.reset()
                                 if pending_job is not None:
                                     emit_event(outbox, AudioEvent("stt_superseded", "Microphone suspendu", pending_job["generation"]))
+                                    if pending_job.get("sample_path"):
+                                        emit_event(outbox, AudioEvent("sample_error", "Demande WAV annulée : microphone suspendu.", pending_job["generation"]))
                                     pending_job = None
                         elif command["kind"] == "finish_turn" and not muted:
                             for event in detector.finish():
                                 submit(event)
+                        elif command["kind"] == "sample_next":
+                            sample_path = command["path"]
+                            emit_event(outbox, AudioEvent("sample_armed", sample_path))
                 except queue.Empty:
                     pass
                 if future is not None and future.done():
@@ -110,6 +128,10 @@ def capture_worker(outbox, commands, profile):
                     future = None
                     timing = {"elapsed_ms": round((active_job["finished_at"] - active_job["started_at"]) * 1000),
                               "queue_ms": round((active_job["started_at"] - active_job["ended_at"]) * 1000)}
+                    if "sample_result" in active_job:
+                        emit_event(outbox, AudioEvent("sample_saved", active_job["sample_result"], future_generation))
+                    elif "sample_error" in active_job:
+                        emit_event(outbox, AudioEvent("sample_error", active_job["sample_error"], future_generation))
                     try:
                         text = completed.result()
                     except Exception as exc:
@@ -117,7 +139,9 @@ def capture_worker(outbox, commands, profile):
                         emit_event(outbox, AudioEvent("stt_error", {"error": last_stt, **timing}, future_generation))
                     else:
                         last_stt = "Terminé : " + (text[:400] if text else "aucun texte reconnu")
-                        emit_event(outbox, AudioEvent("stt_complete", {"result": text[:400], **timing}, future_generation))
+                        detail = getattr(stt, "last_result", {})
+                        detail = {**detail, "raw_result": detail.get("raw_result", "")[:2000]}
+                        emit_event(outbox, AudioEvent("stt_complete", {"result": text[:2000], **detail, **timing}, future_generation))
                         emit_event(outbox, AudioEvent("transcript", text, future_generation))
                     active_job = None
                     if pending_job is not None:
@@ -147,6 +171,8 @@ def capture_worker(outbox, commands, profile):
                             generation += 1
                             if pending_job is not None:
                                 emit_event(outbox, AudioEvent("stt_superseded", "Nouvelle prise de parole", pending_job["generation"]))
+                                if pending_job.get("sample_path"):
+                                    emit_event(outbox, AudioEvent("sample_error", "Demande WAV annulée : tour remplacé par une nouvelle prise de parole.", pending_job["generation"]))
                                 pending_job = None
                             emit_event(outbox, AudioEvent("speech_start", generation=generation))
                         elif event.kind == "utterance":
@@ -172,7 +198,8 @@ def capture_worker(outbox, commands, profile):
         emit_event(outbox, AudioEvent("error", audio_error(exc)))
 
 
-def speech_worker(outbox, commands, profile, generation):
+def speech_worker(outbox, commands, profile, generation, persistent=False):
+    loading = True
     try:
         from .tts import AudioPlayer, PiperSpeech
         settings = VoiceSettings(**profile).validate()
@@ -181,10 +208,15 @@ def speech_worker(outbox, commands, profile, generation):
         player = AudioPlayer(settings.output_device)
         emit = lambda event: emit_event(outbox, event)
         emit(AudioEvent("tts_ready", {"load_ms": round((time.monotonic() - loaded_at) * 1000)}, generation))
+        loading = False
         while True:
             text = commands.get()
+            if persistent:
+                generation, text = text["generation"], text["text"]
             if text is None:
                 emit(AudioEvent("speech_done", generation=generation))
+                if persistent:
+                    continue  # Keep the loaded CPU voice only; no open audio stream.
                 return
             # Piper may split a phrase; report per-chunk captions as an approximation.
             synthesis_at = time.monotonic()
@@ -193,7 +225,7 @@ def speech_worker(outbox, commands, profile, generation):
                 player.play(pcm, text, emit, generation)
                 synthesis_at = time.monotonic()
     except Exception as exc:
-        emit_event(outbox, AudioEvent("error", audio_error(exc), generation))
+        emit_event(outbox, AudioEvent("tts_load_error" if persistent and loading else "error", audio_error(exc), generation))
 
 
 def diagnostics_worker(outbox, commands, profile):
@@ -219,18 +251,38 @@ def diagnostics_worker(outbox, commands, profile):
         emit_event(outbox, AudioEvent("error", audio_error(exc)))
 
 
+def sample_worker(outbox, commands, profile, generation):
+    """Explicit local WAV replay, no TTS/STT model or device opened beforehand."""
+    try:
+        from .audio_diagnostics import read_wav
+        from .tts import AudioPlayer, PCM
+        settings = VoiceSettings(**profile).validate()
+        path = commands.get()
+        AudioPlayer(settings.output_device).play(PCM(read_wav(path), 16000), "",
+            lambda event: emit_event(outbox, event), generation)
+        emit_event(outbox, AudioEvent("speech_done", generation=generation))
+    except Exception as exc:
+        emit_event(outbox, AudioEvent("error", audio_error(exc), generation))
+
+
 class AudioProcess:
     def __init__(self):
         self.context = mp.get_context("spawn")
         self.process = self.outbox = self.commands = None
+        self.kind = None
+        self.generation = 0
 
     def start(self, kind, settings, generation=0):
         self.stop()
+        self.kind, self.generation = kind, generation
         self.outbox = self.context.Queue(maxsize=128)
         self.commands = self.context.Queue(maxsize=8)
-        target = {"capture": capture_worker, "speech": speech_worker, "diagnostics": diagnostics_worker}[kind]
+        target = {"capture": capture_worker, "speech": speech_worker, "sample": sample_worker,
+                  "diagnostics": diagnostics_worker}[kind]
         args = (self.outbox, self.commands, settings.to_dict())
         if kind == "speech":
+            args += (generation, True)
+        elif kind == "sample":
             args += (generation,)
         self.process = self.context.Process(target=target, args=args, daemon=True)
         self.process.start()
@@ -239,6 +291,8 @@ class AudioProcess:
         if self.commands is None:
             return False
         try:
+            if self.kind == "speech":
+                command = {"generation": self.generation, "text": command}
             self.commands.put_nowait(command)
             return True
         except queue.Full:

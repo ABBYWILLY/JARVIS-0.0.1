@@ -128,11 +128,15 @@ class FrenchWhisper:
 
     def transcribe(self, audio):
         import numpy as np
-        segments, _info = self.model.transcribe(np.asarray(audio, dtype="float32"), language="fr",
+        segments, info = self.model.transcribe(np.asarray(audio, dtype="float32"), language="fr",
             beam_size=1, vad_filter=False, condition_on_previous_text=False)
+        segments = list(segments)
         # Whisper is not streaming STT: publish one final transcript per utterance.
-        return " ".join(segment.text.strip() for segment in segments
-                        if segment.no_speech_prob < 0.8).strip()
+        text = " ".join(segment.text.strip() for segment in segments if segment.no_speech_prob < 0.8).strip()
+        self.last_result = {"raw_result": " ".join(segment.text.strip() for segment in segments),
+                            "language_requested": "fr", "language_reported": getattr(info, "language", None),
+                            "discarded_segments": sum(segment.no_speech_prob >= 0.8 for segment in segments)}
+        return text
 
 
 def device_inventory():
