@@ -19,24 +19,27 @@ def audio_error(exc):
 
 def emit_event(outbox, event):
     try:
-        if event.kind in {"mic_level", "played"}:
+        if event.kind in {"mic_level", "played", "diagnostic"}:
             outbox.put_nowait(event)  # Never block an audio callback on the UI.
         else:
             outbox.put(event, timeout=1)
     except queue.Full:
-        if event.kind not in {"mic_level", "played"}:
+        if event.kind not in {"mic_level", "played", "diagnostic"}:
             raise RuntimeError("File d’événements vocaux saturée ; redémarrez l’écoute.")
 
 
 def capture_worker(outbox, commands, profile):
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+    stage = "initialisation STT"
     try:
         from .audio import FrenchWhisper, Microphone, SileroFrames, TurnDetector, signal_view
         settings = VoiceSettings(**profile).validate()
         stt = FrenchWhisper(settings.model_root / "whisper", settings.cpu_threads)
+        stage = "initialisation VAD"
         vad = SileroFrames()
         detector = TurnDetector(settings.vad_threshold, settings.silence_ms)
+        stage = "ouverture microphone"
         with Microphone(settings.input_device) as microphone, ThreadPoolExecutor(max_workers=1) as executor:
             emit_event(outbox, AudioEvent("listening"))
             future = None
@@ -44,46 +47,100 @@ def capture_worker(outbox, commands, profile):
             generation = 0
             muted = False
             last_level = 0.0
+            last_diagnostic = 0.0
+            stt_started = 0.0
+            last_stt = "Aucun segment soumis"
+
+            def submit(event):
+                nonlocal future, future_generation, stt_started, last_stt
+                emit_event(outbox, AudioEvent("turn_end", {
+                    "reason": detector.last_end_reason, "duration": detector.last_duration,
+                    "samples": len(event.payload)}, generation))
+                if detector.last_end_reason == "max_duration":
+                    emit_event(outbox, AudioEvent("warning", "Tour limité à 20 s : segment envoyé au STT. Attendez un silence avant de reprendre.", generation))
+                    vad.reset()
+                if future is not None:
+                    emit_event(outbox, AudioEvent("warning", "Transcription occupée : cette intervention n’a pas été envoyée. Répétez après l’indicateur d’écoute.", generation))
+                else:
+                    future_generation = generation
+                    stt_started = time.monotonic()
+                    last_stt = "STT démarré"
+                    future = executor.submit(stt.transcribe, event.payload)
+                    emit_event(outbox, AudioEvent("transcribing", generation=generation))
             while True:
                 try:
                     while True:
                         command = commands.get_nowait()
                         if command["kind"] == "mute":
-                            muted = command["value"]
-                            detector.reset()
-                            vad.reset()
+                            # Idempotent: speech_start triggers an unmute from the UI.
+                            # Resetting False→False here used to destroy every new turn.
+                            requested = bool(command["value"])
+                            if requested != muted:
+                                muted = requested
+                                detector.reset()
+                                vad.reset()
+                        elif command["kind"] == "finish_turn" and not muted:
+                            for event in detector.finish():
+                                submit(event)
                 except queue.Empty:
                     pass
                 if future is not None and future.done():
-                    text = future.result()
-                    emit_event(outbox, AudioEvent("transcript", text, future_generation))
+                    completed = future
                     future = None
+                    try:
+                        text = completed.result()
+                    except Exception as exc:
+                        last_stt = f"{type(exc).__name__}: {str(exc)[:400]}"
+                        emit_event(outbox, AudioEvent("stt_error", {"error": last_stt,
+                            "elapsed_ms": round((time.monotonic() - stt_started) * 1000)}, future_generation))
+                    else:
+                        last_stt = "Terminé : " + (text[:400] if text else "aucun texte reconnu")
+                        emit_event(outbox, AudioEvent("stt_complete", {"result": text[:400],
+                            "elapsed_ms": round((time.monotonic() - stt_started) * 1000)}, future_generation))
+                        emit_event(outbox, AudioEvent("transcript", text, future_generation))
                 try:
+                    stage = "capture / rééchantillonnage PCM"
                     frames = microphone.read()
                 except queue.Empty:
                     continue
                 if muted:
+                    now = time.monotonic()
+                    if frames and now - last_diagnostic > 0.25:
+                        emit_event(outbox, AudioEvent("diagnostic", {
+                            "rms": signal_view(frames[-1], points=1)["rms"], "vad": None,
+                            "state": "suspendu pendant la lecture", "turn_seconds": 0,
+                            "end_reason": detector.last_end_reason, "last_stt": last_stt,
+                            "native_rate": getattr(microphone, "native_rate", None),
+                            "rate": 16000, "frame_samples": len(frames[-1])}, generation))
+                        last_diagnostic = now
                     continue
                 for frame in frames:
+                    stage = "VAD / détection de fin de tour"
                     probability = vad.probability(frame)
                     for event in detector.feed(frame, probability):
                         if event.kind == "speech_start":
                             generation += 1
                             emit_event(outbox, AudioEvent("speech_start", generation=generation))
                         elif event.kind == "utterance":
-                            if future is not None:
-                                emit_event(outbox, AudioEvent("warning", "Transcription occupée : cette intervention n’a pas été envoyée. Répétez après l’indicateur d’écoute.", generation))
-                            else:
-                                future_generation = generation
-                                future = executor.submit(stt.transcribe, event.payload)
-                                emit_event(outbox, AudioEvent("transcribing", generation=generation))
+                            submit(event)
                     now = time.monotonic()
                     if now - last_level > 0.05:
                         view = signal_view(frame if detector.speaking and probability >= settings.vad_threshold else [0.0])
                         view["speaking"] = detector.speaking
                         emit_event(outbox, AudioEvent("mic_level", view, generation))
                         last_level = now
+                    if now - last_diagnostic > 0.25:
+                        rms = signal_view(frame, points=1)["rms"]
+                        phase = "suspendu" if muted else "attente de silence" if detector.waiting_for_quiet else "parole" if detector.speaking else "silence"
+                        emit_event(outbox, AudioEvent("diagnostic", {"rms": rms, "vad": probability,
+                            "state": phase, "turn_seconds": detector.duration,
+                            "end_reason": detector.last_end_reason, "last_stt": last_stt,
+                            "native_rate": getattr(microphone, "native_rate", None),
+                            "rate": 16000, "frame_samples": len(frame)}, generation))
+                        last_diagnostic = now
     except Exception as exc:
+        emit_event(outbox, AudioEvent("capture_error", {"stage": stage,
+                   "error": f"{type(exc).__name__}: {str(exc)[:400]}"}))
         emit_event(outbox, AudioEvent("error", audio_error(exc)))
 
 

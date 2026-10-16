@@ -119,6 +119,47 @@ class VoiceFlowTests(unittest.TestCase):
         self.assertIsNone(self.app.operation)
         self.assertIn("Parole sans modèle sélectionné", self.app.input.get("1.0", "end"))
 
+    def test_stt_diagnostics_and_error_recovery_keep_microphone_active(self):
+        self.activate()
+        self.voice.open_diagnostics()
+        self.voice.capture.events.extend([
+            AudioEvent("speech_start", generation=1),
+            AudioEvent("diagnostic", {"rms": 0.02, "vad": 0.12, "state": "silence",
+                                      "turn_seconds": 1.28, "native_rate": 48000,
+                                      "rate": 16000, "frame_samples": 512}),
+            AudioEvent("turn_end", {"reason": "silence", "duration": 1.28}, generation=1),
+            AudioEvent("transcribing", generation=1),
+            AudioEvent("mic_level", {"speaking": False, "rms": 0}, generation=1),
+        ])
+        self.voice.poll()
+        self.assertIn("Transcription française locale", self.voice.status.get())
+        self.assertTrue(self.voice.transcribing)
+        self.app.presence.update_event.assert_called_with("thinking", signal=None, caption=None)
+        text = self.voice.diagnostic_text.get("1.0", "end")
+        for value in ("0.02000", "0.120", "48000 → 16000", "512", "turn_end", "transcribing"):
+            self.assertIn(value, text)
+        self.voice.capture.events.append(AudioEvent("stt_error", {"error": "STT failure", "elapsed_ms": 250}, 1))
+        self.voice.poll()
+        self.assertFalse(self.voice.transcribing)
+        self.assertTrue(self.voice.capture.alive())
+        self.assertIn("STT failure", self.voice.diagnostic_text.get("1.0", "end"))
+        button = next(child for child in self.voice.diagnostic_window.winfo_children()
+                      if child.winfo_class() == "TButton")
+        button.invoke()
+        self.assertEqual(self.voice.capture.commands[-1], {"kind": "finish_turn"})
+        self.voice.capture.events.extend([
+            AudioEvent("speech_start", generation=2),
+            AudioEvent("transcribing", generation=2),
+            AudioEvent("stt_complete", {"result": "Bonjour", "elapsed_ms": 200}, 2),
+            AudioEvent("transcript", "Bonjour", 2),
+        ])
+        self.voice.poll()
+        self.assertIn("Bonjour", self.app.input.get("1.0", "end"))
+        self.assertFalse(self.voice.transcribing)
+        self.voice.diagnostic_window.destroy()
+        self.voice.open_diagnostics()
+        self.assertIn("stt_complete", self.voice.diagnostic_text.get("1.0", "end"))
+
     def test_unhinged_profile_only_changes_prompt_not_microphone_or_endpoint(self):
         from jarvis.voice_config import PERSONALITY_PROMPTS
         endpoint = self.app.settings.endpoint
@@ -360,6 +401,7 @@ class RuntimeContractTests(unittest.TestCase):
         outbox.put(original)
         emit_event(outbox, AudioEvent("mic_level", {"rms": 0.1}))
         emit_event(outbox, AudioEvent("played", {"rms": 0.1}))
+        emit_event(outbox, AudioEvent("diagnostic", {"rms": 0.1, "vad": 0.9}))
         self.assertIs(outbox.get_nowait(), original)
         # Avoid waiting the real 1 s timeout: enforce the same queue-full contract.
         blocked = Mock()

@@ -29,6 +29,7 @@ class PresenceSettings:
     subtitles: bool = True
     accent_mode: str = "adaptive"
     fixed_color: str = "#69edf5"
+    wave_expressivity: int = 65
 
     @classmethod
     def from_dict(cls, values):
@@ -50,6 +51,10 @@ class PresenceSettings:
         color = values.get("fixed_color")
         if isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", color):
             valid["fixed_color"] = color.lower()
+        expressivity = values.get("wave_expressivity")
+        if (isinstance(expressivity, (int, float)) and not isinstance(expressivity, bool)
+                and math.isfinite(expressivity) and 0 <= expressivity <= 100):
+            valid["wave_expressivity"] = round(expressivity)
         return replace(defaults, **valid)
 
 
@@ -182,6 +187,12 @@ class PresenceModel:
         span = max(1.0, width - 2 * max(18, width * 0.08))
         active = self.has_signal(now)
         energy = min(1.0, math.sqrt(self.signal["rms"]) * 1.6) if active else 0.0
+        expressivity = self.settings.wave_expressivity / 100
+        # Display compression only: retain quiet real variations without changing
+        # microphone PCM, VAD thresholds, or the signal driving the speaking core.
+        wave_energy = ((1 - math.exp(-self.signal["rms"] * (10 + 35 * expressivity))) ** 0.8
+                       if active else 0.0)
+        amplitude = min(220, height * 0.24) * (0.18 + 0.82 * expressivity) * wave_energy
         wave = _smooth_wave(self.signal["wave"]) if active else [0.0] * POINT_COUNT
         wave_line = [value * math.sin(math.pi * i / (POINT_COUNT - 1)) ** 2
                      for i, value in enumerate(wave)]
@@ -211,10 +222,7 @@ class PresenceModel:
                 x, y = cx + (t - 0.5) * span, cy
                 if self.state == "user_speaking" and active:
                     # The sine is an endpoint window, never an invented audio carrier.
-                    amplitude = min(85, height * 0.11) * energy
-                    if self.settings.reduced_motion:
-                        amplitude *= 0.55
-                    y += wave_line[i] * amplitude
+                    y += wave_line[i] * amplitude * (0.55 if self.settings.reduced_motion else 1)
             points.append((x, y))
         return _center(points, width, height)
 
@@ -227,7 +235,10 @@ class PresenceModel:
             self.points = target
         else:
             delta = max(0, min(0.1, now - self.last_frame))
-            duration = 0.025 if self.state == "user_speaking" else 0.065
+            duration = 0.065
+            if self.state == "user_speaking":
+                extent = lambda points: max(y for _, y in points) - min(y for _, y in points)
+                duration = 0.022 if extent(target) >= extent(self.points) else 0.095
             amount = 1 - math.exp(-delta / duration)
             self.points = [(x + (tx - x) * amount, y + (ty - y) * amount)
                            for (x, y), (tx, ty) in zip(self.points, target)]
@@ -547,6 +558,15 @@ class PresenceView:
         choice.pack(fill="x", pady=(6, 12))
         choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
             profile=next(key for key, label in PROFILE_LABELS.items() if label == profile.get())))
+        tk.Label(dialog, text="Expressivité de l’onde (%)", bg=colors["background"],
+                 fg=colors["foreground"]).pack(anchor="w")
+        expressivity = tk.IntVar(value=self.settings.wave_expressivity)
+        tk.Scale(dialog, from_=0, to=100, resolution=1, orient="horizontal", variable=expressivity,
+                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
+                 troughcolor=colors["button"],
+                 command=lambda value: self.set_options(wave_expressivity=round(float(value)))).pack(fill="x")
+        tk.Label(dialog, text="Affichage uniquement · aucun effet sur le micro ou la détection vocale",
+                 bg=colors["background"], fg=colors["muted"]).pack(anchor="w", pady=(0, 8))
         reduced = tk.BooleanVar(value=self.settings.reduced_motion)
         subtitles = tk.BooleanVar(value=self.settings.subtitles)
         for label, variable, key in (("Réduire les mouvements", reduced, "reduced_motion"),

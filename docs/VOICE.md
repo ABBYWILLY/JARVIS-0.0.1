@@ -74,6 +74,38 @@ sous-titres sont persistants. Les transcriptions restent des overlays : le centr
 ne se déplace pas. Fermer PRESENCE ne ferme pas la conversation ; désactivez le micro
 explicitement si vous ne souhaitez plus être écouté.
 
+Dans **PRESENCE → Réglages**, **Expressivité de l’onde (%)** va de 0 à 100,
+65 par défaut. L’amplification non linéaire et le lissage sont purement visuels :
+aucun changement du PCM, du gain micro, de la sensibilité VAD ou de Whisper.
+L’onde reste une spline du signal réel ; signal nul ou périmé → ligne plate.
+
+## Diagnostic micro → VAD → STT sur Windows
+
+Dans COMMAND OS, ouvrir **Diagnostic micro / STT**, puis activer l’écoute.
+La fenêtre affiche le RMS micro réel (même si l’onde est plate), la probabilité
+Silero, l’état parole/silence, la durée du tour, les fréquences PCM et les trames
+de 512 échantillons à 16 kHz. Mesures au plus 4 fois/s, trace des 32 événements
+récents en mémoire seulement, aucun fichier audio ni téléchargement.
+
+Parler brièvement puis attendre le silence configuré : la trace doit montrer
+`speech_start → turn_end (silence) → transcribing → stt_complete`, avec le texte
+reconnu et le temps STT. La transcription arrive dans COMMAND OS ; si aucun
+modèle Ollama n’est choisi, elle est conservée dans la saisie.
+
+Si la VAD reste haute après l’arrêt de la parole, noter RMS/probabilité/durée.
+**Terminer le tour courant** envoie explicitement le segment au STT. La limite
+existante de 20 s envoie aussi le segment, puis attend un vrai silence avant de
+réarmer pour éviter des transcriptions répétées de bruit. Le bouton ne crée pas
+de segment au repos. Cette limite peut couper une intervention de plus de 20 s :
+faire des pauses. Aucun réducteur de bruit ajouté sans mesure justifiant son usage.
+
+Une erreur STT apparaît avec son type/message et sa durée ; l’écoute reste active
+pour le tour suivant. Une erreur capture/VAD indique l’étape et nécessite de
+réactiver l’écoute. En cas d’échec sur le PC, copier le contenu de cette fenêtre
+(il peut contenir les transcriptions privées) avec la fréquence et le périphérique,
+sans supposer que le ventilateur est la cause. Tester aussi un tour avec et sans
+ventilation, Tom/Siwis en préécoute et le retour du micro après TTS en mode speakers.
+
 Le spectre adaptatif est une **estimation lexicale prudente**, sans appel LLM et sans
 prétention de ressentir une émotion. Ambiguïté → cyan, inertie de 3 s, négation simple.
 Les menus, permissions et alertes ont leur propre spectre opérationnel indépendant.

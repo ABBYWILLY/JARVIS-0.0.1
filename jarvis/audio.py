@@ -34,6 +34,8 @@ class TurnDetector:
         self.threshold = threshold
         self.silence_frames = max(1, round(silence_ms / 32))
         self.max_frames = round(max_seconds * RATE / FRAME)
+        self.last_end_reason = ""
+        self.last_duration = 0.0
         self.reset()
 
     def reset(self):
@@ -41,12 +43,33 @@ class TurnDetector:
         self.frames = []
         self.voiced = self.silent = 0
         self.speaking = False
+        self.waiting_for_quiet = False
+
+    @property
+    def duration(self):
+        return len(self.frames) * FRAME / RATE
+
+    def finish(self, reason="manual"):
+        if not self.speaking:
+            return []
+        trim = max(0, self.silent - 5)
+        frames = self.frames[:-trim] if trim else self.frames
+        self.last_end_reason, self.last_duration = reason, self.duration
+        self.reset()
+        # A stuck VAD must not submit the same constant noise every 20 seconds.
+        self.waiting_for_quiet = reason in {"max_duration", "manual"}
+        return [AudioEvent("utterance", [x for f in frames for x in f])]
 
     def feed(self, frame, probability):
         events = []
         frame = list(frame)
         if len(frame) != FRAME:
             raise ValueError("VAD attend exactement 512 échantillons à 16 kHz.")
+        if self.waiting_for_quiet:
+            self.silent = self.silent + 1 if probability < self.threshold else 0
+            if self.silent >= self.silence_frames:
+                self.reset()
+            return events
         if not self.speaking:
             self.pre.append(frame)
             self.voiced = self.voiced + 1 if probability >= self.threshold else 0
@@ -58,12 +81,10 @@ class TurnDetector:
         else:
             self.frames.append(frame)
             self.silent = 0 if probability >= self.threshold else self.silent + 1
-            if self.silent >= self.silence_frames or len(self.frames) >= self.max_frames:
-                # Retain 160 ms of trailing silence; remove the long end-of-turn wait.
-                trim = max(0, self.silent - 5)
-                frames = self.frames[:-trim] if trim else self.frames
-                events.append(AudioEvent("utterance", [x for f in frames for x in f]))
-                self.reset()
+            if self.silent >= self.silence_frames:
+                events.extend(self.finish("silence"))
+            elif len(self.frames) >= self.max_frames:
+                events.extend(self.finish("max_duration"))
         return events
 
 
@@ -142,6 +163,7 @@ class Microphone:
         self.np = np
         self.device = resolve_device(device_key, "input")
         native_rate = int(sd.query_devices(self.device, "input")["default_samplerate"])
+        self.native_rate = native_rate
         self.resampler = soxr.ResampleStream(native_rate, RATE, 1, dtype="float32", quality="HQ")
         self.pending = np.empty(0, dtype="float32")
         self.inbox = queue.Queue(maxsize=64)

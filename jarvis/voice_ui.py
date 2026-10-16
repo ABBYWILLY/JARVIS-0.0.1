@@ -30,10 +30,15 @@ class VoiceControls:
         self.pending_visuals = []
         self.pending_phrases = deque(maxlen=64)
         self.resume_id = None
+        self.transcribing = False
+        self.diagnostics = {}
+        self.diagnostic_events = deque(maxlen=32)
+        self.diagnostic_window = None
         self.status = tk.StringVar(value=initial_status)
         self.listen_button = ttk.Button(parent, text="Activer l’écoute", command=self.toggle)
         self.listen_button.pack(fill="x", pady=(10, 4))
         ttk.Button(parent, text="Voix / périphériques", command=self.open_settings).pack(fill="x")
+        ttk.Button(parent, text="Diagnostic micro / STT", command=self.open_diagnostics).pack(fill="x", pady=2)
         ttk.Button(parent, text="Arrêt d’urgence", command=self.emergency).pack(fill="x", pady=4)
         tk.Label(parent, textvariable=self.status, bg="#121c29", fg="#a6b8cb",
                  wraplength=235, justify="left", font=(app.font_family, 9)).pack(fill="x", pady=4)
@@ -52,6 +57,9 @@ class VoiceControls:
             return
         self.capture.start("capture", self.settings)
         self.listening = True
+        self.transcribing = False
+        self.diagnostics = {}
+        self.diagnostic_events.clear()
         self.heard = 0
         self.listen_button.configure(text="Désactiver l’écoute")
         self.status.set("Chargement STT/VAD local…")
@@ -61,6 +69,7 @@ class VoiceControls:
     def stop_listening(self):
         self.capture.stop()
         self.listening = False
+        self.transcribing = False
         self.listen_button.configure(text="Activer l’écoute")
         self.status.set("Microphone désactivé")
         self.cancel_speech()
@@ -71,6 +80,7 @@ class VoiceControls:
         self.capture.stop()
         self.speech.stop()
         self.listening = False
+        self.transcribing = False
         self.listen_button.configure(text="Activer l’écoute")
         self.cancel_speech()
         if self.app.operation:
@@ -86,6 +96,7 @@ class VoiceControls:
         self.pending_visuals.clear()
         self.pending_phrases.clear()
         self.end_pending = self.reading = self.listening = False
+        self.transcribing = False
         self.mid = None
         if self.resume_id is not None:
             self.app.root.after_cancel(self.resume_id)
@@ -189,7 +200,21 @@ class VoiceControls:
         now = time.monotonic()
         for event in self.capture.poll():
             self.last_capture = now
-            if event.kind == "speech_start":
+            if event.kind == "diagnostic":
+                self.diagnostics = event.payload
+                self.refresh_diagnostics()
+            elif event.kind in {"turn_end", "stt_complete", "capture_error"}:
+                self.record_diagnostic(event.kind, event.payload)
+                if event.kind == "stt_complete":
+                    self.transcribing = False
+            elif event.kind == "stt_error":
+                self.transcribing = False
+                self.record_diagnostic(event.kind, event.payload)
+                self.status.set("Échec STT ; écoute maintenue. Détails dans Diagnostic micro / STT.")
+                if event.generation == self.heard and not self.app.operation:
+                    self.notify_presence("listening")
+            elif event.kind == "speech_start":
+                self.record_diagnostic(event.kind, {"tour": event.generation})
                 self.heard = event.generation
                 self.cancel_speech()
                 if self.app.operation == "chat":
@@ -197,9 +222,12 @@ class VoiceControls:
                 self.status.set("Voix détectée")
                 self.notify_presence("user_speaking")
             elif event.kind == "transcribing":
+                self.transcribing = True
+                self.record_diagnostic(event.kind, {"tour": event.generation})
                 self.status.set("Transcription française locale…")
                 self.notify_presence("thinking")
             elif event.kind == "transcript" and event.generation == self.heard:
+                self.transcribing = False
                 if event.payload.strip() and not self.app.operation:
                     self.app.send(source="voice", text=event.payload.strip())
                     if self.app.operation != "chat":
@@ -214,7 +242,7 @@ class VoiceControls:
             elif event.kind == "mic_level":
                 if event.payload.get("speaking"):
                     self.notify_presence("user_speaking", signal=event.payload)
-                elif self.listening and not self.app.operation and not self.speech.alive():
+                elif self.listening and not self.transcribing and not self.app.operation and not self.speech.alive():
                     self.notify_presence("listening", signal=event.payload)
             elif event.kind == "listening":
                 self.status.set("Écoute locale active")
@@ -262,6 +290,46 @@ class VoiceControls:
         if self.speech.process is not None and not self.speech.alive() and now - self.last_speech > 0.5:
             self.cancel_speech(status="error")
             self.status.set("Processus de lecture arrêté ; texte conservé.")
+
+    def record_diagnostic(self, kind, payload):
+        stamp = time.strftime("%H:%M:%S")
+        self.diagnostic_events.append(f"{stamp} · {kind} · {payload}")
+        self.refresh_diagnostics()
+
+    def refresh_diagnostics(self):
+        if self.diagnostic_window is None or not self.diagnostic_window.winfo_exists():
+            return
+        values = self.diagnostics
+        probability = values.get("vad")
+        text = (f"RMS micro : {values.get('rms', 0):.5f}   |   Probabilité VAD : "
+                + (f"{probability:.3f}" if probability is not None else "—")
+                + f"\nÉtat : {values.get('state', 'en attente')}   |   Tour : {values.get('turn_seconds', 0):.2f} s"
+                + f"\nPCM : {values.get('native_rate', '—')} → {values.get('rate', '—')} Hz ; trames : {values.get('frame_samples', '—')}"
+                + f"\nDernière fin : {values.get('end_reason', '') or 'aucune'}"
+                + f"\nSTT : {values.get('last_stt', 'en attente')}\n\n"
+                + "\n".join(self.diagnostic_events))
+        self.diagnostic_text.configure(state="normal")
+        self.diagnostic_text.delete("1.0", "end")
+        self.diagnostic_text.insert("1.0", text)
+        self.diagnostic_text.configure(state="disabled")
+        self.diagnostic_text.see("end")
+
+    def open_diagnostics(self):
+        if self.diagnostic_window is not None and self.diagnostic_window.winfo_exists():
+            self.diagnostic_window.lift()
+            return
+        dialog = self.diagnostic_window = tk.Toplevel(self.app.root)
+        dialog.title("Diagnostic local · micro → VAD → STT")
+        dialog.geometry("760x450")
+        dialog.configure(bg="#121c29", padx=12, pady=12)
+        tk.Label(dialog, text="Mesures réelles, actualisées 4 fois/s. Trace locale en mémoire, sans fichier audio ni envoi réseau.",
+                 bg="#121c29", fg="#e4edf6", wraplength=720, justify="left").pack(anchor="w")
+        from tkinter.scrolledtext import ScrolledText
+        self.diagnostic_text = ScrolledText(dialog, wrap="word", bg="#0b1019", fg="#e4edf6", height=14)
+        self.diagnostic_text.pack(fill="both", expand=True, pady=8)
+        ttk.Button(dialog, text="Terminer le tour courant (si VAD reste actif)",
+                   command=lambda: self.capture.send({"kind": "finish_turn"})).pack(anchor="w")
+        self.refresh_diagnostics()
 
     def preview(self):
         if hasattr(self.app, "presence") and self.app.presence.state == "dormant":

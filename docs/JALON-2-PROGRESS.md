@@ -5,6 +5,10 @@ Le jalon 1 a été validé sur Windows par le propriétaire ; ce n’est pas une
 Windows du présent jalon. Spécifications : DOCX existants + `JALON-2-SPEC.md`.
 Aucun changement direct de main, aucun force push, aucune fusion automatique.
 
+**Dernier correctif : VAD/STT + expressivité**, détail en fin de fichier. Les
+bilans J2.0–J2.6 ci-dessous restent des preuves historiques ; les observations
+Windows du propriétaire ne valident pas encore la nouvelle version corrigée.
+
 ## Critères d’implémentation stables (24)
 
 Une case cochée signifie code intégré et testé au niveau indiqué, pas recette Windows.
@@ -156,3 +160,45 @@ fonctionne ; ne pas demander de token pour le push qui fonctionne déjà. L’ex
 Actions et son artefact ne sont pas confirmables via l’API de cette session.
 Ouvrir Actions sur GitHub puis vérifier le dernier workflow de cette branche ;
 créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne pas fusionner.
+
+## Correctif conversation VAD/STT + expressivité PRESENCE
+
+- Constat propriétaire Windows 11 : USB Condenser/MME, capture et onde réelles,
+  « Voix détectée » sans STT aux silences 300/800/1500 ms. Préécoutes Tom/Siwis
+  et chat Ollama fonctionnent ; sortie XTREME140 Bluetooth en mode speakers.
+- **Cause reproduite dans le code** : `speech_start` appelle `cancel_speech()`
+  qui envoie `mute=False` alors que le micro est déjà actif. Le worker réinitialisait
+  inconditionnellement TurnDetector et Silero, effaçant le tour nouvellement détecté.
+  Même séquence PCM/VAD et même commande UI : ancien code = 3 débuts/0 segment STT ;
+  correctif = 1 début/1 segment/transcription de test. Le ventilateur n’est pas une
+  cause démontrée et aucun réducteur de bruit ou moteur supplémentaire n’est ajouté.
+- Réinitialisation seulement lors d’un changement réel de mute. Les véritables
+  suspensions restent effectives. Fin normale au silence inchangée ; garde 20 s
+  existante conservée, puis attente de silence pour éviter les boucles de faux tours.
+  Fin manuelle explicite accessible dans le diagnostic.
+- Diagnostic local discret : RMS PCM réel, probabilité Silero, parole/silence,
+  durée, fin de tour/motif, début/fin STT, texte ou exception et temps STT ;
+  4 mesures/s maximum, 32 événements en mémoire, sans enregistrement audio.
+  Une erreur STT ne tue plus la capture ; reprise au tour suivant testée.
+- PRESENCE : même maillage/splines centrés, compression visuelle non linéaire,
+  attaque rapide et relâchement plus doux, ligne strictement plate sans signal.
+  Curseur persistant 0–100 %, défaut 65 %, indépendant de PCM/gain/VAD/STT.
+- **61 tests ciblés distincts réussis**, aucun échec ni ignoré : première passe
+  59 tests (`tests.test_capture_turns tests.test_audio tests.test_voice_flow
+  tests.test_presence`), puis 11 tests capture/contrats après ajout de deux cas
+  de commande manuelle/suspension réelle (9 cas déjà exécutés, ne pas additionner).
+  Commande : `DISPLAY=:99 LD_LIBRARY_PATH=/tmp/j2-portaudio/usr/lib/x86_64-linux-gnu
+  .venv-voice/bin/python -m unittest <modules ci-dessus> -v`.
+  SOXR réel vérifié à 44,1/48 kHz → 16 kHz avec trames de 512 sans perte ; Silero
+  ONNX réel vérifié au silence/réinitialisation. Parole courte/longue, bruit constant,
+  parole avec bruit, VAD bloqué et reprise STT sont des scénarios PCM/probabilités
+  contrôlés, **pas une mesure de reconnaissance réelle en présence du ventilateur**.
+  Tk/SQLite/HTTP de test sont réels ; microphone et reconnaissance des phrases simulés.
+- Workflow Windows vocal existant conservé : tests, compilation et smoke EXE,
+  artefact `Jarvis-Jalon2-Windows-x64-<commit>`. Consultation Actions refusée par
+  l’API (`Forbidden`) dans cet environnement. Aucun nouvel EXE Windows exécuté ici.
+- **À vérifier sur le PC** après récupération de l’artefact vert : une phrase puis
+  silence aux trois réglages, phrase longue, bruit seul, phrase avec bruit, réponse
+  et reprise micro speakers ; consulter la chaîne d’événements décrite dans VOICE.md.
+  Si l’échec persiste, ces valeurs et l’étape d’exception permettent un diagnostic
+  exploitable. Les validations matérielles/latences restent ouvertes, sans les déclarer réussies.

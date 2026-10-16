@@ -22,6 +22,54 @@ def bounds(points):
 
 
 class GeometryTests(unittest.TestCase):
+    def test_expressivity_is_nonlinear_bounded_and_uses_only_real_audio(self):
+        heights = []
+        for expressivity in (0, 65, 100):
+            model = PresenceModel(PresenceSettings(wave_expressivity=expressivity))
+            model.update_event("user_speaking", {**SIGNAL, "rms": 0.02}, now=1)
+            points = model.frame(1000, 700, now=1)
+            self.assert_centered(points, 1000, 700)
+            heights.append(bounds(points)[3] - bounds(points)[1])
+            model.update_event("user_speaking", {"rms": 0, "wave": SIGNAL["wave"]}, now=2)
+            self.assertTrue(all(y == 350 for _, y in model.frame(1000, 700, now=2)))
+        self.assertLess(heights[0], heights[1])
+        self.assertLess(heights[1], heights[2])
+        self.assertGreater(heights[1], 100)  # Quiet PCM now has visible dynamic range.
+        model = PresenceModel()
+        excursions = []
+        for rms in (0.01, 0.02, 0.04, 1):
+            model.update_event("user_speaking", {**SIGNAL, "rms": rms}, now=1)
+            points = model.target_geometry(1000, 700, now=1)
+            self.assert_centered(points, 1000, 700)
+            excursions.append(bounds(points)[3] - bounds(points)[1])
+        self.assertEqual(excursions, sorted(excursions))
+        self.assertLess(excursions[1], 2 * excursions[0])  # Compression, not fixed gain.
+
+    def test_wave_attack_is_fast_and_release_is_softer_without_idle_motion(self):
+        model = PresenceModel()
+        model.update_event("user_speaking", {**SIGNAL, "rms": 0.001}, now=1)
+        low = model.frame(1000, 700, now=1)
+        model.update_event("user_speaking", {**SIGNAL, "rms": 0.12}, now=1.03)
+        high_target = model.target_geometry(1000, 700, now=1.03)
+        rise = model.frame(1000, 700, now=1.03)
+        extent = lambda points: bounds(points)[3] - bounds(points)[1]
+        attack = (extent(rise) - extent(low)) / (extent(high_target) - extent(low))
+        model.update_event("user_speaking", {**SIGNAL, "rms": 0.001}, now=1.06)
+        fall = model.frame(1000, 700, now=1.06)
+        release = (extent(rise) - extent(fall)) / (extent(rise) - extent(low))
+        self.assertGreater(attack, 0.7)
+        self.assertLess(release, 0.3)
+        flat = model.frame(1000, 700, now=2)
+        self.assertTrue(all(y == 350 for _, y in flat))
+        self.assertFalse(model.needs_animation(now=2))
+
+    def test_expressivity_defaults_and_invalid_preferences(self):
+        self.assertEqual(PresenceSettings().wave_expressivity, 65)
+        for value in (-1, 101, float("nan"), float("inf"), True, "high", None):
+            self.assertEqual(PresenceSettings.from_dict({"wave_expressivity": value}).wave_expressivity, 65)
+        for value in (0, 65, 100):
+            self.assertEqual(PresenceSettings.from_dict({"wave_expressivity": value}).wave_expressivity, value)
+
     def assert_centered(self, points, width, height):
         left, top, right, bottom = bounds(points)
         self.assertAlmostEqual((left + right) / 2, width / 2, places=6)
@@ -179,6 +227,21 @@ class PresenceTkTests(unittest.TestCase):
         self.view.show()
         self.assertIsNot(self.view.window, original)
         self.assertEqual(self.view.state, "thinking")
+
+    def test_expressivity_slider_persists_without_touching_voice_preferences(self):
+        self.store.set_preference("voice", {"vad_threshold": 0.6, "silence_ms": 800})
+        self.view.show()
+        self.view.open_settings()
+        slider = next(child for child in self.view.settings_dialog.winfo_children() if isinstance(child, tk.Scale))
+        self.assertEqual(slider.get(), 65)
+        self.root.update()
+        slider.set(90)
+        self.root.update()
+        self.assertEqual(self.store.get_preference("presence")["wave_expressivity"], 90)
+        reopened = PresenceView(self.app)
+        self.addCleanup(reopened.close)
+        self.assertEqual(reopened.settings.wave_expressivity, 90)
+        self.assertEqual(self.store.get_preference("voice"), {"vad_threshold": 0.6, "silence_ms": 800})
 
     def test_caption_overlay_never_changes_canvas_or_core_centre(self):
         self.view.show()

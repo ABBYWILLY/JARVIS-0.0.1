@@ -58,6 +58,34 @@ class TurnTests(unittest.TestCase):
 
 @unittest.skipUnless(importlib.util.find_spec("faster_whisper"), "Dépendances vocales non installées")
 class RealVadTests(unittest.TestCase):
+    def test_native_pcm_resampling_preserves_audio_and_512_sample_frames(self):
+        import numpy as np
+        import soxr
+        from jarvis.audio import Microphone
+        for rate in (44100, 48000):
+            with self.subTest(rate=rate):
+                sd = Mock()
+                sd.query_devices.return_value = {"default_samplerate": rate}
+                with patch.dict("sys.modules", {"sounddevice": sd}):
+                    microphone = Microphone(None)
+                capture = sd.RawInputStream.call_args.kwargs["callback"]
+                pcm = (0.1 * np.sin(2 * np.pi * 997 * np.arange(rate) / rate)).astype("float32")
+                frames = []
+                for offset in range(0, len(pcm), 1000):
+                    chunk = pcm[offset:offset + 1000]
+                    capture(chunk.tobytes(), len(chunk), None, None)
+                    frames.extend(microphone.read())
+                    self.assertLess(len(microphone.pending), FRAME)
+                self.assertTrue(frames)
+                self.assertTrue(all(len(frame) == FRAME and frame.dtype == np.float32 for frame in frames))
+                # Account for SOXR's bounded filter delay; production keeps this
+                # tail for the following callback rather than flushing each block.
+                tail = microphone.resampler.resample_chunk(np.empty(0, dtype="float32"), last=True)
+                actual = np.concatenate([*frames, microphone.pending, tail])
+                expected = soxr.resample(pcm, rate, RATE, quality="HQ")
+                self.assertEqual(len(actual), RATE)
+                np.testing.assert_allclose(actual, expected, atol=2e-6)
+
     def test_stt_contract_local_only_french_cpu(self):
         from jarvis.audio import FrenchWhisper
         with tempfile.TemporaryDirectory() as directory:
