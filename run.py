@@ -1,0 +1,48 @@
+"""Desktop entry point; freeze_support must precede UI startup on Windows."""
+import multiprocessing
+import sys
+
+
+def main():
+    import tkinter as tk
+    from tkinter import messagebox
+    from jarvis.config import data_directory
+    from jarvis.storage import Store
+    from jarvis.ui import App
+    from dataclasses import replace
+    import time
+
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        store = Store(data_directory() / "jarvis.sqlite3")
+        app = App(root, store, refresh="--smoke-test" not in sys.argv)
+    except Exception:
+        messagebox.showerror("JARVIS — démarrage impossible", "Impossible d’ouvrir les données locales. Vérifiez les droits du dossier et l’espace disque. Ne supprimez pas votre base ; sauvegardez-la avant toute réparation.", parent=root)
+        root.destroy()
+        return 1
+    root.deiconify()
+    result = [0]
+    if "--smoke-test" in sys.argv:
+        # Exercise frozen multiprocessing as well as Tk/SQLite, without Ollama.
+        app.settings = replace(app.settings, endpoint="http://127.0.0.1:1")
+        app.refresh_models()
+        deadline = time.monotonic() + 15
+
+        def check():
+            if not app.operation:
+                result[0] = 0 if "Connexion Ollama impossible" in app.status.get() else 1
+                app.close()
+            elif time.monotonic() > deadline:
+                result[0] = 1
+                app.close()
+            else:
+                root.after(50, check)
+        root.after(100, check)
+    root.mainloop()
+    return result[0]
+
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    raise SystemExit(main())
