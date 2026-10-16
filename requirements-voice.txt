@@ -1,0 +1,7 @@
+# Optional local voice runtime. No Torch/CUDA requirement.
+numpy==2.2.6
+sounddevice==0.5.6
+soxr==1.0.0
+faster-whisper==1.2.1
+piper-tts==1.8.0
+onnxruntime==1.31.0

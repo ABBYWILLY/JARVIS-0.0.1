@@ -11,7 +11,7 @@ Une case cochée signifie code intégré et testé au niveau indiqué, pas recet
 
 - [ ] I01 Capture micro locale sur activation explicite, libération à l’arrêt.
 - [ ] I02 Sélection entrée/sortie et erreurs de périphériques.
-- [ ] I03 VAD réel local, fin de tour, silences, pré-roll et limites.
+- [x] I03 VAD réel local, fin de tour, silences, pré-roll et limites.
 - [ ] I04 STT français local avec modèle installé, sans téléchargement implicite.
 - [ ] I05 TTS Piper : véritable modèle masculin français.
 - [ ] I06 TTS Piper : véritable modèle féminin français.
@@ -41,14 +41,14 @@ Une preuve Linux peut valider un invariant indépendant de l’OS (ex. géométr
 jamais le microphone, l’écoute perceptive ou l’exécutable Windows. Aucune case
 validée par un test ignoré. Preuves actuelles : aucune pour le jalon 2.
 
-Validés : aucun. Implémentation : **0/24 = 0 %**. Validation : **0/34 = 0 %**.
+Validés : aucun. Implémentation : **1/24 = 4,17 %**. Validation : **0/34 = 0 %**.
 
 ## Étapes
 
 | Étape | Statut | Preuves / reste | Commit / prochaine opération |
 |---|---|---|---|
 | J2.0 | TESTÉ | main inspecté, branche dédiée ; moteurs et contraintes définis ; tests baseline ci-dessous | commit `J2.0: prepare voice milestone and recovery checklist` ; implémenter J2.1 |
-| J2.1 | NON COMMENCÉ | capture/VAD/STT | à venir |
+| J2.1 | IMPLÉMENTÉ | adaptateurs capture native/SOXR, périphériques, VAD Silero et STT FR local ; intégration UI en J2.3 ; matériel et modèle non disponibles ici | commit `J2.1: add local capture VAD and French transcription adapters` ; J2.2 |
 | J2.2 | NON COMMENCÉ | TTS/deux voix | à venir |
 | J2.3 | NON COMMENCÉ | dialogue/interruption/SQLite | à venir |
 | J2.4 | NON COMMENCÉ | PRESENCE | à venir |
@@ -78,3 +78,7 @@ Ollama absent). Windows du jalon 2 : aucun test. Références consultées sans c
 Mark-LV CC BY-NC 4.0, backtalk/fullstack-agent AGPL-3+, site jarvis AGPL-3 ; ne pas
 intégrer leur code. Concepts retenus : activation explicite, devices par nom/host API,
 fréquence native et casque pour barge-in. Sources/liens dans JALON-2-SPEC.md.
+
+J2.1 : `.venv-voice/bin/python -m unittest tests.test_audio -v` : 7 réussis, 0 échec,
+0 ignoré. VAD ONNX réel sur silence ; STT testé par contrat, pas par un vrai modèle.
+Capture matérielle et transcription française réelle non validées, aucun test Windows.
