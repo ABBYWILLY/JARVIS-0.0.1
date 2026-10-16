@@ -120,7 +120,7 @@ Profil UNHINGED testé : promptseul, aucuneactivationmicro ni permissionmodifié
 - Préflight source `--voice-smoke-test` réussi : processus spawn, Tk/SQLite,
   imports natifs, phonémisation française **réelle**, VAD Silero ONNX **réel**,
   rééchantillonnage SOXR **réel**. Aucun microphone ni poids Whisper/Piper utilisés.
-- 30 dépendances voix/installation épinglées et paquets Windows x64 téléchargés
+- Dépendances voix/installation épinglées et paquets Windows x64 téléchargés
   avec succès par pip ; aucun paquet absent à la résolution Windows Python3.12.
 - PyInstaller Linux : binaire de contrôle 173 Mio, `--smoke-test` réussi et
   `--voice-smoke-test` réussi **avec PortAudio local disponible**. Le premier essai
@@ -145,3 +145,14 @@ Les 16 validations concernent les preuves indépendantes de l’OS listées plus
 **0 contrôle matériel validé sur Windows pour ce jalon.** Ne pas marquer J2.6 terminé
 avant réception de l’artefact et recette. Prochaine opération : Actions Windows,
 puis installation explicite des modèles et exécution des contrôles réels du guide.
+
+## Commits et publication
+
+J2.0 `ad91560` ; J2.1 `a1ba661` ; J2.2 `a263a0a` ; J2.3 `b515983` ;
+J2.4 `3dfc6fe` ; J2.5 `e773a08` ; J2.6 code exploitable `d0c18c6`.
+Tous ces commits ont été poussés sur `feat/jalon-2-voice-presence` (aucun force push).
+Création de PR refusée par l’API GraphQL GitHub : Forbidden. Le proxy Git HTTPS
+fonctionne ; ne pas demander de token pour le push qui fonctionne déjà. L’exécution
+Actions et son artefact ne sont pas confirmables via l’API de cette session.
+Ouvrir Actions sur GitHub puis vérifier le dernier workflow de cette branche ;
+créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne pas fusionner.
