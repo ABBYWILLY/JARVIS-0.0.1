@@ -1,6 +1,7 @@
 """Voice orchestration on Tk's thread; capture, STT and playback run elsewhere."""
 import time
 import tkinter as tk
+from collections import deque
 from dataclasses import replace
 from tkinter import filedialog, messagebox, ttk
 
@@ -12,7 +13,12 @@ from .voice_runtime import AudioProcess, audio_error
 class VoiceControls:
     def __init__(self, app, parent):
         self.app = app
-        self.settings = VoiceSettings(**app.store.get_preference("voice", {})).validate()
+        initial_status = "Microphone désactivé"
+        try:
+            self.settings = VoiceSettings(**app.store.get_preference("voice", {})).validate()
+        except (TypeError, ValueError):
+            self.settings = VoiceSettings()
+            initial_status = "Préférences vocales invalides ; valeurs par défaut temporaires, chat disponible"
         self.capture, self.speech = AudioProcess(), AudioProcess()
         self.listening = False
         self.epoch = self.heard = 0
@@ -21,8 +27,9 @@ class VoiceControls:
         self.segmenter = SentenceBuffer()
         self.last_capture = self.last_speech = 0.0
         self.pending_visuals = []
+        self.pending_phrases = deque(maxlen=64)
         self.resume_id = None
-        self.status = tk.StringVar(value="Microphone désactivé")
+        self.status = tk.StringVar(value=initial_status)
         self.listen_button = ttk.Button(parent, text="Activer l’écoute", command=self.toggle)
         self.listen_button.pack(fill="x", pady=(10, 4))
         ttk.Button(parent, text="Voix / périphériques", command=self.open_settings).pack(fill="x")
@@ -38,6 +45,8 @@ class VoiceControls:
         if self.listening:
             self.stop_listening()
             return
+        if hasattr(self.app, "presence") and self.app.presence.state == "dormant":
+            self.app.presence.wake()
         if not messagebox.askyesno("Activer le microphone local", "Autoriser JARVIS à écouter ce microphone et à envoyer les transcriptions au modèle Ollama local ?\n\nL’écoute reste active jusqu’à désactivation. Aucun fichier audio n’est conservé.\nMode casque : interruption vocale. Mode haut-parleurs : écoute suspendue pendant la lecture.", parent=self.app.root):
             return
         self.capture.start("capture", self.settings)
@@ -89,9 +98,18 @@ class VoiceControls:
                     self.status.set("Lecture annulée : suspension du microphone impossible.")
                     return
                 self.status.set("Lecture haut-parleurs : microphone suspendu")
-        if not self.speech.send(phrase):
+        if len(self.pending_phrases) == self.pending_phrases.maxlen:
             self.cancel_speech(status="error")
-            self.status.set("Lecture arrêtée : file audio saturée. Le texte reste enregistré.")
+            self.status.set("Lecture arrêtée : trop de phrases audio en attente (64). Le texte reste enregistré.")
+            return
+        self.pending_phrases.append(phrase)
+        self.drain_phrases()
+
+    def drain_phrases(self):
+        while self.speech.process is not None and self.pending_phrases:
+            if not self.speech.send(self.pending_phrases[0]):
+                break
+            self.pending_phrases.popleft()
 
     def chunk(self, text):
         if self.reading:
@@ -122,6 +140,7 @@ class VoiceControls:
         self.speech.stop()
         self.epoch += 1
         self.pending_visuals.clear()
+        self.pending_phrases.clear()
         self.end_pending = False
         self.reading = False
         if not self.app.operation:
@@ -167,6 +186,9 @@ class VoiceControls:
             elif event.kind == "transcript" and event.generation == self.heard:
                 if event.payload.strip() and not self.app.operation:
                     self.app.send(source="voice", text=event.payload.strip())
+                    if self.app.operation != "chat":
+                        self.app.input.insert("end", event.payload.strip() + "\n")
+                        self.status.set("Transcription conservée dans la saisie ; vérifiez le modèle ou le contexte.")
                 elif event.payload.strip():
                     self.status.set("Modèle occupé ; transcription conservée dans la saisie.")
                     self.app.input.insert("end", event.payload + "\n")
@@ -218,13 +240,16 @@ class VoiceControls:
                 if epoch == self.epoch:
                     self.notify_presence("jarvis_speaking", signal=view, caption=view)
                 self.pending_visuals.remove((due, view, epoch))
-        if self.end_pending and self.speech.send(None):
+        self.drain_phrases()
+        if self.end_pending and not self.pending_phrases and self.speech.send(None):
             self.end_pending = False
         if self.speech.process is not None and not self.speech.alive() and now - self.last_speech > 0.5:
             self.cancel_speech(status="error")
             self.status.set("Processus de lecture arrêté ; texte conservé.")
 
     def preview(self):
+        if hasattr(self.app, "presence") and self.app.presence.state == "dormant":
+            self.app.presence.wake()
         self.cancel_speech()
         self.speech.start("speech", self.settings, self.epoch)
         self.app.stop_button.configure(state="normal")

@@ -93,6 +93,7 @@ class VoiceFlowTests(unittest.TestCase):
 
     def test_microphone_closed_until_explicit_acceptance_and_toggle_stops_it(self):
         self.assertFalse(self.voice.listening)
+
         self.assertEqual(self.voice.capture.starts, [])
         self.assertEqual(self.voice.speech.starts, [])
         with patch("jarvis.voice_ui.messagebox.askyesno", return_value=False) as permission:
@@ -107,6 +108,16 @@ class VoiceFlowTests(unittest.TestCase):
         permission.assert_not_called()
         self.assertFalse(self.voice.capture.alive())
         self.assertFalse(self.voice.listening)
+
+    def test_rejected_voice_send_keeps_transcript_in_composer(self):
+        self.activate()
+        self.voice.capture.events.extend([
+            AudioEvent("speech_start", generation=1),
+            AudioEvent("transcript", "Parole sans modèle sélectionné", generation=1),
+        ])
+        self.voice.poll()
+        self.assertIsNone(self.app.operation)
+        self.assertIn("Parole sans modèle sélectionné", self.app.input.get("1.0", "end"))
 
     def test_voice_transcript_uses_real_http_stream_and_sqlite_archive(self):
         with Fixture() as fixture:
@@ -251,6 +262,77 @@ class VoiceFlowTests(unittest.TestCase):
         self.assertEqual(self.voice.speech.commands, [])
         self.assertEqual(json.loads(self.store.messages(self.app.session_id)[1]["metadata"])["audio_status"], "error")
         self.assertIn("suspension du microphone impossible", self.voice.status.get())
+
+    def bounded_speech_queue(self):
+        """Real bounded transport; synthesis/playback remain explicitly simulated."""
+        transport = queue.Queue(maxsize=8)
+        original_send = self.voice.speech.send
+
+        def send(command):
+            try:
+                transport.put_nowait(command)
+            except queue.Full:
+                return False
+            return original_send(command)
+
+        self.send_patch = patch.object(self.voice.speech, "send", side_effect=send)
+        self.send_patch.start()
+        self.addCleanup(self.send_patch.stop)
+        return transport
+
+    def test_fast_ten_phrase_response_waits_for_worker_then_drains_in_order(self):
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        transport = self.bounded_speech_queue()
+        phrases = [f"Phrase {i}." for i in range(10)]
+        self.voice.chunk(" ".join(phrases))
+        self.voice.finish_turn("complete")
+        self.voice.poll()  # A full worker queue must keep the last phrases and sentinel waiting.
+        self.assertTrue(self.voice.speech.alive())
+        self.assertEqual(self.voice.speech.commands, phrases[:8])
+        self.assertEqual(list(self.voice.pending_phrases), phrases[8:])
+        self.assertTrue(self.voice.end_pending)
+        self.assertEqual([transport.get_nowait() for _ in range(8)], phrases[:8])
+        self.voice.poll()
+        self.assertEqual(self.voice.speech.commands, phrases + [None])
+        self.assertEqual([transport.get_nowait() for _ in range(3)], phrases[8:] + [None])
+        self.assertFalse(self.voice.pending_phrases)
+        self.assertFalse(self.voice.end_pending)
+        self.assertEqual(json.loads(self.store.messages(self.app.session_id)[1]["metadata"])["audio_status"], "synthesizing")
+
+    def test_cancel_discards_backlog_and_pending_end_marker(self):
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.bounded_speech_queue()
+        self.voice.chunk("Une phrase. " * 10)
+        self.voice.finish_turn("complete")
+        self.assertEqual(len(self.voice.pending_phrases), 2)
+        previous_epoch = self.voice.epoch
+        self.voice.cancel_speech()
+        self.voice.poll()
+        self.assertFalse(self.voice.pending_phrases)
+        self.assertFalse(self.voice.end_pending)
+        self.assertGreater(self.voice.epoch, previous_epoch)
+        self.assertFalse(self.voice.speech.alive())
+        self.assertEqual(self.voice.speech.commands, ["Une phrase."] * 8)
+        self.assertEqual(json.loads(self.store.messages(self.app.session_id)[1]["metadata"])["audio_status"], "interrupted")
+
+    def test_backlog_limit_reports_error_without_silent_phrase_eviction(self):
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.bounded_speech_queue()
+        self.voice.chunk("Une phrase. " * 72)
+        self.assertEqual(len(self.voice.pending_phrases), 64)
+        self.assertTrue(self.voice.speech.alive())
+        self.voice.chunk("Phrase en trop.")
+        self.assertFalse(self.voice.speech.alive())
+        self.assertFalse(self.voice.pending_phrases)
+        self.assertIn("64", self.voice.status.get())
+        self.assertIn("texte reste enregistré", self.voice.status.get())
+        self.assertEqual(json.loads(self.store.messages(self.app.session_id)[1]["metadata"])["audio_status"], "error")
 
 
 class RuntimeContractTests(unittest.TestCase):

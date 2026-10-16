@@ -1,0 +1,521 @@
+"""One audio-driven mesh, shared by PRESENCE's line, wave and core forms."""
+import math
+import re
+import time
+import tkinter as tk
+from dataclasses import asdict, dataclass, replace
+from tkinter import colorchooser, messagebox, ttk
+
+
+STATES = {"silent", "listening", "user_speaking", "thinking", "jarvis_speaking", "dormant"}
+PROFILES = {"eco": (16, 1), "balanced": (30, 2), "cinematic": (45, 4)}
+PROFILE_LABELS = {"eco": "Éco", "balanced": "Équilibré", "cinematic": "Cinématique"}
+STATE_LABELS = {"silent": "SILENCE", "listening": "ÉCOUTE LOCALE",
+                "user_speaking": "VOUS PARLEZ", "thinking": "TRAITEMENT LOCAL",
+                "jarvis_speaking": "JARVIS PARLE", "dormant": "EN SOMMEIL"}
+POINT_COUNT = 97
+SIGNAL_LIFETIME = 0.18
+
+
+@dataclass(frozen=True)
+class PresenceSettings:
+    background: str = "#000000"
+    profile: str = "balanced"
+    reduced_motion: bool = False
+    subtitles: bool = True
+
+    @classmethod
+    def from_dict(cls, values):
+        """Optional visual preferences must never prevent the text app starting."""
+        defaults = cls()
+        if not isinstance(values, dict):
+            return defaults
+        valid = {}
+        color = values.get("background")
+        if isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+            valid["background"] = color.lower()
+        if isinstance(values.get("profile"), str) and values["profile"] in PROFILES:
+            valid["profile"] = values["profile"]
+        for key in ("reduced_motion", "subtitles"):
+            if isinstance(values.get(key), bool):
+                valid[key] = values[key]
+        return replace(defaults, **valid)
+
+
+def _rgb(color):
+    return tuple(int(color[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def mix(background, foreground, amount):
+    return "#" + "".join(f"{round(a + (b - a) * amount):02x}"
+                         for a, b in zip(_rgb(background), _rgb(foreground)))
+
+
+def luminance(color):
+    channels = [value / 255 for value in _rgb(color)]
+    linear = [value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+              for value in channels]
+    return sum(value * weight for value, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+
+
+def contrast(a, b):
+    light, dark = sorted((luminance(a), luminance(b)), reverse=True)
+    return (light + 0.05) / (dark + 0.05)
+
+
+def palette(background):
+    foreground = max(("#f2f6fa", "#101820"), key=lambda color: contrast(background, color))
+    muted = mix(background, foreground, 0.72)
+    if contrast(background, muted) < 4.5:
+        muted = foreground
+    accent = max(("#69edf5", "#005367"), key=lambda color: contrast(background, color))
+    button_shade = "#000000" if foreground == "#f2f6fa" else "#ffffff"
+    return {"background": background, "foreground": foreground, "muted": muted,
+            "accent": accent, "button": mix(background, button_shade, 0.08)}
+
+
+def core_radius(width, height):
+    small = max(1.0, min(width, height))
+    return min(260.0, max(36.0, small * 0.18), small * 0.23)
+
+
+def _finite(value, default=0.0):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return default
+    return value if math.isfinite(value) else default
+
+
+def _signal(signal):
+    if not isinstance(signal, dict):
+        return {"rms": 0.0, "wave": []}
+    wave = signal.get("wave", [])
+    if not isinstance(wave, (list, tuple)):
+        wave = []
+    return {"rms": max(0.0, min(1.0, _finite(signal.get("rms", 0)))),
+            "wave": [max(-1.0, min(1.0, _finite(value))) for value in wave[:192]]}
+
+
+def _smooth_wave(samples, count=POINT_COUNT):
+    if not samples or not any(samples):
+        return [0.0] * count
+    values = list(samples)
+    # A short spatial filter plus Canvas splines removes angular microphone peaks.
+    for _ in range(2):
+        padded = [values[0]] * 2 + values + [values[-1]] * 2
+        values = [sum(padded[i + j] * weight for j, weight in enumerate((1, 4, 6, 4, 1))) / 16
+                  for i in range(len(values))]
+    mean = sum(values) / len(values)
+    values = [value - mean for value in values]
+    peak = max(abs(value) for value in values)
+    if peak < 1e-9:
+        return [0.0] * count
+    result = []
+    for i in range(count):
+        position = i * (len(values) - 1) / (count - 1)
+        left = int(position)
+        right = min(len(values) - 1, left + 1)
+        value = values[left] + (values[right] - values[left]) * (position - left)
+        result.append(value / peak)
+    return result
+
+
+def _center(points, width, height):
+    xs, ys = zip(*points)
+    dx, dy = width / 2 - (min(xs) + max(xs)) / 2, height / 2 - (min(ys) + max(ys)) / 2
+    return [(x + dx, y + dy) for x, y in points]
+
+
+class PresenceModel:
+    """The sole state machine and reversible mesh; independent of Tk and audio I/O."""
+    def __init__(self, settings=None):
+        self.settings = settings or PresenceSettings()
+        self.state = "silent"
+        self.signal = _signal(None)
+        self.signal_at = self.state_since = 0.0
+        self.points = []
+        self.size = None
+        self.last_frame = None
+        self.morphing = False
+
+    def update_event(self, state, signal=None, now=None):
+        if state not in STATES:
+            raise ValueError("État PRESENCE inconnu.")
+        now = time.monotonic() if now is None else now
+        if state != self.state:
+            self.state_since = now
+        self.state = state
+        self.signal = _signal(signal)
+        self.signal_at = now
+
+    def has_signal(self, now):
+        return self.signal["rms"] > 0 and 0 <= now - self.signal_at <= SIGNAL_LIFETIME
+
+    def target_geometry(self, width, height, now=None):
+        now = time.monotonic() if now is None else now
+        width, height = max(1, width), max(1, height)
+        cx, cy = width / 2, height / 2
+        span = max(1.0, width - 2 * max(18, width * 0.08))
+        active = self.has_signal(now)
+        energy = min(1.0, math.sqrt(self.signal["rms"]) * 1.6) if active else 0.0
+        wave = _smooth_wave(self.signal["wave"]) if active else [0.0] * POINT_COUNT
+        wave_line = [value * math.sin(math.pi * i / (POINT_COUNT - 1)) ** 2
+                     for i, value in enumerate(wave)]
+        positive, negative = max(wave_line), -min(wave_line)
+        if positive > 1e-9 and negative > 1e-9:
+            wave_line = [value / (positive if value >= 0 else negative) for value in wave_line]
+        else:
+            wave_line = [0.0] * POINT_COUNT
+        points = []
+        for i in range(POINT_COUNT):
+            t = i / (POINT_COUNT - 1)
+            if self.state == "dormant":
+                x, y = cx + (t - 0.5) * 5, cy
+            elif self.state in {"thinking", "jarvis_speaking"}:
+                angle = -math.pi / 2 + math.tau * t
+                radius = core_radius(width, height)
+                if self.state == "thinking" and not self.settings.reduced_motion:
+                    phase = (now - self.state_since) * 0.45
+                    radius *= 1 + 0.012 * math.sin(2 * angle + phase)
+                elif self.state == "jarvis_speaking" and active:
+                    # Opposite radii share data, so speech never moves the core's centre.
+                    j = (i + (POINT_COUNT - 1) // 2) % (POINT_COUNT - 1)
+                    modulation = (wave[i % (POINT_COUNT - 1)] + wave[j]) / 2
+                    radius *= 1 + energy * (0.025 + 0.10 * modulation)
+                x, y = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+            else:
+                x, y = cx + (t - 0.5) * span, cy
+                if self.state == "user_speaking" and active:
+                    # The sine is an endpoint window, never an invented audio carrier.
+                    amplitude = min(85, height * 0.11) * energy
+                    if self.settings.reduced_motion:
+                        amplitude *= 0.55
+                    y += wave_line[i] * amplitude
+            points.append((x, y))
+        return _center(points, width, height)
+
+    def frame(self, width, height, now=None):
+        now = time.monotonic() if now is None else now
+        target = self.target_geometry(width, height, now)
+        speaking_without_signal = self.state in {"user_speaking", "jarvis_speaking"} and not self.has_signal(now)
+        if (not self.points or self.size != (width, height) or self.settings.reduced_motion
+                or self.state == "dormant" or speaking_without_signal):
+            self.points = target
+        else:
+            delta = max(0, min(0.1, now - self.last_frame))
+            duration = 0.025 if self.state == "user_speaking" else 0.065
+            amount = 1 - math.exp(-delta / duration)
+            self.points = [(x + (tx - x) * amount, y + (ty - y) * amount)
+                           for (x, y), (tx, ty) in zip(self.points, target)]
+            self.points = _center(self.points, width, height)
+            if max(math.dist(point, goal) for point, goal in zip(self.points, target)) < 0.15:
+                self.points = target
+        self.size, self.last_frame = (width, height), now
+        self.morphing = any(math.dist(point, goal) > 0.15 for point, goal in zip(self.points, target))
+        return self.points
+
+    def needs_animation(self, now=None):
+        now = time.monotonic() if now is None else now
+        if self.state == "dormant":
+            return False
+        return (self.morphing or self.state == "thinking" and not self.settings.reduced_motion
+                or self.state in {"user_speaking", "jarvis_speaking"} and self.has_signal(now))
+
+
+class PresenceView:
+    """Lazy, optional window. It never owns the microphone, inference or playback."""
+    def __init__(self, app):
+        self.app = app
+        try:
+            raw = app.store.get_preference("presence", {})
+        except Exception:
+            raw = {}
+        self._saved_preferences = dict(raw) if isinstance(raw, dict) else {}
+        self.settings = PresenceSettings.from_dict(raw)
+        self.model = PresenceModel(self.settings)
+        self.window = self.canvas = None
+        self.after_id = None
+        self.caption_text = ""
+        self.caption_data = None
+        self.paths = []
+        self.settings_dialog = None
+        self._slow_until = 0.0
+
+    @property
+    def state(self):
+        return self.model.state
+
+    def show(self):
+        if self.window is not None and self.window.winfo_exists():
+            self.window.deiconify()
+            self.window.lift()
+            self._render()
+            return
+        window = self.window = tk.Toplevel(self.app.root)
+        window.title("JARVIS · PRESENCE")
+        sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
+        width, height = min(1100, max(420, sw - 80)), min(760, max(340, sh - 100))
+        window.geometry(f"{width}x{height}")
+        window.minsize(min(620, width), min(440, height))
+        window.protocol("WM_DELETE_WINDOW", self.close)
+        window.bind("<F11>", self.toggle_fullscreen)
+        window.bind("<Escape>", self.exit_fullscreen)
+        window.bind("<Control-space>", lambda _event: self.toggle_listening())
+        window.bind("<Map>", self._on_map)
+        window.bind("<Unmap>", self._on_unmap)
+        window.bind("<Destroy>", self._on_destroy)
+        self.canvas = tk.Canvas(window, highlightthickness=0, borderwidth=0)
+        self.canvas.pack(fill="both", expand=True)
+        self.canvas.bind("<Configure>", self._on_resize)
+        self.paths = [self.canvas.create_line(0, 0, 1, 0, smooth=True, splinesteps=16,
+                                             capstyle="round", joinstyle="round") for _ in range(4)]
+        family = getattr(self.app, "font_family", "Segoe UI")
+        self.identity = tk.Label(window, text="J A R V I S", font=(family, 18, "bold"))
+        self.identity.place(relx=0.045, rely=0.045, anchor="nw")
+        self.state_label = tk.Label(window, font=(family, 10), anchor="w")
+        self.state_label.place(relx=0.045, rely=0.105, anchor="nw")
+        self.mic_label = tk.Label(window, font=(family, 9), anchor="w")
+        self.mic_label.place(relx=0.045, rely=0.15, anchor="nw")
+        self.header_controls = tk.Frame(window)
+        self.header_controls.place(relx=0.955, rely=0.045, anchor="ne")
+        self.buttons = []
+        for label, command in (("Fond", self.choose_background), ("Réglages", self.open_settings)):
+            self._button(self.header_controls, label, command).pack(side="left", padx=4)
+        self.controls = tk.Frame(window)
+        self.controls.place(relx=0.5, rely=0.92, anchor="center")
+        self.listen_button = self._button(self.controls, "Activer l’écoute", self.toggle_listening)
+        self.listen_button.pack(side="left", padx=4)
+        self._button(self.controls, "Arrêt", self.emergency).pack(side="left", padx=4)
+        self.sleep_button = self._button(self.controls, "Sommeil", self.toggle_sleep)
+        self.sleep_button.pack(side="left", padx=4)
+        self._button(self.controls, "COMMAND OS", self.return_to_command).pack(side="left", padx=4)
+        # Overlays use place: their requested size never participates in core layout.
+        self.caption_label = tk.Label(window, text="", font=(family, 13), justify="center",
+                                      height=3, anchor="n", padx=8)
+        self._apply_colors()
+        window.update_idletasks()
+        self.canvas.focus_set()
+        self._render()
+
+    def _button(self, parent, text, command):
+        button = tk.Button(parent, text=text, command=command, relief="flat", borderwidth=1,
+                           padx=12, pady=8, takefocus=True,
+                           font=(getattr(self.app, "font_family", "Segoe UI"), 10))
+        self.buttons.append(button)
+        return button
+
+    def update_event(self, state, signal=None, caption=None):
+        if state not in STATES or self.state == "dormant" and state != "dormant":
+            return
+        self.model.update_event(state, signal)
+        if caption is not None:
+            self.caption_data = caption
+            self.caption_text = str(caption.get("text", "")) if isinstance(caption, dict) else str(caption)
+        elif state in {"silent", "listening", "dormant"}:
+            self.caption_text = ""
+            self.caption_data = None
+        if self._visible():
+            self._render()
+
+    def _visible(self):
+        return self.window is not None and bool(self.window.winfo_exists() and self.window.winfo_viewable())
+
+    def _cancel_animation(self):
+        if self.after_id is not None:
+            self.app.root.after_cancel(self.after_id)
+            self.after_id = None
+
+    def _render(self):
+        self._cancel_animation()
+        if not self._visible():
+            return
+        started = time.monotonic()
+        width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
+        points = self.model.frame(width, height, started)
+        coords = [coordinate for point in points for coordinate in point]
+        colors = palette(self.settings.background)
+        count = PROFILES[self.settings.profile][1]
+        if self.settings.reduced_motion:
+            count = 1
+        accent = colors["accent"]
+        strength = 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
+        # Every halo uses precisely the same coordinates, never another visualizer.
+        for index, path in enumerate(self.paths):
+            visible = index < count
+            is_edge = index == count - 1
+            opacity = strength if is_edge else (0.06 + index * 0.04) * strength
+            self.canvas.coords(path, *coords)
+            self.canvas.itemconfigure(path, state="normal" if visible else "hidden",
+                                      width=2 if is_edge else 16 - index * 3,
+                                      fill=mix(self.settings.background, accent, opacity))
+        self._update_overlays(width)
+        elapsed = time.monotonic() - started
+        if elapsed > 0.012:
+            self._slow_until = started + 3
+        if self.model.needs_animation(started):
+            fps = PROFILES[self.settings.profile][0]
+            if started < self._slow_until:
+                fps = min(fps, 16)
+            self.after_id = self.app.root.after(round(1000 / fps), self._tick)
+
+    def _tick(self):
+        self.after_id = None
+        self._render()
+
+    def _update_overlays(self, width):
+        self.state_label.configure(text=STATE_LABELS[self.state])
+        listening = bool(self.app.voice.listening)
+        self.mic_label.configure(text="MICRO AUTORISÉ · LOCAL" if listening else "MICRO DÉSACTIVÉ · LOCAL")
+        self.listen_button.configure(text="Désactiver l’écoute" if listening else "Activer l’écoute")
+        self.sleep_button.configure(text="Réveiller" if self.state == "dormant" else "Sommeil")
+        self.caption_label.configure(text=self.caption_text, wraplength=max(200, round(width * 0.76)))
+        if self.settings.subtitles and self.caption_text and self.state != "dormant":
+            self.caption_label.place(relx=0.5, rely=0.76, relwidth=0.82, anchor="n")
+        else:
+            self.caption_label.place_forget()
+
+    def _apply_colors(self):
+        if self.window is None:
+            return
+        colors = palette(self.settings.background)
+        bg, fg = colors["background"], colors["foreground"]
+        self.window.configure(bg=bg)
+        self.canvas.configure(bg=bg)
+        for widget in (self.controls, self.header_controls):
+            widget.configure(bg=bg)
+        for widget in (self.identity, self.state_label, self.mic_label, self.caption_label):
+            widget.configure(bg=bg, fg=fg)
+        self.state_label.configure(fg=colors["accent"])
+        self.mic_label.configure(fg=colors["muted"])
+        for button in self.buttons:
+            button.configure(bg=colors["button"], fg=fg,
+                             activebackground=mix(bg, fg, 0.15), activeforeground=fg,
+                             highlightbackground=bg, highlightcolor=colors["accent"])
+
+    def set_options(self, **changes):
+        candidate = PresenceSettings.from_dict({**asdict(self.settings), **changes})
+        values = {**self._saved_preferences, **asdict(candidate)}
+        try:
+            self.app.store.set_preference("presence", values)
+        except Exception:
+            messagebox.showerror("Préférences PRESENCE", "Impossible d’enregistrer les préférences locales. Vérifiez les droits et l’espace disque.", parent=self.window or self.app.root)
+            return False
+        self._saved_preferences = values
+        self.settings = self.model.settings = candidate
+        self._apply_colors()
+        self._render()
+        return True
+
+    def set_background(self, color):
+        if not isinstance(color, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+            return False
+        return self.set_options(background=color.lower())
+
+    def reset_background(self):
+        return self.set_background("#000000")
+
+    def choose_background(self):
+        _rgb_value, color = colorchooser.askcolor(self.settings.background, title="Fond PRESENCE",
+                                                parent=self.window or self.app.root)
+        if color:
+            self.set_background(color)
+
+    def open_settings(self):
+        if self.settings_dialog is not None and self.settings_dialog.winfo_exists():
+            self.settings_dialog.lift()
+            return
+        dialog = self.settings_dialog = tk.Toplevel(self.window)
+        dialog.title("PRESENCE · affichage")
+        dialog.transient(self.window)
+        colors = palette(self.settings.background)
+        dialog.configure(bg=colors["background"], padx=20, pady=18)
+        tk.Label(dialog, text="Profil graphique", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
+        profile = tk.StringVar(value=PROFILE_LABELS[self.settings.profile])
+        choice = ttk.Combobox(dialog, state="readonly", values=list(PROFILE_LABELS.values()), textvariable=profile)
+        choice.pack(fill="x", pady=(6, 12))
+        choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
+            profile=next(key for key, label in PROFILE_LABELS.items() if label == profile.get())))
+        reduced = tk.BooleanVar(value=self.settings.reduced_motion)
+        subtitles = tk.BooleanVar(value=self.settings.subtitles)
+        for label, variable, key in (("Réduire les mouvements", reduced, "reduced_motion"),
+                                     ("Afficher les sous-titres", subtitles, "subtitles")):
+            tk.Checkbutton(dialog, text=label, variable=variable, bg=colors["background"],
+                           fg=colors["foreground"], selectcolor=colors["button"],
+                           activebackground=colors["background"], activeforeground=colors["foreground"],
+                           command=lambda v=variable, k=key: self.set_options(**{k: v.get()})).pack(anchor="w", pady=5)
+        ttk.Button(dialog, text="Choisir le fond…", command=self.choose_background).pack(fill="x", pady=(12, 4))
+        ttk.Button(dialog, text="Rétablir le noir", command=self.reset_background).pack(fill="x", pady=4)
+        ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(fill="x", pady=(12, 0))
+
+    def toggle_listening(self):
+        if self.state == "dormant":
+            self.wake()
+        self.app.voice.toggle()
+        return "break"
+
+    def emergency(self):
+        self.app.voice.emergency()
+        if self.state != "dormant":
+            self.update_event("silent")
+
+    def toggle_sleep(self):
+        if self.state == "dormant":
+            self.wake()
+        else:
+            self.sleep()
+
+    def sleep(self):
+        # Stop real audio/inference first; no visual transition delays cancellation.
+        self.app.voice.emergency()
+        self.update_event("dormant")
+
+    def wake(self):
+        self.app.voice.stop_listening()
+        self.model.update_event("silent")
+        self.caption_text, self.caption_data = "", None
+        self._render()
+
+    def toggle_fullscreen(self, _event=None):
+        if self.window is not None:
+            self.window.attributes("-fullscreen", not bool(self.window.attributes("-fullscreen")))
+        return "break"
+
+    def exit_fullscreen(self, _event=None):
+        if self.window is not None:
+            self.window.attributes("-fullscreen", False)
+        return "break"
+
+    def return_to_command(self):
+        if self.window is not None:
+            self.window.withdraw()
+        self._cancel_animation()
+        self.app.root.deiconify()
+        self.app.root.lift()
+        self.app.root.focus_set()
+
+    def _on_resize(self, _event=None):
+        if self._visible():
+            self._render()
+
+    def _on_map(self, event):
+        if event.widget is self.window:
+            self._render()
+
+    def _on_unmap(self, event):
+        if event.widget is self.window:
+            self._cancel_animation()
+
+    def _on_destroy(self, event):
+        if event.widget is self.window:
+            self._cancel_animation()
+            self.window = self.canvas = None
+            self.settings_dialog = None
+
+    def close(self):
+        self._cancel_animation()
+        window = self.window
+        self.window = self.canvas = None
+        self.settings_dialog = None
+        if window is not None and window.winfo_exists():
+            window.destroy()

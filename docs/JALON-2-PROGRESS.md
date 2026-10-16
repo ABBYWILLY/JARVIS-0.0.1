@@ -18,17 +18,17 @@ Une case cochée signifie code intégré et testé au niveau indiqué, pas recet
 - [x] I07 Gestionnaire de voix, préécoute audio et vitesse persistante.
 - [x] I08 Orchestration STT → Ollama → TTS segmenté, tours mains libres.
 - [x] I09 Interruption vocale, invalidation des anciens segments et politique d’écho explicite.
-- [ ] I10 Arrêt manuel/urgence et sommeil désactivant capture et tâches.
+- [x] I10 Arrêt manuel/urgence et sommeil désactivant capture et tâches.
 - [x] I11 Migration SQLite préservant textes, provenance, dates, voix/moteur et interruptions.
-- [ ] I12 PRESENCE : une machine à états et une géométrie morphologique unique.
-- [ ] I13 Ligne plate au silence et onde arrondie pilotée par micro réel.
-- [ ] I14 Réflexion sur traitement réel et noyau piloté par audio diffusé.
-- [ ] I15 Centrage et proportions responsives sans déplacement par sous-titres.
-- [ ] I16 Fond noir, sélecteur, restauration et contraste automatique persistants.
+- [x] I12 PRESENCE : une machine à états et une géométrie morphologique unique.
+- [x] I13 Ligne plate au silence et onde arrondie pilotée par micro réel.
+- [x] I14 Réflexion sur traitement réel et noyau piloté par audio diffusé.
+- [x] I15 Centrage et proportions responsives sans déplacement par sous-titres.
+- [x] I16 Fond noir, sélecteur, restauration et contraste automatique persistants.
 - [ ] I17 Spectre émotionnel conservateur, mots sélectifs, quatre modes persistants.
 - [ ] I18 Spectre opérationnel indépendant, texte explicite, aucun droit supplémentaire.
 - [ ] I19 Sous-titres sur audio joué, approximation annoncée, historique/copie.
-- [ ] I20 Profils graphiques et réduction du mouvement, ressources bornées.
+- [x] I20 Profils graphiques et réduction du mouvement, ressources bornées.
 - [ ] I21 Préférences vocales/personnalité sans filtrage ni modification des permissions.
 - [ ] I22 Tests ciblés audio et non-régression du jalon 1.
 - [ ] I23 Build Windows vocal séparé, contrôles de démarrage et artefact versionné.
@@ -41,7 +41,10 @@ Une preuve Linux peut valider un invariant indépendant de l’OS (ex. géométr
 jamais le microphone, l’écoute perceptive ou l’exécutable Windows. Aucune case
 validée par un test ignoré. Preuves dans tests/test_voice_storage.py ; aucune preuve de matériel audio/Windows.
 
-Validés : V04 (persistance réelle SQLite), V34 (migration/backup sans perte). Implémentation : **10/24 = 41,67 %**. Validation : **2/34 = 5,88 %**.
+Validés : V04, V14, V15, V16, V18, V20, V21, V23, V24, V25, V30, V34.
+Preuves : tests/test_voice_storage.py et les 15 tests tests/test_presence.py.
+Il s’agit de persistance/invariants graphiques et d’orchestration sous Linux, pas
+de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Windows. Implémentation : **17/24 = 70,83 %**. Validation : **12/34 = 35,29 %**.
 
 ## Étapes
 
@@ -51,7 +54,7 @@ Validés : V04 (persistance réelle SQLite), V34 (migration/backup sans perte). 
 | J2.1 | IMPLÉMENTÉ | adaptateurs capture native/SOXR, périphériques, VAD Silero et STT FR local ; intégration UI en J2.3 ; matériel et modèle non disponibles ici | commit `J2.1: add local capture VAD and French transcription adapters` ; J2.2 |
 | J2.2 | IMPLÉMENTÉ | Piper CPU, 2 profils distincts, PCM à fréquence native, segmentation et lecture ; UI J2.3 ; modèles/licences individuelles/écoute restent à vérifier | commit `J2.2: add Piper synthesis real playback and explicit model installer` ; J2.3 |
 | J2.3 | IMPLÉMENTÉ | UI écoute explicite/devices/préécoute ; STT→LLM→TTS, epochs et arrêt prioritaire ; migration v2/backup ; tests de contrat, pas conversation audio réelle | commit `J2.3: integrate hands-free orchestration cancellation and lossless history` ; J2.4 |
-| J2.4 | NON COMMENCÉ | PRESENCE | à venir |
+| J2.4 | TESTÉ | maillage spline unique, états réels, fond/contraste, centre responsive, profils, sommeil et annulation ; 15 tests Linux | commit `J2.4: add single-mesh responsive audio-driven Presence` ; J2.5 |
 | J2.5 | NON COMMENCÉ | spectres/sous-titres | à venir |
 | J2.6 | NON COMMENCÉ | build/recette | à venir |
 
@@ -94,3 +97,9 @@ barge-in casque, segments obsolètes et fermeture callback testés. Suite initia
 audio+baseline+stockage : 34 réussis, 1 ignoré (modèle Ollama). Aucun test Windows,
 aucune audition ni capture physique. Les critères I05/I06 désignent les adaptateurs
 et profils installables, pas des poids téléchargés ni une qualité vocale validée.
+
+J2.4 : 15 tests présence + 17 flux/capture ciblés réussis, zéro échec/ignoré ;
+smoke source réussi. Revue : tampon TTS de 64 phrases alimenté progressivement,
+ancien plafond8 ne coupe plus les réponses rapides ; capture libérée si ouverture
+échoue ; transcription sans modèle conservée dans la saisie. Capture écran du
+silence inspectée sous X virtuel : noir et ligne plate ; aucune donnée audio inventée.

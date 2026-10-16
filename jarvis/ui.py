@@ -22,7 +22,8 @@ class App:
         self.dead_polls = 0
         self.closed = False
         self.settings = store.settings()
-        self.font_family = "Segoe UI" if "Segoe UI" in font.families(root) else "DejaVu Sans"
+        families = {family.casefold(): family for family in font.families(root)}
+        self.font_family = next((families[name] for name in ("segoe ui", "dejavu sans", "helvetica") if name in families), "TkDefaultFont")
         root.title("JARVIS UNHINGED NEXT · 0.0.1")
         root.geometry("1100x760")
         root.minsize(900, 600)
@@ -67,6 +68,9 @@ class App:
         self.settings_button.pack(fill="x")
         from .voice_ui import VoiceControls
         self.voice = VoiceControls(self, sidebar)
+        from .presence import PresenceView
+        self.presence = PresenceView(self)
+        ttk.Button(sidebar, text="PRESENCE", command=self.presence.show).pack(fill="x", pady=4)
         tk.Label(sidebar, text="Outils système : désactivés",
                  justify="left", bg=PANEL, fg=MUTED, font=(self.font_family, 9)).pack(anchor="w", pady=(16, 0))
 
@@ -220,6 +224,8 @@ class App:
         text = (self.input.get("1.0", "end-1c") if from_input else text).strip()
         if not text:
             return
+        if self.presence.state == "dormant":
+            self.presence.wake()
         if not self.settings.model or self.settings.model not in self.models:
             self.set_status("Choisissez un modèle installé. Cliquez sur Actualiser ; si la liste est vide, utilisez « ollama pull qwen2.5:3b ».", True)
             return
@@ -350,6 +356,7 @@ class App:
     def close(self):
         try:
             self.voice.stop_listening()
+            self.presence.close()
             if self.operation:
                 self.cancel()
         finally:

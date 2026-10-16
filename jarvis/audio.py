@@ -159,7 +159,11 @@ class Microphone:
             channels=1, dtype="float32", blocksize=max(128, round(native_rate * 0.032)), callback=capture)
 
     def __enter__(self):
-        self.stream.start()
+        try:
+            self.stream.start()
+        except BaseException:
+            self.stream.close()
+            raise
         return self
 
     def read(self, timeout=0.1):

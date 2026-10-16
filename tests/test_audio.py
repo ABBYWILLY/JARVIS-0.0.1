@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+from unittest.mock import Mock
 from jarvis.audio import FRAME, RATE, TurnDetector, signal_view
 from jarvis.voice_config import VoiceSettings
 
@@ -44,6 +45,15 @@ class TurnTests(unittest.TestCase):
         self.assertEqual(VoiceSettings().validate().acoustic_mode, "speakers")
         with self.assertRaises(ValueError):
             VoiceSettings(speed=0).validate()
+
+    def test_failed_capture_start_closes_device(self):
+        from jarvis.audio import Microphone
+        microphone = object.__new__(Microphone)
+        microphone.stream = Mock()
+        microphone.stream.start.side_effect = OSError("device disconnected")
+        with self.assertRaises(OSError):
+            microphone.__enter__()
+        microphone.stream.close.assert_called_once()
 
 
 @unittest.skipUnless(importlib.util.find_spec("faster_whisper"), "Dépendances vocales non installées")
