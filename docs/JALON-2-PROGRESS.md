@@ -202,3 +202,21 @@ créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne 
   et reprise micro speakers ; consulter la chaîne d’événements décrite dans VOICE.md.
   Si l’échec persiste, ces valeurs et l’étape d’exception permettent un diagnostic
   exploitable. Les validations matérielles/latences restent ouvertes, sans les déclarer réussies.
+
+## Extension J2.7 demandée le 16 octobre 2026 — reportée selon priorité utilisateur
+
+- **Statut : non commencée, 0/100 emojis graphiques implémentés, 0/100 validés.**
+  Ni galerie, ni nettoyage Unicode TTS, ni synchronisation emoji livrés.
+- Préalable utilisateur : corrections STT et latences J2.7 implémentées, testées
+  et committées. Correctif STT `a12ca3f` enregistré ; travaux de latence J2.7 non
+  attestés ici, validation de la nouvelle conversation Windows encore ouverte.
+  Aucun développement partiel de l’extension avant ce préalable.
+- Cahier de reprise dans `NEXT-CODEX-SESSION.md` : texte original/TTS/événements
+  distincts, Unicode complexe, 100 formes vectorielles mutualisées, visualiseur
+  unique, callbacks PCM avec approximation annoncée, annulation prioritaire,
+  préférences persistantes, galerie et tests pour les 100 entrées.
+- Sources Unicode officielles proposées consignées, mais non évaluées et aucun
+  classement choisi. Date des données, méthode et limites à vérifier lors de
+  l’implémentation ; aucune prétention de fréquence mondiale actuelle.
+- Cette mise à jour touche uniquement la reprise et le suivi : aucun code,
+  dépendance ou test modifié ; aucun test relancé pour cette documentation.

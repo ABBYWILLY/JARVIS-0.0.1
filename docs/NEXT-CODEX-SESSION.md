@@ -47,3 +47,56 @@ Ne pas déclarer la conversation matérielle corrigée avant essai du nouvel EXE
 
 Pas de microphone ni de Windows cloud ; aucun EXE Windows de ce correctif exécuté
 ici. Préserver les modèles, SQLite v2 et sauvegardes v1. Ne pas fusionner automatiquement.
+
+## Extension J2.7 en attente — Emoji-aware Speech & Semantic Morphing
+
+Demande du 16 octobre 2026. **Non commencée : 0/100 représentations implémentées,
+0/100 validées**, aucune galerie ni séparation emoji/TTS livrée. Préalable imposé
+par le propriétaire : corrections STT et latence J2.7 implémentées, testées et
+enregistrées dans Git avant cette extension. STT : correctif `a12ca3f` avec preuves
+ci-dessus ; travaux/mesures de latence J2.7 non attestés dans le dépôt. Ne pas
+considérer le seul temps STT du diagnostic comme une mesure de latence bout en bout.
+
+Après ce préalable, livrer par lots cohérents testés et committés :
+
+- Séparer texte original, texte TTS et événements visuels avec positions dans le
+  texte original. Préserver intégralement COMMAND OS, sous-titres et SQLite.
+  Retirer seulement les séquences emoji du TTS avant toute conversion descriptive,
+  gérer variantes, modificateurs, ZWJ, drapeaux, touches et caractères invisibles
+  associés sans supprimer le français, les mots explicites (« une fusée »),
+  la ponctuation utile ou la prosodie. Aucun filtrage des noms d’emojis dans le
+  texte ordinaire : leur origine doit déterminer leur traitement.
+- Sélectionner 100 emojis distincts d’après une source vérifiée : priorité
+  https://www.unicode.org/emoji/frequency.html et complément
+  https://home.unicode.org/emoji/emoji-frequency/ . Sources proposées, **pas encore
+  étudiées ni classement retenu**. Vérifier date des données, ordre, méthode,
+  représentativité et limites ; comparer toute source plus récente solide.
+  Ne pas présenter une page consultée récemment comme des données mondiales récentes.
+  Variantes/teintes de peau peuvent partager un dessin, sans gonfler le compteur.
+- 100 formes vectorielles légères, reconnaissables et réellement animées, intégrées
+  au programme. Mutualiser yeux/bouches/cœurs/larmes/mains/flammes/étoiles.
+  Exemples initiaux proposés : ❤️ 💡 🚀 ✨ ⚠️ ✅ ❌ 😊 ; la sélection finale suit
+  la source et les lots livrés, jamais des placeholders comptés comme terminés.
+  Emoji inconnu : texte conservé, retiré du TTS, aucune transformation inventée.
+- Même visualiseur UNIQUE : noyau → symbole holographique arrondi → noyau,
+  monochrome cyan ou Emotional Spectrum, centré et responsive, transitions fluides
+  et courtes, sans duplication, bitmap, GIF, pack externe ni clignotement.
+- Déclencher depuis les callbacks PCM et la portion de phrase correspondante ;
+  conserver la correspondance malgré le nettoyage du texte TTS. Si pas d’alignement
+  mot à mot, documenter une approximation bornée et son erreur, sans synchronisation
+  parfaite annoncée. Regrouper les emojis adjacents et limiter la cadence ; aucune
+  animation concurrente. Interruption : annuler immédiatement l’actuel et les
+  événements en attente, priorité à l’écoute, aucun retour tardif d’ancienne génération.
+- Préférences persistantes : Semantic Morphing activé/désactivé, intensité
+  discret/normal/expressif, réduction du mouvement (respecter aussi celle existante).
+  Aucun ralentissement sensible du TTS, modèle ou téléchargement supplémentaire.
+- Galerie de prévisualisation individuelle des 100 formes. Tests paramétrés pour
+  chaque entrée : Unicode reconnu, véritable géométrie associée, absence de lecture
+  descriptive, transition et retour au noyau. Tests français/Unicode complexe,
+  original intact, ponctuation, synchronisation approximative, interruption et
+  annulation, préférences, responsive et non-régression du visualiseur principal.
+  Publier nombre exact implémenté/validé et liste exacte restante après chaque lot.
+
+Prochaine mission prioritaire : établir puis traiter les latences J2.7 et compléter
+la recette vocale Windows, avec mesures et commits. Ne pas engager les 100 tracés
+tant que ce préalable n’est pas rempli ; conserver cette extension dans la reprise.
