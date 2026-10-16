@@ -160,6 +160,65 @@ class VoiceFlowTests(unittest.TestCase):
         self.voice.open_diagnostics()
         self.assertIn("stt_complete", self.voice.diagnostic_text.get("1.0", "end"))
 
+    def test_old_stt_notifications_do_not_override_new_turn_status_or_presence(self):
+        self.activate()
+        self.voice.capture.events.extend([
+            AudioEvent("speech_start", generation=2),
+            AudioEvent("stt_queued", generation=2),
+            AudioEvent("transcribing", generation=1),
+            AudioEvent("stt_complete", {"elapsed_ms": 200, "queue_ms": 5, "result": "Ancien"}, 1),
+            AudioEvent("stt_error", {"error": "Ancienne erreur", "elapsed_ms": 300}, 1),
+        ])
+        self.voice.poll()
+        self.assertTrue(self.voice.transcribing)
+        self.assertIn("attente du STT", self.voice.status.get())
+        self.assertEqual(self.voice.latencies, {})
+        self.app.presence.update_event.assert_called_with("thinking", signal=None, caption=None)
+        self.voice.capture.events.append(AudioEvent("stt_superseded", "Microphone suspendu", 2))
+        self.voice.poll()
+        self.assertFalse(self.voice.transcribing)
+
+    def test_latency_chain_uses_dac_timestamp_and_rejects_cancelled_playback(self):
+        self.activate()
+        self.voice.capture.events.extend([
+            AudioEvent("speech_start", generation=1),
+            AudioEvent("turn_end", {"ended_at": 10.0, "silence_ms": 800}, 1),
+            AudioEvent("stt_complete", {"elapsed_ms": 250, "queue_ms": 40}, 1),
+        ])
+        self.voice.poll()
+        with patch("jarvis.voice_ui.time.monotonic", return_value=11.0):
+            mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+            self.voice.begin_turn(mid, "voice")
+        with patch("jarvis.voice_ui.time.monotonic", return_value=11.2):
+            self.voice.chunk("Le début")
+        with patch("jarvis.voice_ui.time.monotonic", return_value=11.5):
+            self.voice.chunk(" de la réponse.")
+        self.voice.speech.events.extend([
+            AudioEvent("tts_ready", {"load_ms": 120}, self.voice.epoch),
+            AudioEvent("tts_pcm_ready", {"elapsed_ms": 80}, self.voice.epoch),
+            # Deliberately observe the event much later: the device timestamp wins.
+            AudioEvent("played", {"emitted_at": 11.8, "delay": 0.1, "started_at": 11.9}, self.voice.epoch),
+        ])
+        with patch("jarvis.voice_ui.time.monotonic", return_value=12.2):
+            self.voice.poll()
+        expected = {"Silence de fin de tour (PCM)": 800, "Whisper : transcription": 250,
+                    "Whisper : attente en file": 40, "Ollama : envoi → premier texte reçu": 200,
+                    "Premier texte → première phrase TTS": 300, "Chargement Piper (worker)": 120,
+                    "Piper : synthèse du premier bloc": 80, "Phrase TTS → premier PCM (DAC estimé)": 400,
+                    "Fin de tour détectée → premier PCM (DAC estimé)": 1900}
+        self.assertEqual(self.voice.latencies, expected)
+        old_epoch = self.voice.epoch
+        self.voice.cancel_speech()
+        self.voice.speech.events.extend([
+            AudioEvent("tts_pcm_ready", {"elapsed_ms": 999}, old_epoch),
+            AudioEvent("played", {"emitted_at": 12.3, "delay": 0.2}, old_epoch),
+        ])
+        self.voice.poll()
+        self.assertEqual(self.voice.latencies, expected)
+        self.voice.open_diagnostics()
+        self.assertIn("1900", self.voice.diagnostic_text.get("1.0", "end"))
+        self.assertIn("Bluetooth non mesuré", self.voice.diagnostic_text.get("1.0", "end"))
+
     def test_unhinged_profile_only_changes_prompt_not_microphone_or_endpoint(self):
         from jarvis.voice_config import PERSONALITY_PROMPTS
         endpoint = self.app.settings.endpoint
@@ -395,6 +454,25 @@ class VoiceFlowTests(unittest.TestCase):
 
 
 class RuntimeContractTests(unittest.TestCase):
+    def test_speech_worker_reports_load_and_first_block_timing_in_epoch(self):
+        from jarvis.tts import PCM
+        from jarvis.voice_config import VoiceSettings
+        from jarvis.voice_runtime import speech_worker
+        outbox, commands = queue.Queue(), queue.Queue()
+        commands.put("Bonjour.")
+        commands.put(None)
+        pcm = PCM([0.2], 16000)
+        with patch("jarvis.tts.PiperSpeech") as speech, patch("jarvis.tts.AudioPlayer") as player, \
+                patch("jarvis.voice_runtime.time.monotonic", side_effect=[1.0, 1.1, 2.0, 2.2, 3.0]):
+            speech.return_value.synthesize.return_value = [pcm]
+            speech_worker(outbox, commands, VoiceSettings().to_dict(), 9)
+        events = list(outbox.queue)
+        self.assertEqual([e.kind for e in events], ["tts_ready", "tts_pcm_ready", "speech_done"])
+        self.assertTrue(all(e.generation == 9 for e in events))
+        self.assertEqual(events[0].payload["load_ms"], 100)
+        self.assertEqual(events[1].payload["elapsed_ms"], 200)
+        self.assertIs(player.return_value.play.call_args.args[0], pcm)
+
     def test_levels_drop_on_full_queue_but_control_events_report_failure(self):
         outbox = queue.Queue(maxsize=1)
         original = AudioEvent("speech_start", generation=1)

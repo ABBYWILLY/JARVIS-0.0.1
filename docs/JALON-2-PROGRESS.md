@@ -9,6 +9,11 @@ Aucun changement direct de main, aucun force push, aucune fusion automatique.
 bilans J2.0–J2.6 ci-dessous restent des preuves historiques ; les observations
 Windows du propriétaire ne valident pas encore la nouvelle version corrigée.
 
+**Actualisation J2.7 : fiabilité STT et instrumentation des latences implémentées
+et testées sous Linux**, bilan en fin de fichier. Mesures matérielles Windows
+toujours à réaliser ; les constats antérieurs sur l’absence d’instrumentation
+J2.7 sont historiques.
+
 ## Critères d’implémentation stables (24)
 
 Une case cochée signifie code intégré et testé au niveau indiqué, pas recette Windows.
@@ -220,3 +225,36 @@ créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne 
   l’implémentation ; aucune prétention de fréquence mondiale actuelle.
 - Cette mise à jour touche uniquement la reprise et le suivi : aucun code,
   dépendance ou test modifié ; aucun test relancé pour cette documentation.
+
+## J2.7 — fiabilité STT et latences, priorité technique
+
+- Défaut reproduit : un second tour terminé pendant une inférence Whisper était
+  abandonné. Correction : un emplacement d’attente borné au dernier tour pertinent,
+  lancé dès la fin du calcul en cours, y compris après erreur. Nouvelle parole ou
+  suspension réelle invalide le tour en attente ; pas de backlog croissant.
+- Les événements STT des anciennes générations ne peuvent plus effacer l’indicateur
+  de traitement, l’état PRESENCE ni les mesures du tour actuel. Les résultats
+  obsolètes restent ignorés. Le correctif mute idempotent `a12ca3f` est conservé.
+- Attente évitable reproduite : première phrase sans ponctuation retenue jusqu’à
+  240 caractères. Premier segment désormais borné à 96 caractères, puis limite
+  précédente conservée ; texte français/ponctuation/mots préservés par les tests.
+  C’est une réduction du tampon initial, pas un gain de latence matérielle mesuré.
+- Diagnostic existant enrichi sans dépendance : silence PCM, attente/inférence STT
+  mesurées séparément, premier texte Ollama, premier segment TTS, chargement Piper,
+  synthèse initiale, premier PCM et fin de tour détectée → PCM au DAC estimé.
+  Horloge monotone commune aux processus ; temps de réception UI inclus pour
+  Ollama, estimation PortAudio pour le DAC. Aucune mesure acoustique/Bluetooth
+  et aucune valeur de performance du PC inventée. Mesures transitoires en mémoire.
+- **52 tests ciblés distincts réussis, 0 échec/ignoré** : passe initiale de 50
+  (`test_capture_turns`, `test_audio`, `test_tts`, `test_voice_flow`,
+  `test_presence_integration`), puis deux cas supplémentaires validés : purge STT
+  sur mute réel et instrumentation du worker TTS. Reprises ciblées après ajustement
+  des assertions d’annulation, sans compter les cas répétés deux fois.
+  Les trois régressions principales échouaient avant modification puis passent.
+  SOXR/Silero réels, Tk/SQLite/HTTP réels ; reconnaissance/parole, horloges du test
+  de métriques et périphérique de sortie simulés explicitement. Aucun microphone
+  ou modèle Whisper/Piper réel exécuté pour ces mesures dans le cloud.
+- Procédure PC dans `VOICE.md` : relever les latences à froid/chaud sur plusieurs
+  tours à configuration constante, reprise pendant STT, barge-in casque, retour
+  micro speakers. Build Windows/artefact à vérifier, aucune validation Windows
+  du présent correctif annoncée. Moteurs, seuils, modèles et visualiseur conservés.

@@ -2,9 +2,33 @@
 
 - Dépôt : https://github.com/ABBYWILLY/JARVIS-0.0.1
 - Branche : `feat/jalon-2-voice-presence`. Aucun changement direct de main/force push.
-- Dernier correctif : `fix(voice): preserve active turns and expose local STT diagnostics`.
+- Dernier correctif : `fix(voice): retain pending STT turns and measure response latency`.
   Retrouver son SHA par `git log -5 --oneline`.
 - J2.0–J2.6 et jalon 1 préservés. Lire JALON-2-PROGRESS.md et VOICE.md pour les preuves.
+
+## État actuel J2.7 — priorités techniques
+
+Fiabilité STT et instrumentation des latences implémentées/testées. Les mentions
+historiques d’absence de ces travaux plus bas décrivent l’état avant cette mission.
+
+- Second tour abandonné si Whisper occupé : corrigé avec un seul emplacement
+  d’attente, priorité au dernier tour, purge sur nouvelle parole ou suspension.
+  Après erreur STT, le tour conservé démarre ; anciennes générations sans effet
+  sur statut, PRESENCE ou mesures du tour courant.
+- Première phrase longue : limite initiale 96 caractères au lieu de 240, suite
+  inchangée, sans perte de texte. Aucun moteur, seuil ou modèle remplacé.
+- **Diagnostic micro / STT** : silence PCM, file/inférence STT, attente premier
+  texte Ollama, premier segment, chargement/synthèse Piper, premier PCM au DAC
+  estimé et total depuis la fin de tour détectée. Ce total exclut le silence VAD ;
+  le délai acoustique/Bluetooth n’est pas mesuré. Aucune promesse de gain chiffré.
+- 52 tests ciblés distincts réussis, sans ignoré, détails dans le suivi. Les mesures
+  d’horloge/périphériques de test ne sont pas des benchmarks du PC Windows.
+
+Prochaine action : vérifier le build Windows de ce commit puis mesurer à froid et
+à chaud plusieurs tours sur le PC, en gardant modèle/voix/silence identiques.
+Recette : tour bref et long, reprise pendant STT, interruption casque, fin TTS puis
+réouverture du micro speakers. Copier les mesures/erreurs du diagnostic si échec.
+Ne pas déclarer la validation matérielle terminée sans ces preuves.
 
 ## Ne pas recommencer le diagnostic établi
 

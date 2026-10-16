@@ -3,6 +3,7 @@
 No microphone or real speech recognition is claimed by these regression tests.
 """
 import queue
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -17,14 +18,20 @@ class EndCapture(BaseException):
 
 
 def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=False,
-                finish_on_start=False, worker=capture_worker):
+                finish_on_start=False, hold_until_turns=0, mute_when_queued=False,
+                worker=capture_worker):
     commands = queue.Queue()
     events, calls = [], []
     current = [0.0]
+    release = threading.Event()
 
     class Outbox:
         def put(self, event, **kwargs):
             events.append(event)
+            if event.kind == "turn_end" and sum(e.kind == "turn_end" for e in events) >= hold_until_turns:
+                release.set()
+            if event.kind == "stt_queued" and mute_when_queued:
+                commands.put({"kind": "mute", "value": True})
             if event.kind == "speech_start":
                 # Exactly the feedback sent by VoiceControls.cancel_speech().
                 commands.put({"kind": "mute", "value": mute_on_start})
@@ -70,6 +77,9 @@ def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=F
 
         def transcribe(self, samples):
             calls.append(samples)
+            if hold_until_turns and len(calls) == 1:
+                if not release.wait(5):
+                    raise AssertionError("Capture did not reach the expected following turn")
             if fail_first and len(calls) == 1:
                 raise ValueError("STT failure for regression test")
             return "Bonjour"
@@ -83,6 +93,28 @@ def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=F
 
 
 class CaptureTurnTests(unittest.TestCase):
+    def test_muting_discards_queued_stt_before_it_can_start(self):
+        sequence = ([0.95] * 10 + [0.01] * 30) * 2
+        events, calls = run_capture(sequence, hold_until_turns=2, mute_when_queued=True)
+        self.assertEqual(len(calls), 1)
+        self.assertIn("stt_superseded", [e.kind for e in events])
+        self.assertNotIn(2, [e.generation for e in events if e.kind == "transcribing"])
+
+    def test_slow_stt_keeps_latest_completed_turn_instead_of_dropping_it(self):
+        sequence = ([0.95] * 10 + [0.01] * 30) * 2
+        events, calls = run_capture(sequence, hold_until_turns=2)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("stt_queued", [e.kind for e in events])
+        self.assertIn(2, [e.generation for e in events if e.kind == "transcript"])
+
+    def test_latest_speech_supersedes_queued_turn_even_after_first_stt_error(self):
+        sequence = ([0.95] * 10 + [0.01] * 30) * 3
+        events, calls = run_capture(sequence, hold_until_turns=3, fail_first=True)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual([e.generation for e in events if e.kind == "transcript"], [3])
+        self.assertIn("stt_superseded", [e.kind for e in events])
+        self.assertNotIn("error", [e.kind for e in events])
+
     def test_real_mute_still_discards_active_turn_and_prevents_stt(self):
         events, calls = run_capture([0.95] * 15 + [0.01] * 55, mute_on_start=True)
         self.assertIn("speech_start", [e.kind for e in events])

@@ -106,6 +106,35 @@ réactiver l’écoute. En cas d’échec sur le PC, copier le contenu de cette 
 sans supposer que le ventilateur est la cause. Tester aussi un tour avec et sans
 ventilation, Tom/Siwis en préécoute et le retour du micro après TTS en mode speakers.
 
+### Mesures de latence J2.7
+
+Le même diagnostic affiche en millisecondes le silence PCM de fin de tour,
+l’attente en file Whisper, son temps de transcription, l’attente du premier texte
+Ollama, le délai avant la première phrase TTS, le chargement Piper, sa première
+synthèse et l’arrivée prévue du premier PCM au DAC. La mesure **fin de tour
+détectée → premier PCM** commence après le silence VAD : celui-ci est affiché
+séparément. Les temps Ollama incluent la préparation locale, le processus et
+le retour à l’interface ; ce ne sont pas des temps GPU purs.
+
+Les horodatages viennent des processus et callbacks audio réels. La date DAC est
+une **estimation PortAudio**, qui ne mesure pas le délai acoustique ou Bluetooth
+de XTREME140. Aucun gain réel en secondes n’est annoncé sans mesure sur le PC.
+Une mesure absente reste absente ; les données ne sont ni stockées ni envoyées.
+
+Si Whisper est occupé, le dernier tour complet est conservé dans un seul emplacement
+en attente au lieu d’être abandonné. Une nouvelle prise de parole remplace le tour
+en attente devenu obsolète ; une suspension du micro le purge. L’inférence déjà
+en cours peut se terminer, mais son ancien résultat ne remplace pas le tour courant.
+Arrêt d’urgence ferme les processus. Une longue phrase initiale sans ponctuation
+part désormais au TTS à une limite de 96 caractères au lieu de 240 (coupure sur
+espace si possible) ; la suite conserve la limite précédente, sans perte de mots.
+
+Pour comparer sur Windows : même modèle Ollama, même voix, même microphone et
+même réglage de silence ; relever plusieurs tours après démarrage à froid puis
+à chaud dans **Diagnostic micro / STT**. Tester aussi une reprise pendant STT,
+une interruption au casque et le retour d’écoute après TTS en mode speakers.
+Conserver les valeurs réelles et les erreurs plutôt qu’une estimation de performance.
+
 Le spectre adaptatif est une **estimation lexicale prudente**, sans appel LLM et sans
 prétention de ressentir une émotion. Ambiguïté → cyan, inertie de 3 s, négation simple.
 Les menus, permissions et alertes ont leur propre spectre opérationnel indépendant.

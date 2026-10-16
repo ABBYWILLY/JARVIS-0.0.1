@@ -36,6 +36,7 @@ class TurnDetector:
         self.max_frames = round(max_seconds * RATE / FRAME)
         self.last_end_reason = ""
         self.last_duration = 0.0
+        self.last_silence_ms = 0
         self.reset()
 
     def reset(self):
@@ -55,6 +56,7 @@ class TurnDetector:
         trim = max(0, self.silent - 5)
         frames = self.frames[:-trim] if trim else self.frames
         self.last_end_reason, self.last_duration = reason, self.duration
+        self.last_silence_ms = self.silent * FRAME * 1000 // RATE
         self.reset()
         # A stuck VAD must not submit the same constant noise every 20 seconds.
         self.waiting_for_quiet = reason in {"max_duration", "manual"}

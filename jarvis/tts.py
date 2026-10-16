@@ -41,18 +41,22 @@ class SentenceBuffer:
     """Bounded phrase segmentation of actual LLM text, not token-by-token TTS."""
     def __init__(self):
         self.pending = ""
+        self.emitted = False
 
     def feed(self, text, final=False):
         self.pending += text
         result = []
         while self.pending:
+            # A long opening sentence need not delay the first audio until 240
+            # characters. Following phrases retain the existing batching bound.
+            limit = 240 if self.emitted else 96
             match = re.search(r"[.!?;:\n](?:\s|$)", self.pending)
-            if match and match.end() <= 240:
+            if match and match.end() <= limit:
                 end = match.end()
-            elif len(self.pending) >= 240:
-                end = self.pending.rfind(" ", 0, 240)
+            elif len(self.pending) >= limit:
+                end = self.pending.rfind(" ", 0, limit)
                 if end <= 0:
-                    end = 240
+                    end = limit
             elif final:
                 end = len(self.pending)
             else:
@@ -61,6 +65,7 @@ class SentenceBuffer:
             self.pending = self.pending[end:]
             if phrase:
                 result.append(phrase)
+                self.emitted = True
         return result
 
 
@@ -81,10 +86,11 @@ class AudioPlayer:
             return
         finished = threading.Event()
         position = 0
+        started_at = None
         failed = []
 
         def callback(output, frames, timing, status):
-            nonlocal position
+            nonlocal position, started_at
             if status:
                 failed.append(str(status))
             count = min(frames, len(samples) - position)
@@ -92,9 +98,12 @@ class AudioPlayer:
             output[:count, 0] = samples[position:position + count]
             position += count
             view = signal_view(output[:count, 0])
-            view.update(text=text, fraction=position / len(samples),
-                        delay=max(0.0, timing.outputBufferDacTime - timing.currentTime),
-                        emitted_at=time.monotonic())
+            delay = max(0.0, timing.outputBufferDacTime - timing.currentTime)
+            emitted_at = time.monotonic()
+            if started_at is None:
+                started_at = emitted_at + delay
+            view.update(text=text, fraction=position / len(samples), delay=delay,
+                        emitted_at=emitted_at, started_at=started_at)
             emit(AudioEvent("played", view, generation))
             if position >= len(samples):
                 raise sd.CallbackStop

@@ -34,6 +34,7 @@ class VoiceControls:
         self.diagnostics = {}
         self.diagnostic_events = deque(maxlen=32)
         self.diagnostic_window = None
+        self.reset_turn_latency()
         self.status = tk.StringVar(value=initial_status)
         self.listen_button = ttk.Button(parent, text="Activer l’écoute", command=self.toggle)
         self.listen_button.pack(fill="x", pady=(10, 4))
@@ -60,6 +61,7 @@ class VoiceControls:
         self.transcribing = False
         self.diagnostics = {}
         self.diagnostic_events.clear()
+        self.reset_turn_latency()
         self.heard = 0
         self.listen_button.configure(text="Désactiver l’écoute")
         self.status.set("Chargement STT/VAD local…")
@@ -106,6 +108,9 @@ class VoiceControls:
 
     def begin_turn(self, mid, source):
         self.cancel_speech()
+        if source != "voice":
+            self.reset_turn_latency()
+        self.llm_started_at = time.monotonic()
         self.mid = mid if self.listening else None
         self.reading = self.listening
         self.segmenter = SentenceBuffer()
@@ -115,6 +120,8 @@ class VoiceControls:
         if not self.reading:
             return
         if self.speech.process is None:
+            self.tts_requested_at = time.monotonic()
+            self.mark_latency("Premier texte → première phrase TTS", self.first_llm_at, self.tts_requested_at)
             self.speech.start("speech", self.settings, self.epoch)
             self.app.stop_button.configure(state="normal")
             self.last_speech = time.monotonic()
@@ -140,6 +147,9 @@ class VoiceControls:
 
     def chunk(self, text):
         if self.reading:
+            if text and self.first_llm_at is None:
+                self.first_llm_at = time.monotonic()
+                self.mark_latency("Ollama : envoi → premier texte reçu", self.llm_started_at, self.first_llm_at)
             for phrase in self.segmenter.feed(text):
                 self.submit_phrase(phrase)
 
@@ -203,29 +213,43 @@ class VoiceControls:
             if event.kind == "diagnostic":
                 self.diagnostics = event.payload
                 self.refresh_diagnostics()
-            elif event.kind in {"turn_end", "stt_complete", "capture_error"}:
+            elif event.kind in {"turn_end", "stt_complete", "capture_error", "stt_superseded"}:
                 self.record_diagnostic(event.kind, event.payload)
-                if event.kind == "stt_complete":
-                    self.transcribing = False
+                if event.generation == self.heard:
+                    if event.kind == "turn_end":
+                        self.turn_ended_at = event.payload.get("ended_at")
+                        if "silence_ms" in event.payload:
+                            self.set_latency("Silence de fin de tour (PCM)", event.payload["silence_ms"])
+                    elif event.kind == "stt_complete":
+                        self.transcribing = False
+                        self.stt_latency(event.payload)
+                    elif event.kind == "stt_superseded":
+                        self.transcribing = False
             elif event.kind == "stt_error":
-                self.transcribing = False
                 self.record_diagnostic(event.kind, event.payload)
-                self.status.set("Échec STT ; écoute maintenue. Détails dans Diagnostic micro / STT.")
-                if event.generation == self.heard and not self.app.operation:
-                    self.notify_presence("listening")
+                if event.generation == self.heard:
+                    self.transcribing = False
+                    self.stt_latency(event.payload)
+                    self.status.set("Échec STT ; écoute maintenue. Détails dans Diagnostic micro / STT.")
+                    if not self.app.operation:
+                        self.notify_presence("listening")
             elif event.kind == "speech_start":
                 self.record_diagnostic(event.kind, {"tour": event.generation})
                 self.heard = event.generation
                 self.cancel_speech()
+                self.transcribing = False
+                self.reset_turn_latency()
                 if self.app.operation == "chat":
                     self.app.cancel()
                 self.status.set("Voix détectée")
                 self.notify_presence("user_speaking")
-            elif event.kind == "transcribing":
-                self.transcribing = True
+            elif event.kind in {"transcribing", "stt_queued"}:
                 self.record_diagnostic(event.kind, {"tour": event.generation})
-                self.status.set("Transcription française locale…")
-                self.notify_presence("thinking")
+                if event.generation == self.heard:
+                    self.transcribing = True
+                    self.status.set("Transcription française locale…" if event.kind == "transcribing"
+                                    else "Tour vocal conservé ; attente du STT local…")
+                    self.notify_presence("thinking")
             elif event.kind == "transcript" and event.generation == self.heard:
                 self.transcribing = False
                 if event.payload.strip() and not self.app.operation:
@@ -245,6 +269,8 @@ class VoiceControls:
                 elif self.listening and not self.transcribing and not self.app.operation and not self.speech.alive():
                     self.notify_presence("listening", signal=event.payload)
             elif event.kind == "listening":
+                if event.payload:
+                    self.record_diagnostic("capture_ready", event.payload)
                 self.status.set("Écoute locale active")
                 self.notify_presence("listening")
             elif event.kind == "error":
@@ -261,8 +287,18 @@ class VoiceControls:
                 continue
             if event.kind == "played":
                 view = event.payload
+                if self.first_pcm_at is None and self.tts_requested_at is not None:
+                    self.first_pcm_at = view.get("started_at", view["emitted_at"] + view["delay"])
+                    self.mark_latency("Phrase TTS → premier PCM (DAC estimé)", self.tts_requested_at, self.first_pcm_at)
+                    self.mark_latency("Fin de tour détectée → premier PCM (DAC estimé)", self.turn_ended_at, self.first_pcm_at)
                 self.pending_visuals.append((view["emitted_at"] + view["delay"], view, self.epoch))
                 self.pending_visuals = self.pending_visuals[-64:]
+            elif event.kind == "tts_ready":
+                if event.payload:
+                    self.set_latency("Chargement Piper (worker)", event.payload["load_ms"])
+            elif event.kind == "tts_pcm_ready":
+                if "Piper : synthèse du premier bloc" not in self.latencies:
+                    self.set_latency("Piper : synthèse du premier bloc", event.payload["elapsed_ms"])
             elif event.kind == "speech_done":
                 if self.mid is not None:
                     self.app.store.update_message_metadata(self.mid, {"audio_status": "complete"})
@@ -296,6 +332,24 @@ class VoiceControls:
         self.diagnostic_events.append(f"{stamp} · {kind} · {payload}")
         self.refresh_diagnostics()
 
+    def reset_turn_latency(self):
+        self.latencies = {}
+        self.turn_ended_at = self.llm_started_at = self.first_llm_at = None
+        self.tts_requested_at = self.first_pcm_at = None
+
+    def set_latency(self, label, milliseconds):
+        self.latencies[label] = max(0, round(milliseconds))
+        self.refresh_diagnostics()
+
+    def mark_latency(self, label, start, end):
+        if start is not None and end is not None:
+            self.set_latency(label, (end - start) * 1000)
+
+    def stt_latency(self, payload):
+        self.set_latency("Whisper : transcription", payload["elapsed_ms"])
+        if "queue_ms" in payload:
+            self.set_latency("Whisper : attente en file", payload["queue_ms"])
+
     def refresh_diagnostics(self):
         if self.diagnostic_window is None or not self.diagnostic_window.winfo_exists():
             return
@@ -307,6 +361,9 @@ class VoiceControls:
                 + f"\nPCM : {values.get('native_rate', '—')} → {values.get('rate', '—')} Hz ; trames : {values.get('frame_samples', '—')}"
                 + f"\nDernière fin : {values.get('end_reason', '') or 'aucune'}"
                 + f"\nSTT : {values.get('last_stt', 'en attente')}\n\n"
+                + "Latences du dernier tour (ms) :\n"
+                + ("\n".join(f"{label} : {value}" for label, value in self.latencies.items()) or "En attente de mesures")
+                + "\nDAC estimé par PortAudio ; délai acoustique/Bluetooth non mesuré.\n\n"
                 + "\n".join(self.diagnostic_events))
         self.diagnostic_text.configure(state="normal")
         self.diagnostic_text.delete("1.0", "end")
@@ -335,6 +392,8 @@ class VoiceControls:
         if hasattr(self.app, "presence") and self.app.presence.state == "dormant":
             self.app.presence.wake()
         self.cancel_speech()
+        self.reset_turn_latency()
+        self.tts_requested_at = time.monotonic()
         self.speech.start("speech", self.settings, self.epoch)
         self.app.stop_button.configure(state="normal")
         self.last_speech = time.monotonic()
