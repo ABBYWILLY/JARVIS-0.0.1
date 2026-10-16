@@ -10,7 +10,9 @@ La demande J2.8 remplace l’ordre des lots J2.7 ci-dessous :
    tours complets, allègement des questions autonomes, rappels lexicaux et
    résumés extractifs non exhaustifs. Bouton Contexte : sélection historique,
    statistiques et originaux consultables. 100 tests ciblés distincts réussis.
-3. Mémoire persistante inspectable/approuvée, FTS5 et migrations sauvegardées.
+3. Livré : mémoire locale durable/résumé/projet/document, approbation explicite,
+   FTS5 lexical (secours LIKE signalé), provenance et inspection, sauvegarde
+   avant correction/suppression et migration SQLite3 depuis v1/v2.
 4. Observabilité et comparaison à configuration identique.
 Voix premium, Semantic Morphing et stockage restent différés, sans effacer leurs
 spécifications. Ne pas reprendre les travaux audio J2.7 déjà livrés.
@@ -23,13 +25,22 @@ garder des messages isolés ; ne pas copier ces limites. Son FTS5/BM25 local est
 réutilisable, sans le considérer comme recherche sémantique complète.
 
 J2.8 lot1 publié **bbe88af**. Lot2 sans migration, index ou dépendance nouvelle ;
-les rappels concernent la conversation active. Les souvenirs durables approuvés,
-recherche FTS5 interconversations/documents, corrections/désactivation/suppression
-avec sauvegarde et migration sûre appartiennent au lot3 restant. Aucun souvenir
-durable n’est créé automatiquement. Les résumés sont des citations exactes de
+les rappels de messages concernent la conversation active. Le lot3 ajoute les
+souvenirs approuvés pertinents au même budget partagé, et la consultation FTS5
+manuelle interconversations/documents. Aucun souvenir durable n’est créé
+automatiquement. Les résumés sont des citations exactes de
 phrases originales, jamais une synthèse LLM systématique ; phrases trop longues
 omises plutôt que découpées en affirmations trompeuses. L’estimation UTF-8 reste
 prudente, pas une tokenisation exacte. Gains de tokens/latence Windows à mesurer.
+
+Lot3 : bouton Mémoire, ajout manuel puis Approuver ; import TXT/MD UTF-8≤256Kio
+en attente, aucune lecture automatique de fichiers. Correction sauvegardée puis
+nouvelle approbation. Les contenus différents partageant une même clé de sujet
+approuvée sont bloqués jusqu’à correction/désactivation : détection structurée,
+pas compréhension sémantique complète des contradictions. Doublons exacts/NFC
+par type refusés. IDs mémoire jamais réutilisés ; métadonnées des réponses
+gardent les citations utilisées même si la mémoire est modifiée/supprimée.
+Sauvegardes SQLite locales uniques conservées, aucun modèle/donnée effacé ici.
 
 - Dépôt : https://github.com/ABBYWILLY/JARVIS-0.0.1
 - Branche : `feat/jalon-2-voice-presence`. Aucun changement direct de main/force push.

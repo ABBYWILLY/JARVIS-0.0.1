@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from jarvis.config import Settings, active_context
 from jarvis.ollama import Ollama, OllamaError, friendly_error
-from jarvis.storage import Store
+from jarvis.storage import SCHEMA_VERSION, Store
 from jarvis.worker import Worker
 
 
@@ -143,9 +143,9 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.store.sessions()[0]["id"], other)
 
     def test_version_guard_and_schema(self):
-        self.assertEqual(self.store.db.execute("PRAGMA user_version").fetchone()[0], 2)
+        self.assertEqual(self.store.db.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
         self.assertEqual(self.store.db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-        self.store.db.execute("PRAGMA user_version=3")
+        self.store.db.execute(f"PRAGMA user_version={SCHEMA_VERSION + 1}")
         with self.assertRaisesRegex(ValueError, "récente"):
             Store(self.path)
 

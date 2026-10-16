@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from jarvis.config import Settings
-from jarvis.storage import Store
+from jarvis.storage import SCHEMA_VERSION, Store
 
 
 class RequestSettingsTests(unittest.TestCase):
@@ -54,6 +54,6 @@ class RequestSettingsTests(unittest.TestCase):
             try:
                 self.assertEqual(store.settings(), custom)
                 self.assertEqual(store.messages(sid)[1]["content"], "Salut")
-                self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], 2)
+                self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
             finally:
                 store.close()

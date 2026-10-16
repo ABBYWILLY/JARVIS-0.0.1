@@ -106,7 +106,7 @@ class ContextBuilder:
     def __init__(self, settings):
         self.settings = settings
 
-    def build(self, messages):
+    def build(self, messages, memories=None):
         settings = self.settings
         if not messages or messages[-1].get("role") != "user":
             raise ValueError("Un message utilisateur est requis.")
@@ -159,7 +159,53 @@ class ContextBuilder:
         # canonical original. Do not copy whole conversations into metadata.
         sources = [_source(m, "recent", m["content"][:240]) for m in selected]
         extracts, retrieved_indices = [], set()
+        selected_memory_ids = []
+        memory_warnings = []
         if targeted and query:
+            retrieval_limit = min(remaining, getattr(settings, "retrieval_budget", 768))
+            seen = {_normal(m["content"]) for m in selected}
+            # Only explicitly approved records may be proposed by storage. Keep
+            # this second check at the prompt boundary, including for adapters.
+            for memory in (memories or [])[:5]:
+                if (memory.get("status") != "approved" or not isinstance(memory.get("id"), int)
+                        or isinstance(memory["id"], bool) or memory["id"] in selected_memory_ids):
+                    continue
+                content = memory.get("content", "")
+                if not isinstance(content, str) or _normal(content) in seen:
+                    continue
+                topic = str(memory.get("topic", ""))
+                title = str(memory.get("title", ""))
+                # A short fact may match its human-supplied topic rather than
+                # repeat the query word inside the fact ("prénom" -> "Paul").
+                if query & _words(topic + " " + title) and len(content.encode("utf-8")) <= 480:
+                    excerpt = content
+                else:
+                    excerpt = _excerpt(content, query, 480)
+                if not excerpt or _normal(excerpt) in seen:
+                    continue
+                entry = {"memory_id": memory["id"], "kind": memory.get("kind", "durable"),
+                         "topic": topic, "citation": excerpt, "approved": True}
+                candidate = {"content": _HEADER + json.dumps(
+                    extracts + [entry], ensure_ascii=False, separators=(",", ":"))}
+                if _cost(candidate) > retrieval_limit:
+                    continue
+                provenance = memory.get("provenance", "{}")
+                try:
+                    if isinstance(provenance, str):
+                        provenance = json.loads(provenance)
+                    if not isinstance(provenance, dict):
+                        raise ValueError("object required")
+                except ValueError:
+                    memory_warnings.append(f"Souvenir #{memory['id']} ignoré : provenance invalide.")
+                    continue
+                sources.append({"method": "memory", "memory_id": memory["id"],
+                                "message_id": None, "session_id": "", "role": "memory",
+                                "created": memory.get("created", ""), "kind": memory.get("kind", "durable"),
+                                "status": "approved", "title": title, "topic": topic,
+                                "excerpt": excerpt, "provenance": provenance})
+                extracts.append(entry)
+                selected_memory_ids.append(memory["id"])
+                seen.update((_normal(content), _normal(excerpt)))
             candidates = [(index + offset, message) for index, pair in pairs
                           for offset, message in enumerate(pair)
                           if index + offset not in selected_indices]
@@ -173,8 +219,6 @@ class ContextBuilder:
                 if score:
                     ranking.append((score, index, message))
             ranking.sort(key=lambda item: (-item[0], -item[1]))
-            retrieval_limit = min(remaining, getattr(settings, "retrieval_budget", 768))
-            seen = {_normal(m["content"]) for m in selected}
             for _, index, message in ranking:
                 if len(extracts) >= 8 or _normal(message["content"]) in seen:
                     continue
@@ -210,5 +254,8 @@ class ContextBuilder:
                  "recent_messages": len(selected_indices),
                  "retrieved_messages": len(retrieved_indices),
                  "summary_messages": int(bool(extracts)),
+                 "memory_count": len(selected_memory_ids),
+                 "selected_memory_ids": selected_memory_ids,
+                 "memory_warnings": memory_warnings,
                  "context_strategy": strategy}
         return ContextResult(context, stats, sources)

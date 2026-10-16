@@ -1,10 +1,15 @@
 """SQLite is the canonical archive and settings store; UI process owns writes."""
 import json
+import re
 import sqlite3
 import uuid
 from pathlib import Path
 
 from .config import Settings
+from .memory import MemoryRepository, create_memory_schema
+
+
+SCHEMA_VERSION = 3
 
 
 def _json(value):
@@ -15,17 +20,18 @@ def _json(value):
 class Store:
     def __init__(self, path):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self.path = Path(path)
         self.db = sqlite3.connect(path)
         self.db.row_factory = sqlite3.Row
         self.migration_backup = None
         try:
             version = self.db.execute("PRAGMA user_version").fetchone()[0]
-            if version > 2:
+            if version > SCHEMA_VERSION:
                 raise ValueError("Base créée par une version plus récente de JARVIS.")
             self.db.execute("PRAGMA foreign_keys=ON")
             self.db.execute("PRAGMA journal_mode=WAL")
-            if version == 1:
-                self.migration_backup = self._backup_v1(path)
+            if version in {1, 2}:
+                self.migration_backup = self.backup("v" + str(version))
             # DDL needs an explicit transaction; executescript would commit it.
             with self.db:
                 self.db.execute("BEGIN IMMEDIATE")
@@ -34,15 +40,20 @@ class Store:
                     self.db.execute("ALTER TABLE messages ADD COLUMN metadata TEXT NOT NULL DEFAULT '{}'")
                 self._create_schema()
                 self.db.execute("UPDATE messages SET status='interrupted' WHERE status='streaming'")
-                self.db.execute("PRAGMA user_version=2")
+                self.db.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+            self.memory = MemoryRepository(self.db, self.backup, fts_available=self._fts_available)
         except Exception:
             self.db.close()
             raise
 
-    def _backup_v1(self, path):
-        backup_path = Path(str(path) + ".v1-backup.sqlite3")
+    def backup(self, reason):
+        """Snapshot committed WAL data before migration or explicit destruction."""
+        if self.db.in_transaction:
+            raise ValueError("Terminez l’opération en cours avant la sauvegarde.")
+        label = re.sub(r"[^A-Za-z0-9_-]+", "-", str(reason)).strip("-")[:64] or "manual"
+        backup_path = Path(str(self.path) + "." + label + "-backup.sqlite3")
         if backup_path.exists():
-            backup_path = Path(str(path) + ".v1-backup-" + uuid.uuid4().hex + ".sqlite3")
+            backup_path = Path(str(self.path) + "." + label + "-backup-" + uuid.uuid4().hex + ".sqlite3")
         # Reserve a fresh file: never overwrite a previous migration backup.
         backup_path.touch(exist_ok=False)
         try:
@@ -75,6 +86,7 @@ class Store:
         )
         for statement in statements:
             self.db.execute(statement)
+        self._fts_available = create_memory_schema(self.db)
 
     def close(self):
         self.db.close()

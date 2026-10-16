@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from jarvis.config import Settings
-from jarvis.storage import Store
+from jarvis.storage import SCHEMA_VERSION, Store
 
 
 class ContextStorageTests(unittest.TestCase):
@@ -35,7 +35,7 @@ class ContextStorageTests(unittest.TestCase):
                     self.assertEqual(original["source"], "voice")
                 self.assertIsNone(store.message(999999))
                 self.assertEqual([tuple(row) for row in store.messages(sid)], before)
-                self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], 2)
+                self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
                 self.assertEqual(store.db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
             finally:
                 store.close()

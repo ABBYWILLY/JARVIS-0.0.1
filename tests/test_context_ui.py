@@ -71,7 +71,7 @@ class ContextDesktopTests(unittest.TestCase):
             request_settings = builder.call_args.args[0]
             self.assertEqual(request_settings.max_tokens, self.app.settings.voice_tokens)
             builder.return_value.build.assert_called_once_with(
-                prior_context + [{"role": "user", "content": "Question ciblée"}])
+                prior_context + [{"role": "user", "content": "Question ciblée"}], memories=[])
         rows = self.store.messages(self.app.session_id)
         self.assertEqual([dict(row) for row in rows[:2]], originals)
         self.assertEqual(json.loads(rows[-2]["metadata"]), {"final_transcript": "Question ciblée"})

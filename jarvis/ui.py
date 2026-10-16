@@ -128,6 +128,8 @@ class App:
         self.metrics_toggle.pack(side="right", padx=(10, 0))
         self.context_button = ttk.Button(model_row, text="Contexte", command=self.open_context)
         self.context_button.pack(side="right", padx=(10, 0))
+        self.memory_button = ttk.Button(model_row, text="Mémoire", command=self.open_memory)
+        self.memory_button.pack(side="right", padx=(8, 0))
         self.send_button = ttk.Button(actions, text="Envoyer", command=self.send)
         self.send_button.pack(side="right")
         self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled")
@@ -264,8 +266,9 @@ class App:
             return
         try:
             request_settings = self.settings.for_request(source)
+            memories = self.store.memory.search(text, approved_only=True) if request_settings.targeted_context else []
             context = ContextBuilder(request_settings).build(
-                self.store.context_records(self.session_id) + [{"role": "user", "content": text}])
+                self.store.context_records(self.session_id) + [{"role": "user", "content": text}], memories=memories)
         except ValueError as exc:
             self.set_status(str(exc), True)
             return
@@ -283,6 +286,14 @@ class App:
         self.busy("chat")
         omitted = context.stats["omitted_messages"]
         self.set_status("Génération locale…" + (f" {omitted} anciens messages hors contexte actif, conservés dans l’historique." if omitted else ""))
+
+    def open_memory(self):
+        from .memory_ui import MemoryDialog
+        current = getattr(self, "memory_dialog", None)
+        if current is not None and current.window.winfo_exists():
+            current.window.lift()
+        else:
+            self.memory_dialog = MemoryDialog(self)
 
     def open_context(self):
         """Inspect the recorded selection and its originals without altering it."""
@@ -336,8 +347,24 @@ class App:
                 write_details("Aucun message historique sélectionné pour cette demande.")
                 return
             source = sources[indices[0]]
+            if source.get("method") == "memory":
+                memory_id = source.get("memory_id")
+                memory = self.store.memory.get(memory_id) if isinstance(memory_id, int) else None
+                labels = {"pending": "en attente", "approved": "approuvé", "disabled": "désactivé"}
+                state = labels.get(memory["status"], memory["status"]) if memory is not None else "entrée supprimée ou indisponible"
+                text = (f"Mémoire #{memory_id} · {source.get('title', '')}\nType : {source.get('kind', '—')}\n"
+                        f"État lors de la requête : {labels.get(source.get('status'), source.get('status', '—'))}\nÉtat actuel : {state}\n"
+                        f"\nPassage injecté :\n{source.get('excerpt', '')}\n\nProvenance lors de la requête :\n"
+                        + json.dumps(source.get("provenance", {}), ensure_ascii=False, indent=2))
+                if memory is not None:
+                    text += "\n\nContenu actuel de la mémoire :\n" + memory["content"]
+                write_details(text)
+                return
             mid = source.get("message_id")
             original = self.store.message(mid) if isinstance(mid, int) else None
+            if original is not None and (original["session_id"] != source.get("session_id")
+                                         or original["created"] != source.get("created")):
+                original = None
             heading = (f"Message #{mid if mid is not None else '—'} · {source.get('role', '—')} · "
                        f"{source.get('created', '—')}\nConversation : {source.get('session_id', '—')}\n"
                        f"Sélection : {'extrait ciblé' if source.get('method') == 'extractive' else 'échange récent'}\n")
@@ -355,19 +382,22 @@ class App:
             metrics = generation_metrics(metadata.get("generation_metrics"))
             duration = metrics.get("prompt_eval_duration")
             prompt_time = f"{duration / 1_000_000:.1f} ms" if duration is not None else "—"
+            memory_warnings = context.get("memory_warnings", [])
+            warning_text = "\nMémoire : " + " ; ".join(memory_warnings) if memory_warnings else ""
             summary.set(
                 f"Estimation prudente UTF-8, pas un comptage exact : {context.get('context_estimate_tokens', '—')} tokens.\n"
                 f"Contexte total : {context.get('context_limit_tokens', '—')} · Réserve réponse : {context.get('output_reserved_tokens', '—')} · "
                 f"Stratégie : {context.get('context_strategy', '—')}\n"
                 f"Messages récents : {context.get('recent_messages', '—')} · Rappels ciblés : {context.get('retrieved_messages', '—')} · "
-                f"Résumés extractifs : {context.get('summary_messages', '—')} · Hors contexte : {context.get('omitted_messages', '—')}\n"
+                f"Résumés extractifs : {context.get('summary_messages', '—')} · Souvenirs : {context.get('memory_count', 0)} · Hors contexte : {context.get('omitted_messages', '—')}\n"
                 f"Prompt réellement évalué par Ollama : {metrics.get('prompt_eval_count', '—')} tokens · Traitement : {prompt_time}\n"
-                "Le rappel lexical et les extraits sélectionnés ne constituent pas une compréhension sémantique complète.")
+                "Le rappel lexical et les extraits sélectionnés ne constituent pas une compréhension sémantique complète." + warning_text)
             sources[:] = [source for source in context.get("sources", []) if isinstance(source, dict)]
             source_list.delete(0, "end")
             for source in sources:
-                label = "Extrait" if source.get("method") == "extractive" else "Récent"
-                source_list.insert("end", f"{label} · #{source.get('message_id', '—')} · {source.get('role', '—')} · {source.get('excerpt', '')[:85]}")
+                label = {"extractive": "Extrait", "memory": "Mémoire"}.get(source.get("method"), "Récent")
+                source_id = source.get("memory_id") if source.get("method") == "memory" else source.get("message_id", "—")
+                source_list.insert("end", f"{label} · #{source_id} · {source.get('role', '—')} · {source.get('excerpt', '')[:85]}")
             if sources:
                 source_list.selection_set(0)
             show_source()

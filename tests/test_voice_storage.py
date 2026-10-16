@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from jarvis.config import Settings
-from jarvis.storage import Store
+from jarvis.storage import SCHEMA_VERSION, Store
 
 
 class VoiceStoreTests(unittest.TestCase):
@@ -157,7 +157,7 @@ class MigrationTests(unittest.TestCase):
         finally:
             backup.close()
 
-        self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], 2)
+        self.assertEqual(store.db.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
         self.assertEqual(store.db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
         for table in ("sessions", "settings"):
             self.assertEqual([tuple(row) for row in store.db.execute("SELECT * FROM " + table)], self.original[table])
@@ -211,10 +211,10 @@ class MigrationTests(unittest.TestCase):
         self.assertTrue(Path(str(self.path) + ".v1-backup.sqlite3").is_file())
 
     def test_newer_version_refused_without_changing_data(self):
-        self.legacy.execute("PRAGMA user_version=3")
+        self.legacy.execute(f"PRAGMA user_version={SCHEMA_VERSION + 1}")
         with self.assertRaisesRegex(ValueError, "récente"):
             Store(self.path)
-        self.assertEqual(self.legacy.execute("PRAGMA user_version").fetchone()[0], 3)
+        self.assertEqual(self.legacy.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION + 1)
         for table, rows in self.original.items():
             self.assertEqual(self.legacy.execute("SELECT * FROM " + table).fetchall(), rows)
         self.assertEqual(list(self.path.parent.glob("*.v1-backup*.sqlite3")), [])

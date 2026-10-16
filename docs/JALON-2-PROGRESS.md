@@ -1,5 +1,38 @@
 # Jalon 2 — progression vérifiable
 
+## J2.8 — lot 3 : mémoire persistante approuvée
+
+SQLite3 : migration atomique v1/v2 avec snapshot SQLite préalable conservant le
+WAL, jamais écrasé ; échec d’indexation inattendu annule toute la migration.
+Archives, voix, paramètres et jalon1 préservés. Table mémoires distincte avec
+types durable/résumé/projet/document, états attente/approuvée/désactivée,
+provenance JSON/date/titre/sujet, ID non réutilisable et déduplication exacte/NFC
+par type. Aucune extraction automatique de fait utilisateur.
+
+FTS5/BM25 local, index externes mémoires/documents et messages, triggers de
+cohérence ; messages indexés seulement après finalisation, sans réindexer chaque
+fragment du flux. Absence de FTS5 signalée et repli LIKE Unicode testé. Recherche
+interconversations en consultation seule. Le contexte n’ajoute que les souvenirs
+approuvés pertinents, dans son budget de rappels existant, avec leurs citations
+et références inspectables. Aucune base vectorielle ni dépendance supplémentaire.
+
+Bouton Mémoire : création manuelle, import TXT/MD UTF-8≤256Kio en attente,
+préparation de résumés par citations exactes sans appel LLM, inspection des
+originaux et approbation explicite. Correction : confirmation + snapshot puis
+retour en attente. Suppression : ID/sujet confirmé + snapshot. Désactivation
+réversible. Conflits de contenus pour même clé de sujet approuvée bloqués ;
+ce contrôle ne prétend pas détecter toutes les contradictions sémantiques.
+
+Suite complète Linux : **246 tests exécutés, 243 réussis, 3 ignorés** (inférence
+Ollama réelle et deux essais vocaux réels sans poids présents). Tests HTTP/Tk/
+SQLite/FTS/IPC réels, PCM et réponses de fixtures clairement simulés. Aucun EXE
+ni benchmark Qwen/Windows exécuté. Reprises et paramètres cloud de démarrage de
+test sauvegardés en brouillon, sans publication de l’environnement.
+Après optimisation des triggers : 36 tests backend ciblés réussis, dont24 mémoire/
+migration (deux tests supplémentaires sur l’absence de réindexation par fragment).
+Puis43 tests d’intégration HTTP/interface/voix réussis et démarrage de contrôle
+vocal Linux réussi, sans activer de microphone ni charger de poids STT/TTS.
+
 ## J2.8 — lot 2 : contexte ciblé et inspectable
 
 `ContextBuilder` centralise le budget total, la réserve de réponse effective,

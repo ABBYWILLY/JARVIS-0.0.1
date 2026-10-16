@@ -13,7 +13,7 @@ from unittest.mock import patch
 from jarvis.config import Settings
 from jarvis.metrics import generation_metrics, metrics_label
 from jarvis.ollama import Ollama
-from jarvis.storage import Store
+from jarvis.storage import SCHEMA_VERSION, Store
 from jarvis.ui import App
 from tests.test_jarvis import display_available
 
@@ -198,7 +198,7 @@ class MetricsDesktopTests(unittest.TestCase):
         self.assertGreaterEqual(metrics["ttft_seconds"], 0)
         label = self.metric_text()
         self.assertEqual(label, metrics_label(metrics))
-        self.assertEqual(self.store.db.execute("PRAGMA user_version").fetchone()[0], 2)
+        self.assertEqual(self.store.db.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
         self.close_app()
         self.store = Store(self.path)
         self.root = tk.Tk()
