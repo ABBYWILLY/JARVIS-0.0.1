@@ -49,7 +49,7 @@ Validés : aucun. Implémentation : **1/24 = 4,17 %**. Validation : **0/34 = 0 %
 |---|---|---|---|
 | J2.0 | TESTÉ | main inspecté, branche dédiée ; moteurs et contraintes définis ; tests baseline ci-dessous | commit `J2.0: prepare voice milestone and recovery checklist` ; implémenter J2.1 |
 | J2.1 | IMPLÉMENTÉ | adaptateurs capture native/SOXR, périphériques, VAD Silero et STT FR local ; intégration UI en J2.3 ; matériel et modèle non disponibles ici | commit `J2.1: add local capture VAD and French transcription adapters` ; J2.2 |
-| J2.2 | NON COMMENCÉ | TTS/deux voix | à venir |
+| J2.2 | IMPLÉMENTÉ | Piper CPU, 2 profils distincts, PCM à fréquence native, segmentation et lecture ; UI J2.3 ; modèles/licences individuelles/écoute restent à vérifier | commit `J2.2: add Piper synthesis real playback and explicit model installer` ; J2.3 |
 | J2.3 | NON COMMENCÉ | dialogue/interruption/SQLite | à venir |
 | J2.4 | NON COMMENCÉ | PRESENCE | à venir |
 | J2.5 | NON COMMENCÉ | spectres/sous-titres | à venir |
@@ -82,3 +82,8 @@ fréquence native et casque pour barge-in. Sources/liens dans JALON-2-SPEC.md.
 J2.1 : `.venv-voice/bin/python -m unittest tests.test_audio -v` : 7 réussis, 0 échec,
 0 ignoré. VAD ONNX réel sur silence ; STT testé par contrat, pas par un vrai modèle.
 Capture matérielle et transcription française réelle non validées, aucun test Windows.
+
+J2.2 : 4 tests TTS réussis, aucun échec/ignoré dans l’environnement vocal. Contrats
+Piper des deux profils et fréquence vérifiés avec doubles de test ; aucune voix
+synthétisée ni audible ici. Installateur explicite avec fiches de licence, versions
+HF résolues et contrôle SHA-256 LFS / Git blob pour chaque fichier. Runtime offline.

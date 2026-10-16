@@ -11,3 +11,7 @@
   spectres, sous-titres, CI Windows vocale et recette réelle.
 - Ne pas confondre tests de contrat/signal synthétique et validation micro/voix réelle.
 - Pas de force push ni fusion ; préserver EXE et profils utilisateurs du jalon 1.
+
+Dernier état J2.2 : adaptateurs Piper/AudioPlayer et installateur explicite créés ;
+4 tests TTS réussis. Prochaine modification : voice worker puis intégration UI et
+migration de métadonnées. Aucune audition réelle de Tom/Siwis (HF bloqué).
