@@ -21,6 +21,34 @@ Lot1 conservé. Prochain lot prioritaire : voix premium (sélection vérifiée e
 seul adaptateur), aucun téléchargement volumineux avant accord. Lots4/5 restent
 à implémenter. Les anciens paragraphes ci-dessous sont des bilans historiques.
 
+### Lot 3 : blocage documentaire précis, aucun moteur ajouté
+
+Lot2 publié **21a1284**,75 tests ciblés sans ignoré. Consultation Actions refusée
+`Forbidden` après push ; aucun EXE Windows de ce lot exécuté ici.
+Comparaison officielle du16octobre2026 :
+- PocketTTS3.3.0 (tag3dbee45d343d7dddd0d105468d17f8dcba14db3e) : français natif,
+  CPU, codeMIT, dépendances déclarées compatibles avec pinsvoix actuels (résolution
+  complète non exécutée). Meilleur candidat technique pour préserver la VRAM
+  Ollama. VoixEstelleFR documentée, genres non documentés ; licence de chaque voix
+  et des poids **non vérifiée**, README contient conditions d’usage et liensHF.
+- Qwen3-TTS0.6B CustomVoice (repo022e286b98fbec7e1e916cb940cdf532cd9f488e) :
+  français, Vivian/Ryan documentées, codeApache2 ; instruct ignoré pour0.6B.
+  Transformers4.57.3 incompatible Hub2.2/Tokenizers0.23.3 actuels. Poids/voix
+  non vérifiés ; performances3070 simultanées avecQwen4B inconnues.
+- Chatterbox MultilingualV3 existe (5de7a54aa4e5e2baadb0182dde554908b48b85c2),
+  français/codeMIT ; chargeur défautV2 donc V3 doit être explicite. Numpy<2,
+  Torch2.6 et Transformers5.2 imposés : conflits avec pinsvoix actuels.
+  Poids/voix non vérifiés, Windows11/Python3.12 non validés officiellement ici.
+GitHubGit/raw accessibles, mais HF(API/raw/Git), kyutai.org et blogsQwen = CONNECT403.
+Ne pas confondre licence du code avec celles des poids/voix. Aucune sélection
+définitive, installation, audition ou poids téléchargé ; Piper reste inchangé.
+Tailles complètes inconnues : wheelPocket86452octets seulement, **horsTorch/poids**.
+Ne pas demander un accord de téléchargement sur un volume total inventé.
+Question utilisateur posée pour fournir les licences officielles manquantes.
+Après preuve : un adaptateur, chargement strict local, préécoute comparative,
+tests, taille exacte/accord avant téléchargements, buildWindows premium explicite.
+Ne pas installer Qwen/Chatterbox dans le venvPiper en cassant ses pins.
+
 ## Optimisation audio — lot 1 livré, recette Windows ouverte
 
 Base0b47997 ; propriétaire : STT/conversation légèrement améliorés, latence encore

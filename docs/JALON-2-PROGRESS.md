@@ -305,3 +305,19 @@ créer une PR via compare/main...feat/jalon-2-voice-presence si nécessaire. Ne 
 - Rendu inspecté sous X virtuel avec valeurs de test explicitement contrôlées.
   Pas de microphone/benchmark matériel ni EXE Windows validé ici. Aucun poids
   ou paquet supplémentaire. Lot3 ensuite ; lots4/5 non commencés.
+
+## Lot 3 — comparaison faite, implémentation bloquée, pas livré
+
+Sources officielles consultées (code/manifests, sans poids),16octobre2026 :
+[Pocket3.3.0](https://github.com/kyutai-labs/pocket-tts/tree/3dbee45d343d7dddd0d105468d17f8dcba14db3e),
+[Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS/tree/022e286b98fbec7e1e916cb940cdf532cd9f488e),
+[ChatterboxV3](https://github.com/resemble-ai/chatterbox/tree/5de7a54aa4e5e2baadb0182dde554908b48b85c2).
+Pocket français/CPU est prioritaire techniquement ; Qwen/Chatterbox imposent des
+versions incompatibles avec les dépendances voix installées. Détail dans la reprise.
+CodeMIT/Apache vérifié, **licences poids/voix non vérifiées**, pas de certification
+d’usage commercial ou de redistribution. Accès HF et sites officiels complémentaires
+refusé CONNECT403 malgré vérification des routes HTTP/Git disponibles.
+Pas d’adaptateur premium ou de téléchargement ajouté sous une conformité supposée.
+Pas de taille totale ni de gain sonore/latence Windows inventés. Une preuve de
+licences est demandée à l’utilisateur. Lot2 publié21a1284 ; APIActionsForbidden.
+Lots4/5 non commencés, aucune suppression ni modification du moteurPiper.
