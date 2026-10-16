@@ -65,7 +65,9 @@ class App:
         self.delete_button.pack(fill="x", pady=(10, 6))
         self.settings_button = ttk.Button(sidebar, text="Paramètres", command=self.open_settings)
         self.settings_button.pack(fill="x")
-        tk.Label(sidebar, text="Outils système : désactivés\nVoix et PRESENCE : à venir",
+        from .voice_ui import VoiceControls
+        self.voice = VoiceControls(self, sidebar)
+        tk.Label(sidebar, text="Outils système : désactivés",
                  justify="left", bg=PANEL, fg=MUTED, font=(self.font_family, 9)).pack(anchor="w", pady=(16, 0))
 
         top = tk.Frame(root, bg=BG, padx=20, pady=15)
@@ -167,6 +169,8 @@ class App:
     def new_session(self):
         if self.operation:
             return
+        if hasattr(self, "voice"):
+            self.voice.stop_listening()
         self.session_id = self.store.new_session()
         self.reload_history()
         self.render_session()
@@ -175,11 +179,13 @@ class App:
     def select_session(self, _event=None):
         selected = self.history.curselection()
         if selected and not self.operation:
+            self.voice.stop_listening()
             self.session_id = self.session_rows[selected[0]]["id"]
             self.render_session()
 
     def delete_session(self):
         if not self.operation and messagebox.askyesno("Supprimer", "Supprimer définitivement cette conversation de JARVIS ?", parent=self.root):
+            self.voice.stop_listening()
             self.store.delete_session(self.session_id)
             rows = self.store.sessions()
             self.session_id = rows[0]["id"] if rows else self.store.new_session()
@@ -196,7 +202,8 @@ class App:
         for widget in (self.new_button, self.delete_button, self.settings_button, self.refresh_button, self.send_button, self.history):
             widget.configure(state=state)
         self.model_combo.configure(state="disabled" if operation else "readonly")
-        self.stop_button.configure(state="normal" if operation else "disabled")
+        speech_active = hasattr(self, "voice") and self.voice.speech.process is not None
+        self.stop_button.configure(state="normal" if operation or speech_active else "disabled")
         self.dead_polls = 0
 
     def refresh_models(self):
@@ -206,10 +213,11 @@ class App:
         self.busy("models")
         self.set_status("Connexion à Ollama…")
 
-    def send(self):
+    def send(self, source="text", text=None):
         if self.operation:
             return
-        text = self.input.get("1.0", "end-1c").strip()
+        from_input = text is None
+        text = (self.input.get("1.0", "end-1c") if from_input else text).strip()
         if not text:
             return
         if not self.settings.model or self.settings.model not in self.models:
@@ -220,9 +228,12 @@ class App:
         except ValueError as exc:
             self.set_status(str(exc), True)
             return
-        self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model)
+        metadata = {"final_transcript": text} if source == "voice" else None
+        self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model, source=source, metadata=metadata)
+        self.voice.begin_turn(self.message_id, source)
         self.response = ""
-        self.input.delete("1.0", "end")
+        if from_input:
+            self.input.delete("1.0", "end")
         self.reload_history()
         self.render_session()
         self.worker.start("chat", self.settings, messages)
@@ -232,20 +243,27 @@ class App:
     def finish(self, status, text, error=False):
         if self.operation == "chat" and self.message_id is not None:
             self.store.update_response(self.message_id, self.response, status)
+            self.voice.finish_turn(status)
             if not self.response and status == "complete":
                 text = "Réponse terminée sans texte visible. Vérifiez les capacités ou augmentez la limite de réponse du modèle."
             self.append("\n", "meta")
         self.worker.stop()
         self.busy(None)
+        if self.voice.speech.process is None:
+            self.voice.notify_presence("listening" if self.voice.listening else "silent")
         self.message_id = None
         self.set_status(text, error)
 
     def cancel(self):
         if self.operation:
             self.finish("cancelled", "Arrêt demandé ; réponse partielle conservée. Ollama peut mettre un instant à libérer le modèle.")
+        elif self.voice.speech.process is not None:
+            self.voice.cancel_speech()
+            self.set_status("Lecture vocale arrêtée ; texte conservé.")
 
     def poll(self):
         try:
+            self.voice.poll()
             if self.operation:
                 changed = False
                 for event in self.worker.poll():
@@ -256,6 +274,7 @@ class App:
                             self.finish("cancelled", "Limite de taille de réponse atteinte ; génération arrêtée.", True)
                             break
                         self.append(event.payload)
+                        self.voice.chunk(event.payload)
                     elif event.kind == "models":
                         self.models = event.payload
                         self.model_combo.configure(values=self.models)
@@ -322,11 +341,15 @@ class App:
 
     def callback_error(self, _kind, exc, _trace):
         self.worker.stop()
+        self.voice.capture.stop()
+        self.voice.speech.stop()
+        self.voice.listening = False
         self.busy(None)
         self.set_status("Erreur de stockage local : vérifiez l’espace libre et les droits du dossier de données. Redémarrez JARVIS." if isinstance(exc, (sqlite3.Error, OSError)) else "Erreur interne de l’interface. Redémarrez JARVIS ; les données déjà enregistrées sont conservées.", True)
 
     def close(self):
         try:
+            self.voice.stop_listening()
             if self.operation:
                 self.cancel()
         finally:

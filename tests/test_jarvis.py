@@ -143,9 +143,9 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.store.sessions()[0]["id"], other)
 
     def test_version_guard_and_schema(self):
-        self.assertEqual(self.store.db.execute("PRAGMA user_version").fetchone()[0], 1)
+        self.assertEqual(self.store.db.execute("PRAGMA user_version").fetchone()[0], 2)
         self.assertEqual(self.store.db.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-        self.store.db.execute("PRAGMA user_version=2")
+        self.store.db.execute("PRAGMA user_version=3")
         with self.assertRaisesRegex(ValueError, "récente"):
             Store(self.path)
 

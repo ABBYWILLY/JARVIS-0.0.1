@@ -9,17 +9,17 @@ Aucun changement direct de main, aucun force push, aucune fusion automatique.
 
 Une case cochée signifie code intégré et testé au niveau indiqué, pas recette Windows.
 
-- [ ] I01 Capture micro locale sur activation explicite, libération à l’arrêt.
-- [ ] I02 Sélection entrée/sortie et erreurs de périphériques.
+- [x] I01 Capture micro locale sur activation explicite, libération à l’arrêt.
+- [x] I02 Sélection entrée/sortie et erreurs de périphériques.
 - [x] I03 VAD réel local, fin de tour, silences, pré-roll et limites.
-- [ ] I04 STT français local avec modèle installé, sans téléchargement implicite.
-- [ ] I05 TTS Piper : véritable modèle masculin français.
-- [ ] I06 TTS Piper : véritable modèle féminin français.
-- [ ] I07 Gestionnaire de voix, préécoute audio et vitesse persistante.
-- [ ] I08 Orchestration STT → Ollama → TTS segmenté, tours mains libres.
-- [ ] I09 Interruption vocale, invalidation des anciens segments et politique d’écho explicite.
+- [x] I04 STT français local avec modèle installé, sans téléchargement implicite.
+- [x] I05 TTS Piper : véritable modèle masculin français.
+- [x] I06 TTS Piper : véritable modèle féminin français.
+- [x] I07 Gestionnaire de voix, préécoute audio et vitesse persistante.
+- [x] I08 Orchestration STT → Ollama → TTS segmenté, tours mains libres.
+- [x] I09 Interruption vocale, invalidation des anciens segments et politique d’écho explicite.
 - [ ] I10 Arrêt manuel/urgence et sommeil désactivant capture et tâches.
-- [ ] I11 Migration SQLite préservant textes, provenance, dates, voix/moteur et interruptions.
+- [x] I11 Migration SQLite préservant textes, provenance, dates, voix/moteur et interruptions.
 - [ ] I12 PRESENCE : une machine à états et une géométrie morphologique unique.
 - [ ] I13 Ligne plate au silence et onde arrondie pilotée par micro réel.
 - [ ] I14 Réflexion sur traitement réel et noyau piloté par audio diffusé.
@@ -39,9 +39,9 @@ Une case cochée signifie code intégré et testé au niveau indiqué, pas recet
 V01 à V34 sont exactement les 34 contrôles de la section 13 de `JALON-2-SPEC.md`.
 Une preuve Linux peut valider un invariant indépendant de l’OS (ex. géométrie),
 jamais le microphone, l’écoute perceptive ou l’exécutable Windows. Aucune case
-validée par un test ignoré. Preuves actuelles : aucune pour le jalon 2.
+validée par un test ignoré. Preuves dans tests/test_voice_storage.py ; aucune preuve de matériel audio/Windows.
 
-Validés : aucun. Implémentation : **1/24 = 4,17 %**. Validation : **0/34 = 0 %**.
+Validés : V04 (persistance réelle SQLite), V34 (migration/backup sans perte). Implémentation : **10/24 = 41,67 %**. Validation : **2/34 = 5,88 %**.
 
 ## Étapes
 
@@ -50,7 +50,7 @@ Validés : aucun. Implémentation : **1/24 = 4,17 %**. Validation : **0/34 = 0 %
 | J2.0 | TESTÉ | main inspecté, branche dédiée ; moteurs et contraintes définis ; tests baseline ci-dessous | commit `J2.0: prepare voice milestone and recovery checklist` ; implémenter J2.1 |
 | J2.1 | IMPLÉMENTÉ | adaptateurs capture native/SOXR, périphériques, VAD Silero et STT FR local ; intégration UI en J2.3 ; matériel et modèle non disponibles ici | commit `J2.1: add local capture VAD and French transcription adapters` ; J2.2 |
 | J2.2 | IMPLÉMENTÉ | Piper CPU, 2 profils distincts, PCM à fréquence native, segmentation et lecture ; UI J2.3 ; modèles/licences individuelles/écoute restent à vérifier | commit `J2.2: add Piper synthesis real playback and explicit model installer` ; J2.3 |
-| J2.3 | NON COMMENCÉ | dialogue/interruption/SQLite | à venir |
+| J2.3 | IMPLÉMENTÉ | UI écoute explicite/devices/préécoute ; STT→LLM→TTS, epochs et arrêt prioritaire ; migration v2/backup ; tests de contrat, pas conversation audio réelle | commit `J2.3: integrate hands-free orchestration cancellation and lossless history` ; J2.4 |
 | J2.4 | NON COMMENCÉ | PRESENCE | à venir |
 | J2.5 | NON COMMENCÉ | spectres/sous-titres | à venir |
 | J2.6 | NON COMMENCÉ | build/recette | à venir |
@@ -87,3 +87,10 @@ J2.2 : 4 tests TTS réussis, aucun échec/ignoré dans l’environnement vocal. 
 Piper des deux profils et fréquence vérifiés avec doubles de test ; aucune voix
 synthétisée ni audible ici. Installateur explicite avec fiches de licence, versions
 HF résolues et contrôle SHA-256 LFS / Git blob pour chaque fichier. Runtime offline.
+
+J2.3 : 12 tests de flux réussis (Tk+SQLite+HTTP fixture, audio simulé explicitement),
+8 tests stockage et 3 parcours desktop baseline réussis. Arrêt après fin du LLM,
+barge-in casque, segments obsolètes et fermeture callback testés. Suite initiale
+audio+baseline+stockage : 34 réussis, 1 ignoré (modèle Ollama). Aucun test Windows,
+aucune audition ni capture physique. Les critères I05/I06 désignent les adaptateurs
+et profils installables, pas des poids téléchargés ni une qualité vocale validée.
