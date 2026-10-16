@@ -6,6 +6,7 @@ import sqlite3
 import tempfile
 import tkinter as tk
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -85,7 +86,7 @@ class MemoryDesktopTests(unittest.TestCase):
         self.assertEqual(self.store.memory.get(mid)["status"], "pending")
         updates = list(Path(self.temp.name).glob("*memory-update*"))
         self.assertEqual(len(updates), 1)
-        with sqlite3.connect(updates[0]) as backup:
+        with closing(sqlite3.connect(updates[0])) as backup:
             self.assertEqual(backup.execute("SELECT content FROM memories WHERE id=?", (mid,)).fetchone()[0],
                              "Le projet Atlas utilise SQLite.")
         with patch("jarvis.memory_ui.messagebox.askyesno", return_value=False):

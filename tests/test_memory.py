@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import unicodedata
 import unittest
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -26,10 +27,37 @@ class MemoryTests(unittest.TestCase):
         return mid
 
     def snapshot_row(self, path, mid):
-        with sqlite3.connect(path) as snapshot:
+        # A SQLite transaction context does not close the connection. Windows
+        # needs the handle released before TemporaryDirectory removes backups.
+        with closing(sqlite3.connect(path)) as snapshot:
             snapshot.row_factory = sqlite3.Row
             self.assertEqual(snapshot.execute("PRAGMA integrity_check").fetchone()[0], "ok")
             return snapshot.execute("SELECT * FROM memories WHERE id=?", (mid,)).fetchone()
+
+    def test_backup_and_snapshot_readers_close_handles_even_when_reading_fails(self):
+        mid = self.memory.create("Sauvegarde conservée et immédiatement libérée.")
+        original_connect = sqlite3.connect
+        connections = []
+
+        def connect(*args, **kwargs):
+            connection = original_connect(*args, **kwargs)
+            # Retain the actual connections so garbage collection cannot hide
+            # a leaked handle on Linux before the Windows runner checks it.
+            connections.append(connection)
+            return connection
+
+        with patch("sqlite3.connect", side_effect=connect):
+            backup = self.store.backup("handle-lifetime")
+            self.assertEqual(self.snapshot_row(backup, mid)["content"],
+                             "Sauvegarde conservée et immédiatement libérée.")
+            with self.assertRaisesRegex(sqlite3.OperationalError, "no such table"):
+                self.snapshot_row(self.path.parent / "empty-snapshot.sqlite3", mid)
+
+        self.assertEqual(len(connections), 3)
+        for connection in connections:
+            with self.assertRaises(sqlite3.ProgrammingError):
+                connection.execute("SELECT 1")
+        self.assertEqual(self.store.db.execute("SELECT 1").fetchone()[0], 1)
 
     def test_all_categories_start_pending_with_exact_original_and_provenance(self):
         original = "  Le réseau d’Éole 👩🏽‍💻 reste local.\n"
@@ -318,7 +346,7 @@ class MemoryMigrationTests(unittest.TestCase):
         store = Store(self.path)
         self.addCleanup(store.close)
         self.assertEqual(store.migration_backup, Path(str(self.path) + ".v2-backup.sqlite3"))
-        with sqlite3.connect(store.migration_backup) as backup:
+        with closing(sqlite3.connect(store.migration_backup)) as backup:
             self.assertEqual(backup.execute("PRAGMA user_version").fetchone()[0], 2)
             self.assert_original(backup)
             self.assertIsNone(backup.execute("SELECT name FROM sqlite_master WHERE name='memories'").fetchone())
@@ -343,7 +371,7 @@ class MemoryMigrationTests(unittest.TestCase):
         self.addCleanup(store.close)
         self.assertNotEqual(previous, store.migration_backup)
         self.assertEqual(previous.read_bytes(), b"previous user snapshot")
-        with sqlite3.connect(store.migration_backup) as backup:
+        with closing(sqlite3.connect(store.migration_backup)) as backup:
             self.assert_original(backup)
 
     def test_unexpected_index_error_rolls_back_entire_migration(self):
