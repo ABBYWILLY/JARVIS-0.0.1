@@ -1,0 +1,29 @@
+name: Windows Jarvis
+on:
+  push:
+    branches: [main, work]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - name: Tests, compilation et démarrage de l’EXE
+        shell: powershell
+        run: .\scripts\build-windows.ps1 -PythonExecutable (Get-Command python).Source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-Windows-x64-${{ github.sha }}
+          path: |
+            dist/Jarvis.exe
+            dist/Jarvis.exe.sha256
+          if-no-files-found: error
+          retention-days: 14
