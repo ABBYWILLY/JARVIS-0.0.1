@@ -174,10 +174,16 @@ class ProtocolTests(unittest.TestCase):
     def test_connection_refused_and_timeout_explanation(self):
         with Fixture() as fixture:
             endpoint = fixture.endpoint
-        with self.assertRaises(OSError) as caught:
-            Ollama(endpoint, timeout=0.1).models()
+        # Windows can take longer than 100 ms to report a refused connection.
+        # Require refusal specifically, rather than accepting a premature timeout.
+        with self.assertRaises(ConnectionRefusedError) as caught:
+            Ollama(endpoint, timeout=5).models()
         self.assertIn("Démarrez Ollama", friendly_error(caught.exception))
-        self.assertIn("120 s", friendly_error(TimeoutError()))
+        # Exercise the timeout path independently of platform/network timing.
+        with patch("jarvis.ollama.http.client.HTTPConnection.request", side_effect=TimeoutError()):
+            with self.assertRaises(TimeoutError) as caught_timeout:
+                Ollama(endpoint).models()
+        self.assertIn("120 s", friendly_error(caught_timeout.exception))
 
     def test_spawn_worker_can_cancel_blocked_stream_and_restart(self):
         with Fixture() as fixture:
