@@ -78,6 +78,21 @@ class VoiceControls:
         self.status.set("ARRÊT — microphone, génération et lecture arrêtés")
         self.notify_presence("silent")
 
+    def halt_without_persistence(self):
+        """Fail closed even when SQLite is the failing component."""
+        self.capture.stop()
+        self.speech.stop()
+        self.epoch += 1
+        self.pending_visuals.clear()
+        self.pending_phrases.clear()
+        self.end_pending = self.reading = self.listening = False
+        self.mid = None
+        if self.resume_id is not None:
+            self.app.root.after_cancel(self.resume_id)
+            self.resume_id = None
+        self.listen_button.configure(text="Activer l’écoute")
+        self.notify_presence("silent")
+
     def begin_turn(self, mid, source):
         self.cancel_speech()
         self.mid = mid if self.listening else None

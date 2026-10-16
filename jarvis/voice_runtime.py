@@ -107,6 +107,29 @@ def speech_worker(outbox, commands, profile, generation):
         emit_event(outbox, AudioEvent("error", audio_error(exc), generation))
 
 
+def diagnostics_worker(outbox, commands, profile):
+    """No microphone/model download: exercise bundled native dependencies in spawn."""
+    try:
+        import numpy as np
+        import onnxruntime
+        onnxruntime.disable_telemetry_events()
+        import ctranslate2
+        import sounddevice as sd
+        import soxr
+        from piper.phonemize_espeak import EspeakPhonemizer
+        from .audio import SileroFrames
+        phonemes = EspeakPhonemizer().phonemize("fr", "Bonjour, je suis JARVIS.")
+        vad = SileroFrames()
+        silent = vad.probability(np.zeros(512, dtype="float32"))
+        samples = soxr.resample(np.zeros(480, dtype="float32"), 48000, 16000)
+        if not phonemes or silent >= 0.6 or len(samples) != 160:
+            raise RuntimeError("Voice native diagnostic failed")
+        emit_event(outbox, AudioEvent("diagnostics_done", {"phonemes": True, "vad": True,
+                  "resampling": True, "portaudio": sd.get_portaudio_version()[0]}))
+    except Exception as exc:
+        emit_event(outbox, AudioEvent("error", audio_error(exc)))
+
+
 class AudioProcess:
     def __init__(self):
         self.context = mp.get_context("spawn")
@@ -116,9 +139,9 @@ class AudioProcess:
         self.stop()
         self.outbox = self.context.Queue(maxsize=128)
         self.commands = self.context.Queue(maxsize=8)
-        target = capture_worker if kind == "capture" else speech_worker
+        target = {"capture": capture_worker, "speech": speech_worker, "diagnostics": diagnostics_worker}[kind]
         args = (self.outbox, self.commands, settings.to_dict())
-        if kind != "capture":
+        if kind == "speech":
             args += (generation,)
         self.process = self.context.Process(target=target, args=args, daemon=True)
         self.process.start()

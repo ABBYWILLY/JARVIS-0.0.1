@@ -30,9 +30,9 @@ Une case cochée signifie code intégré et testé au niveau indiqué, pas recet
 - [x] I19 Sous-titres sur audio joué, approximation annoncée, historique/copie.
 - [x] I20 Profils graphiques et réduction du mouvement, ressources bornées.
 - [x] I21 Préférences vocales/personnalité sans filtrage ni modification des permissions.
-- [ ] I22 Tests ciblés audio et non-régression du jalon 1.
+- [x] I22 Tests ciblés audio et non-régression du jalon 1.
 - [ ] I23 Build Windows vocal séparé, contrôles de démarrage et artefact versionné.
-- [ ] I24 Installation, recette Windows, restauration et reprise documentées.
+- [x] I24 Installation, recette Windows, restauration et reprise documentées.
 
 ## Critères de validation stables (34)
 
@@ -44,7 +44,7 @@ validée par un test ignoré. Preuves dans tests/test_voice_storage.py ; aucune 
 Validés : V04, V14, V15, V16, V18, V20, V21, V23, V24, V25, V27, V28, V29, V30, V31, V34.
 Preuves : tests/test_voice_storage.py et les 15 tests tests/test_presence.py.
 Il s’agit de persistance/invariants graphiques et d’orchestration sous Linux, pas
-de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Windows. Implémentation : **21/24 = 87,50 %**. Validation : **16/34 = 47,06 %**.
+de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Windows. Implémentation : **23/24 = 95,83 %**. Validation : **16/34 = 47,06 %**.
 
 ## Étapes
 
@@ -56,7 +56,7 @@ de la recette matérielle Windows. V17 (qualité/DPI) reste à examiner sur Wind
 | J2.3 | IMPLÉMENTÉ | UI écoute explicite/devices/préécoute ; STT→LLM→TTS, epochs et arrêt prioritaire ; migration v2/backup ; tests de contrat, pas conversation audio réelle | commit `J2.3: integrate hands-free orchestration cancellation and lossless history` ; J2.4 |
 | J2.4 | TESTÉ | maillage spline unique, états réels, fond/contraste, centre responsive, profils, sommeil et annulation ; 15 tests Linux | commit `J2.4: add single-mesh responsive audio-driven Presence` ; J2.5 |
 | J2.5 | TESTÉ | spectres indépendants, quatre modes, mots ciblés, sous-titres depuis fraction PCM avec approximation signalée ; profils conversationnels persistants | commit `J2.5: add independent spectra and playback-driven captions` ; J2.6 |
-| J2.6 | NON COMMENCÉ | build/recette | à venir |
+| J2.6 | BLOQUÉ | code build/guide/tests terminés ; artefact et recette Windows non confirmés dans cette machine Linux | commit `J2.6: package optional voice build and preserve Windows baseline` ; vérifier Actions puis PC cible |
 
 ## Décisions et limites initiales
 
@@ -110,3 +110,38 @@ Estimation de tonalité lexicale conservatrice, négation simple, inertie3s, auc
 aucune prétention de ressentir une émotion. Sous-titres : groupesde3 mots estimés
 par durée PCM, pas alignement mots/phonèmes ; précisionaudible à vérifierWindows.
 Profil UNHINGED testé : promptseul, aucuneactivationmicro ni permissionmodifiée.
+
+## Résultat J2.6 de cette session
+
+- Suite complète : **89 tests exécutés, 86 réussis, 0 échec, 3 ignorés**.
+  Ignorés : vrai modèle Ollama, deux voix Piper réelles, aller-retour réel TTS→STT.
+  Commande : `DISPLAY=:99 .venv-voice/bin/python -m unittest discover -s tests -v`
+  (PortAudio local fourni dans les chemins de bibliothèques pour diagnostics).
+- Préflight source `--voice-smoke-test` réussi : processus spawn, Tk/SQLite,
+  imports natifs, phonémisation française **réelle**, VAD Silero ONNX **réel**,
+  rééchantillonnage SOXR **réel**. Aucun microphone ni poids Whisper/Piper utilisés.
+- 30 dépendances voix/installation épinglées et paquets Windows x64 téléchargés
+  avec succès par pip ; aucun paquet absent à la résolution Windows Python3.12.
+- PyInstaller Linux : binaire de contrôle 173 Mio, `--smoke-test` réussi et
+  `--voice-smoke-test` réussi **avec PortAudio local disponible**. Le premier essai
+  vocal sans ce chemin système a échoué ; cause isolée à la découverte de PortAudio,
+  corrigée par configuration de bibliothèque (pas de vérification désactivée).
+  PortAudio extrait d’un paquet Debian vérifié par APT et les index signés, sans
+  installation système. Bibliothèques Tcl/Tk spécifiques à cette machine incluses.
+  Cela ne constitue pas un test Windows ni une distribution Linux standalone.
+- Défaut détecté en revue et corrigé : après une erreur SQLite/UI, purger aussi les
+  buffers/callbacks et invalider les epochs ; 4 tests d’intégration supplémentaires
+  prouvent qu’aucun ancien sous-titre/état audio ne réapparaît après arrêt/sommeil.
+- Windows : workflow vocal prêt sur push/PR/manual ; artefact distinct et sortie
+  `dist/jalon-2`, ancien EXE préservé. **Aucun nouveau EXE Windows exécuté ici**.
+- Matériel/qualité : pas de microphone cloud, pas d’audition Tom/Siwis, pas de STT
+  français réel ni d’inférence réelle ; modèles HF refusés403. Pas de mesures
+  utilisateur inventées, pas de garantie60tok/s, pas d’AEC haut-parleurs.
+- Licences : moteur Piper GPL3+, sources et notices référencées ; licences des poids
+  Tom/Siwis non vérifiées ici, fiches à lire avant installation explicite. Aucun
+  poids redistribué. Piper est le seul moteur livré, interface SpeechProvider prévue.
+
+Les 16 validations concernent les preuves indépendantes de l’OS listées plus haut.
+**0 contrôle matériel validé sur Windows pour ce jalon.** Ne pas marquer J2.6 terminé
+avant réception de l’artefact et recette. Prochaine opération : Actions Windows,
+puis installation explicite des modèles et exécution des contrôles réels du guide.

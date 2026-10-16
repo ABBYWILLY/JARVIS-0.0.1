@@ -1,7 +1,7 @@
 name: Windows Jarvis
 on:
   push:
-    branches: [main, work]
+    branches: [main, work, feat/jalon-2-voice-presence]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -16,14 +16,17 @@ jobs:
         with:
           python-version: '3.12.10'
           architecture: x64
-      - name: Tests, compilation et démarrage de l’EXE
+      - name: Tests, compilation vocale et démarrage de l’EXE Jalon 2
         shell: powershell
-        run: .\scripts\build-windows.ps1 -PythonExecutable (Get-Command python).Source
+        run: .\scripts\build-windows.ps1 -PythonExecutable (Get-Command python).Source -WithVoice
       - uses: actions/upload-artifact@v4
         with:
-          name: Jarvis-Windows-x64-${{ github.sha }}
+          name: Jarvis-Jalon2-Windows-x64-${{ github.sha }}
           path: |
-            dist/Jarvis.exe
-            dist/Jarvis.exe.sha256
+            dist/jalon-2/Jarvis.exe
+            dist/jalon-2/Jarvis.exe.sha256
+            docs/VOICE.md
+            scripts/install_voice_models.py
+            requirements-voice.txt
           if-no-files-found: error
           retention-days: 14

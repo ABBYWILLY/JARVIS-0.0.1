@@ -2,13 +2,19 @@
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from jarvis.config import data_directory
+def default_models_directory():
+    # Standalone helper also ships beside the EXE, without importing the checkout.
+    if os.environ.get("JARVIS_DATA_DIR"):
+        return Path(os.environ["JARVIS_DATA_DIR"]) / "models"
+    if os.name == "nt":
+        return Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "Jarvis/models"
+    return Path.home() / ".local/share/jarvis/models"
 
 
 def verified_download(repo, revision, filename, destination):
@@ -28,8 +34,9 @@ def verified_download(repo, revision, filename, destination):
         raise RuntimeError(f"Intégrité non vérifiée : {repo}/{filename}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(cached, destination)
-    return {"repo": repo, "revision": info.sha, "file": filename,
-            "sha256": hashlib.sha256(destination.read_bytes()).hexdigest()}
+    with destination.open("rb") as handle:
+        sha256 = hashlib.file_digest(handle, "sha256").hexdigest()
+    return {"repo": repo, "revision": info.sha, "file": filename, "sha256": sha256}
 
 
 def install(root, accept, stt_size):
@@ -72,7 +79,7 @@ def install(root, accept, stt_size):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--destination", type=Path, default=data_directory() / "models")
+    parser.add_argument("--destination", type=Path, default=default_models_directory())
     parser.add_argument("--stt-size", choices=("tiny", "base", "small"), default="small")
     parser.add_argument("--accept-model-licenses", action="store_true")
     args = parser.parse_args()

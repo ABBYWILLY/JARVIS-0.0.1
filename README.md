@@ -45,13 +45,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1
 
 Le script crée `.venv-build`, installe les outils épinglés, lance les tests, compile,
 puis vérifie le démarrage et le processus secondaire de l’EXE sans nécessiter Ollama.
-Résultat : **`dist\Jarvis.exe`** et `dist\Jarvis.exe.sha256`.
+Résultat : **`dist\jalon-2\Jarvis.exe`** et `dist\jalon-2\Jarvis.exe.sha256`.
 L’EXE embarque Python/Tk ; Ollama et ses modèles restent à installer séparément.
 Le binaire est **non signé**, portable, sans installateur ni mise à jour automatique.
 
 Alternative sans compiler sur votre PC : après l’envoi de ces fichiers sur GitHub,
 ouvrir **Actions → Windows Jarvis → Run workflow** sur la branche contenant ce code.
-Après un résultat vert, télécharger l’artefact **Jarvis-Windows-x64-…** en bas de
+Après un résultat vert, télécharger l’artefact **Jarvis-Jalon2-Windows-x64-…** en bas de
 l’exécution et décompresser le ZIP. Le workflow se lance aussi sur une PR et sur
 les mises à jour de `main` ou `work`. Aucun artefact Windows n’a été produit dans
 cette session Linux ; la recette Windows 11 avec un vrai modèle reste requise.
@@ -97,3 +97,16 @@ Les tests HTTP utilisent un serveur de test explicitement distinct d’Ollama.
 Le test d’inférence réelle est ignoré si `JARVIS_TEST_MODEL` n’est pas défini ;
 les tests desktop sont ignorés si aucun écran n’est disponible.
 Résultats et périmètre : [notes de réalisation](docs/IMPLEMENTATION.md).
+
+## Jalon 2 : voix locale et PRESENCE
+
+La branche Jalon2 ajoute capture/VAD/STT local, deux profils Piper FR, orchestration
+mains libres, arrêt/interruption au casque, migration SQLite conservatrice et PRESENCE.
+Les composants vocaux et modèles sont facultatifs et installés explicitement.
+Voir **[installation et recette Windows](docs/VOICE.md)**, le
+[journal vérifiable](docs/JALON-2-PROGRESS.md) et la [reprise](docs/NEXT-CODEX-SESSION.md).
+
+Pour le build vocal, utiliser `scripts\build-windows.ps1 -WithVoice` ; le script
+produit désormais `dist\jalon-2\Jarvis.exe` sans écraser l’ancien EXE.
+L’artefact GitHub porte le nom **Jarvis-Jalon2-Windows-x64-…**.
+Le guide vocal précise les contrôles disponibles et les validations matérielles restantes.

@@ -355,10 +355,8 @@ class App:
         ttk.Button(dialog, text="Annuler", command=dialog.destroy).grid(row=7, column=0, sticky="w")
 
     def callback_error(self, _kind, exc, _trace):
+        self.voice.halt_without_persistence()
         self.worker.stop()
-        self.voice.capture.stop()
-        self.voice.speech.stop()
-        self.voice.listening = False
         self.busy(None)
         self.set_status("Erreur de stockage local : vérifiez l’espace libre et les droits du dossier de données. Redémarrez JARVIS." if isinstance(exc, (sqlite3.Error, OSError)) else "Erreur interne de l’interface. Redémarrez JARVIS ; les données déjà enregistrées sont conservées.", True)
 

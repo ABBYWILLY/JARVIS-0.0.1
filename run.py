@@ -12,29 +12,51 @@ def main():
     from dataclasses import replace
     import time
 
+    smoke = "--smoke-test" in sys.argv or "--voice-smoke-test" in sys.argv
+
     root = tk.Tk()
     root.withdraw()
     try:
         store = Store(data_directory() / "jarvis.sqlite3")
-        app = App(root, store, refresh="--smoke-test" not in sys.argv)
+        app = App(root, store, refresh=not smoke)
     except Exception:
-        messagebox.showerror("JARVIS — démarrage impossible", "Impossible d’ouvrir les données locales. Vérifiez les droits du dossier et l’espace disque. Ne supprimez pas votre base ; sauvegardez-la avant toute réparation.", parent=root)
+        if not smoke:
+            messagebox.showerror("JARVIS — démarrage impossible", "Impossible d’ouvrir les données locales. Vérifiez les droits du dossier et l’espace disque. Ne supprimez pas votre base ; sauvegardez-la avant toute réparation.", parent=root)
         root.destroy()
         return 1
     root.deiconify()
     result = [0]
-    if "--smoke-test" in sys.argv:
+    if smoke:
         # Exercise frozen multiprocessing as well as Tk/SQLite, without Ollama.
         app.settings = replace(app.settings, endpoint="http://127.0.0.1:1")
         app.refresh_models()
-        deadline = time.monotonic() + 15
+        diagnostics = None
+        diagnostics_ok = "--voice-smoke-test" not in sys.argv
+        if not diagnostics_ok:
+            from jarvis.voice_runtime import AudioProcess
+            diagnostics = AudioProcess()
+            diagnostics.start("diagnostics", app.voice.settings)
+        deadline = time.monotonic() + 40
 
         def check():
-            if not app.operation:
+            nonlocal diagnostics_ok
+            if diagnostics is not None:
+                for event in diagnostics.poll():
+                    if event.kind == "diagnostics_done":
+                        diagnostics_ok = True
+                        diagnostics.stop()
+                    elif event.kind == "error":
+                        result[0] = 1
+                        diagnostics.stop()
+                        app.close()
+                        return
+            if not app.operation and diagnostics_ok:
                 result[0] = 0 if "Connexion Ollama impossible" in app.status.get() else 1
                 app.close()
             elif time.monotonic() > deadline:
                 result[0] = 1
+                if diagnostics is not None:
+                    diagnostics.stop()
                 app.close()
             else:
                 root.after(50, check)
