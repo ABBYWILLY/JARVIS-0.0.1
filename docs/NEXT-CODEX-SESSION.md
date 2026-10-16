@@ -13,7 +13,10 @@ La demande J2.8 remplace l’ordre des lots J2.7 ci-dessous :
 3. Livré : mémoire locale durable/résumé/projet/document, approbation explicite,
    FTS5 lexical (secours LIKE signalé), provenance et inspection, sauvegarde
    avant correction/suppression et migration SQLite3 depuis v1/v2.
-4. Observabilité et comparaison à configuration identique.
+4. Livré : observabilité facultative et comparaison locale reproductible à
+   configuration identique, `python -m jarvis.inference_benchmark`.
+Validation finale J2.8 : 260 tests exécutés,257 réussis,3 ignorés faute de modèles
+réels. Aucun échec ; aucun gain réel Qwen/Windows ou EXE Windows validé ici.
 Voix premium, Semantic Morphing et stockage restent différés, sans effacer leurs
 spécifications. Ne pas reprendre les travaux audio J2.7 déjà livrés.
 
@@ -24,7 +27,8 @@ L’ancien contexte estimait 2,4 caractères/token, tronquait le système et pou
 garder des messages isolés ; ne pas copier ces limites. Son FTS5/BM25 local est
 réutilisable, sans le considérer comme recherche sémantique complète.
 
-J2.8 lot1 publié **bbe88af**. Lot2 sans migration, index ou dépendance nouvelle ;
+J2.8 publiés : lot1 **bbe88af**, lot2 **01ff571**, lot3 **234ff62**.
+Lot2 sans migration, index ou dépendance nouvelle ;
 les rappels de messages concernent la conversation active. Le lot3 ajoute les
 souvenirs approuvés pertinents au même budget partagé, et la consultation FTS5
 manuelle interconversations/documents. Aucun souvenir durable n’est créé
@@ -42,10 +46,43 @@ par type refusés. IDs mémoire jamais réutilisés ; métadonnées des réponse
 gardent les citations utilisées même si la mémoire est modifiée/supprimée.
 Sauvegardes SQLite locales uniques conservées, aucun modèle/donnée effacé ici.
 
+### Recette Windows J2.8 à réaliser
+
+Dans COMMAND OS : Paramètres → Raisonnement Rapide ; vérifier « 2+2 ? », un suivi
+et un rappel ancien. Métriques montre les observations Ollama ; Contexte montre
+les sources et la réserve ; Mémoire permet ajout puis approbation explicite.
+Les compteurs visibles restent indisponibles si le serveur ne les fournit pas.
+
+Dans PowerShell ouvert dans le dépôt, avec Ollama et un modèle déjà installé :
+
+```powershell
+ollama list
+.\.venv-voice\Scripts\python.exe -m jarvis.inference_benchmark --model "NOM_EXACT_DE_OLLAMA_LIST" --output .\jarvis-j28-4b.jsonl --context 4096 --max-tokens 256 --repeats 1
+```
+
+Remplacer le nom du modèle ; utiliser un autre fichier pour le9B ou une répétition.
+Le programme refuse d’écraser un rapport. Corpus synthétique de trois questions,
+six appels mesurés et un préchauffage de16 tokens hors comparaison. Modèle,
+contexte total, budget de sortie et température identiques ; comparaison combinée
+avant(auto/contexte récent) et après(rapide/contexte ciblé), ordre alterné.
+JSONL conserve les textes visibles, paramètres et compteurs réels, jamais la
+pensée interne. Réponses vides/tronquées/échouées exclues des gains. Le cache et
+l’ordre influencent les résultats ; examiner aussi la qualité des réponses.
+Aucun modèle téléchargé ; aucun benchmark Qwen réel exécuté dans le cloud.
+
+Compilation Windows inchangée (consulter aussi `VOICE.md`) :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-windows.ps1 -WithVoice
+```
+
+Actions API = `Forbidden` ici ; vérifier les résultats du workflow et l’artefact
+sur GitHub. Aucune fusion dans main, aucune recette Windows prétendue.
+
 - Dépôt : https://github.com/ABBYWILLY/JARVIS-0.0.1
 - Branche : `feat/jalon-2-voice-presence`. Aucun changement direct de main/force push.
-- Dernier lot : `feat(ui): show real generation and voice timing metrics`.
-  Retrouver son SHA par `git log -5 --oneline`.
+- Dernier état J2.8 : les lots ci-dessus ; les bilans J2.7 ci-dessous sont
+  historiques. Retrouver le dernier SHA par `git log -5 --oneline`.
 - J2.0–J2.6 et jalon 1 préservés. Lire JALON-2-PROGRESS.md et VOICE.md pour les preuves.
 
 ## Lot 2 livré après d90fd5a

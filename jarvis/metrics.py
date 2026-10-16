@@ -77,7 +77,8 @@ def metrics_label(values):
     label += (f" · Tokens de génération totaux : {count}"
               f" · Tokens de réponse visibles : {metrics.get('response_tokens', 'indisponibles')}"
               f" · Tokens du prompt : {metrics.get('prompt_eval_count', '—')}"
-              f" · Traitement du prompt : {seconds('prompt_eval_duration', 1_000_000_000)}")
+              f" · Traitement du prompt : {seconds('prompt_eval_duration', 1_000_000_000)}"
+              f" · Durée totale Ollama : {seconds('total_duration', 1_000_000_000)}")
     reasoning = REASONING_LABELS.get(metrics.get("reasoning_status"), "indisponible")
     if metrics.get("thinking_observed"):
         reasoning += " ; pensée interne reçue"

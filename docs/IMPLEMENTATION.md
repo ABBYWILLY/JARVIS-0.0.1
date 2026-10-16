@@ -1,5 +1,9 @@
 # Décision et périmètre de cette livraison
 
+Ce document décrit la livraison historique du jalon1. Pour l’état actuel
+(voix/PRESENCE, J2.8 raisonnement/contexte/mémoire), lire `JALON-2-PROGRESS.md`
+et `NEXT-CODEX-SESSION.md` ; les limites « pas encore » ci-dessous sont historiques.
+
 Les deux DOCX du dossier `docs/` ont le même SHA-256 et le même contenu. Ils restent
 la spécification complète, inchangée. La présente mission livre le sous-ensemble
 conversation demandé, **pas la recette finale P0**.

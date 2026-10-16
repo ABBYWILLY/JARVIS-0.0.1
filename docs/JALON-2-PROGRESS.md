@@ -1,5 +1,31 @@
 # Jalon 2 — progression vérifiable
 
+## J2.8 — lot 4 : observabilité et comparaison locale
+
+Les métriques masquables distinguent génération, durée totale serveur, traitement
+du prompt, compteurs réels et TTFT visible. Contexte expose estimation prudente,
+réserve et souvenirs effectivement sélectionnés. Raisonnement demandé/observé
+distingué, sans affirmer qu’un serveur a obéi à un champ qu’il pourrait ignorer.
+
+`python -m jarvis.inference_benchmark` : trois questions sur corpus synthétique
+fixe, mêmes modèle/contexte/sortie/température, ordre alterné, préchauffage commun
+de16 tokens hors comparaison. JSONL neuf/exclusif, écrit et vidé après chaque
+mesure ; interruption conservée, modèle absent refusé sans téléchargement,
+aucune pensée interne enregistrée. Écarts uniquement sur mesures présentes et
+réponses complètes/non vides ; absence de tokens jamais remplacée par estimation.
+Comparaison combinée contexte+raisonnement, caches influents, qualité à inspecter.
+Commande Windows exacte dans `NEXT-CODEX-SESSION.md`.
+
+Validation finale : **260 tests exécutés, 257 réussis, 3 ignorés**,35,231s sous
+Linux avec Tk/FTS/HTTP/IPC réels. Les ignorés exigent Ollama et les poids vocaux
+réels absents du cloud.12 tests du benchmark utilisent des fixtures HTTP/CLI,
+sans mesure Qwen réelle. Démarrage vocal de contrôle Linux réussi au lot3.
+Ni compilation/EXE Windows ni gain matériel prétendus. Actions API = `Forbidden`.
+Commits déjà publiés : lot1 `bbe88af`, lot2 `01ff571`, lot3 `234ff62` ; retrouver
+le lot4 par `git log --oneline --grep='benchmark local inference'`.
+Prochaine action : recette du propriétaire sous Windows11, Qwen3.5 4B/9B,
+conversation vocale, approbation/rappel mémoire et comparaison des rapports.
+
 ## J2.8 — lot 3 : mémoire persistante approuvée
 
 SQLite3 : migration atomique v1/v2 avec snapshot SQLite préalable conservant le

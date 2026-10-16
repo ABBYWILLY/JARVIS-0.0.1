@@ -81,6 +81,8 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("Tokens de réponse visibles : indisponibles", label)
         self.assertIn("Tokens du prompt : 30", label)
         self.assertIn("Traitement du prompt : 1.00 s", label)
+        # Server total includes prompt/loading; eval_duration is generation only.
+        self.assertIn("Durée totale Ollama : 5.00 s", label)
 
     def test_missing_and_invalid_values_are_never_estimated(self):
         for invalid in (None, -1, True, "12", 1.5, float("nan"), float("inf")):
@@ -93,7 +95,8 @@ class MetricsTests(unittest.TestCase):
         self.assertIn("Tokens/s : —", metrics_label(metrics))
         self.assertEqual(metrics_label(None), "Modèle : — · Tokens : — · Tokens/s : — · Génération Ollama : — · TTFT reçu : —"
                          " · Tokens de génération totaux : — · Tokens de réponse visibles : indisponibles"
-                         " · Tokens du prompt : — · Traitement du prompt : — · Raisonnement : indisponible")
+                         " · Tokens du prompt : — · Traitement du prompt : — · Durée totale Ollama : —"
+                         " · Raisonnement : indisponible")
 
     def test_reasoning_and_visible_tokens_are_distinct_validated_observations(self):
         values = {**STATS, "reasoning_status": "requested_disabled", "thinking_observed": True,
