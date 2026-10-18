@@ -447,3 +447,21 @@ Pas d’adaptateur premium ou de téléchargement ajouté sous une conformité s
 Pas de taille totale ni de gain sonore/latence Windows inventés. Une preuve de
 licences est demandée à l’utilisateur. Lot2 publié21a1284 ; APIActionsForbidden.
 Lots4/5 non commencés, aucune suppression ni modification du moteurPiper.
+
+
+## Correctif Markdown/TTS — 18 octobre 2026
+
+Rendu Markdown natif Tk pour réponses et historique, sans interprétation HTML ou
+script. Styles combinés, titres/listes/citations/code, formules en texte et liens
+HTTPS validés avec aperçu/copie. Mise à jour de la seule réponse courante, sélection
+et défilement préservés, indices Unicode calculés par Tcl pour Windows.
+Pipeline source/affichage/parole/événements commun : emojis et source conservés dans
+SQLite/sous-titres, ponctuation/pauses et montants préservés ; maths usuelles
+verbalisées, code omis explicitement par défaut ou lecture activable/persistante.
+Segmentation protégée contre fragments Markdown/URL/LaTeX incomplets, métadonnées
+source conservées à travers IPC Windows, annulation immédiate de la file vocale.
+Aucune dépendance/modèle supplémentaire ; validation sonore Windows à réaliser.
+Validation : **73 tests ciblés réussis, zéro ignoré** (richtext, pipeline vocal,
+voice_flow, Markdown Tk, métriques, protocole HTTP et bureau). Démarrage source
+`--smoke-test` réussi sous Linux/Tk virtuel ; aucune validation sonore matérielle.
+Fixtures Tk libérées sur le thread principal, évitant leur GC dans le serveur HTTP.

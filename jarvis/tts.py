@@ -14,6 +14,20 @@ class PCM:
     sample_rate: int
 
 
+class SpeechText(str):
+    """Clean speech plus source metadata, picklable across Windows spawn IPC."""
+    def __new__(cls, text, *, original=None, display_text=None, start=0, end=None,
+                events=(), segment_id=0):
+        instance = super().__new__(cls, text)
+        instance.original = text if original is None else original
+        instance.display_text = text if display_text is None else display_text
+        instance.start = start
+        instance.end = start + len(instance.original) if end is None else end
+        instance.events = tuple(events)
+        instance.segment_id = segment_id
+        return instance
+
+
 class SpeechProvider(Protocol):
     def synthesize(self, text: str) -> Iterable[PCM]: ...
 

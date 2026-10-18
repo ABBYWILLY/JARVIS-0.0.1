@@ -23,8 +23,11 @@ class VoiceSettings:
     silence_ms: int = 800
     cpu_threads: int = 4
     personality: str = "Personnalisé"
+    speak_code: bool = False
 
     def validate(self):
+        if not isinstance(self.speak_code, bool):
+            raise ValueError("Le réglage de lecture du code doit être activé ou désactivé.")
         if self.voice not in VOICES or self.acoustic_mode not in {"speakers", "headphones"}:
             raise ValueError("Voix ou mode acoustique invalide.")
         if not 0.5 <= self.speed <= 2 or not 0.3 <= self.vad_threshold <= 0.95:

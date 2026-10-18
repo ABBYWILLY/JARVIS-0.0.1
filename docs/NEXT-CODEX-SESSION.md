@@ -1,3 +1,23 @@
+# Reprise — Markdown, TTS et spectre organique (18 octobre 2026)
+
+- Lot Markdown/TTS : rendu Tk sûr en streaming/historique, source SQLite intacte,
+  pipeline commun `richtext`, voix sans balises/emojis, liens lus par leur libellé.
+  Liens HTTPS publics : aperçu/copie explicites, aucun navigateur lancé.
+- Voix → périphériques : lecture des blocs de code facultative, désactivée par
+  défaut (« Bloc de code non lu »). Maths simples verbalisées ; affichage texte
+  des formules sans délimiteurs, sans moteur de composition LaTeX.
+- Les constructions inachevées attendent leur fermeture ou la fin du flux avant
+  lecture ; décimaux et URL protégés. Préchargement Piper et annulation préservés.
+- Événements avec positions source transmis avec les callbacks PCM. Synchronisation
+  approximative par phrase/bloc Piper, aucun alignement mot à mot annoncé.
+- Prochaine étape autorisée : spectre organique local par passage, modes ambiance /
+  expression / neutre, interpolation/intensité/prévisualisation, puis tests et push.
+- Recette matérielle Windows toujours requise : écoute réelle Tom/Siwis, Markdown,
+  devises/formules, sous-titres avec emojis, interruption. Aucun modèle téléchargé.
+- Ne pas reprendre J2.8, la voix premium ou la bibliothèque Semantic Morphing.
+
+---
+
 # Reprise JARVIS — correctif VAD/STT + PRESENCE
 
 ## Priorité actuelle : J2.8 tokens, contexte et mémoire

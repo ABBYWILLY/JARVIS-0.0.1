@@ -1,4 +1,5 @@
 """HTTP fixtures test protocol handling; only LiveOllama uses a real model."""
+import gc
 import json
 import os
 import tempfile
@@ -231,7 +232,14 @@ class DesktopTests(unittest.TestCase):
         self.store = Store(Path(self.temp.name) / "ui.sqlite3")
         self.root = tk.Tk()
         self.app = App(self.root, self.store, refresh=False)
-        self.addCleanup(self.app.close)
+        self.addCleanup(self.close_app)
+
+    def close_app(self):
+        if self.app is not None and not self.app.closed:
+            self.app.close()
+        self.app = self.root = self.store = None
+        # Finalize Tk cycles here, before a later HTTP fixture starts threads.
+        gc.collect()
 
     def pump_until(self, predicate):
         deadline = time.monotonic() + 8

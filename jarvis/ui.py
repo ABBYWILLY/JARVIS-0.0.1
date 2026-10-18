@@ -110,6 +110,9 @@ class App:
         self.metrics_visible = tk.BooleanVar(value=store.get_preference("show_generation_metrics", True) is not False)
         self.chat.tag_configure("metrics", foreground=MUTED, font=(self.font_family, 9),
                                 spacing3=10, elide=not self.metrics_visible.get())
+        from .markdown_view import MarkdownView
+        self.markdown = MarkdownView(self.chat, self.font_family, TEXT, MUTED, CYAN, FIELD)
+        self.assistant_region = None
         compose = tk.Frame(root, bg=BG, padx=20, pady=14)
         compose.grid(row=2, column=1, sticky="ew")
         self.input = tk.Text(compose, height=4, bg=FIELD, fg=TEXT, insertbackground=CYAN,
@@ -185,6 +188,8 @@ class App:
             self.response_metrics = metrics
 
     def render_session(self):
+        self.markdown.reset()
+        self.assistant_region = None
         self.chat.configure(state="normal")
         self.chat.delete("1.0", "end")
         self.chat.configure(state="disabled")
@@ -195,7 +200,14 @@ class App:
                         "Les réponses du modèle ne peuvent déclencher aucune action système.\n", "meta")
         for row in rows:
             self.append(("VOUS" if row["role"] == "user" else "JARVIS · " + row["model"]) + "\n", "speaker")
-            self.append(row["content"] + ("" if row["status"] == "streaming" else "\n"))
+            if row["role"] == "assistant":
+                region = self.markdown.append(row["content"], final=row["status"] != "streaming")
+                if row["status"] == "streaming":
+                    self.assistant_region = region
+                else:
+                    self.append("\n")
+            else:
+                self.append(row["content"] + "\n")
             if row["status"] not in {"complete", "streaming"}:
                 self.append({"streaming": "En cours", "cancelled": "Arrêtée", "error": "Échec",
                              "interrupted": "Interrompue à la fermeture"}[row["status"]] + "\n", "meta")
@@ -414,6 +426,8 @@ class App:
                 status, error = "error", True
                 text = "Aucun texte visible reçu. Le modèle a terminé sans réponse ; consultez les statistiques de raisonnement et la limite de génération."
             self.store.update_response(self.message_id, self.response, status)
+            if self.assistant_region is not None:
+                self.markdown.update(self.assistant_region, self.response, final=True)
             # Finish playback of the visible fragment, while its archive remains
             # explicitly incomplete. Manual cancellation still stops audio.
             self.voice.finish_turn("complete" if read_partial and self.response.strip() else status)
@@ -446,7 +460,6 @@ class App:
                         if len(self.response) > 1_000_000:
                             self.finish("cancelled", "Limite de taille de réponse atteinte ; génération arrêtée.", True)
                             break
-                        self.append(event.payload)
                         self.voice.chunk(event.payload)
                     elif event.kind == "models":
                         self.models = event.payload
@@ -477,6 +490,8 @@ class App:
                         break
                 if self.operation == "chat" and changed:
                     self.store.update_response(self.message_id, self.response)
+                    if self.assistant_region is not None:
+                        self.markdown.update(self.assistant_region, self.response, final=False)
                 if self.operation and not self.worker.alive():
                     self.dead_polls += 1
                     if self.dead_polls > 5:
@@ -575,5 +590,6 @@ class App:
             self.closed = True
             self.worker.stop()
             self.root.after_cancel(self.poll_id)
+            self.markdown.close()
             self.store.close()
             self.root.destroy()

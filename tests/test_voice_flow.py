@@ -2,6 +2,7 @@
 
 These tests do not validate a microphone, audible playback, or model inference.
 """
+import gc
 import json
 import queue
 import tempfile
@@ -65,9 +66,16 @@ class VoiceFlowTests(unittest.TestCase):
         self.store = Store(Path(self.temp.name) / "voice.sqlite3")
         self.root = tk.Tk()
         self.app = App(self.root, self.store, refresh=False)
-        self.addCleanup(self.app.close)
+        self.addCleanup(self.close_app)
         self.voice = self.app.voice
         self.app.presence = Mock()
+
+    def close_app(self):
+        if self.app is not None and not self.app.closed:
+            self.app.close()
+        self.voice = self.app = self.root = self.store = None
+        # Finalize Tk cycles here, before a later HTTP fixture starts threads.
+        gc.collect()
 
     def pump_until(self, predicate, timeout=8):
         deadline = time.monotonic() + timeout
@@ -108,6 +116,40 @@ class VoiceFlowTests(unittest.TestCase):
         permission.assert_not_called()
         self.assertFalse(self.voice.capture.alive())
         self.assertFalse(self.voice.listening)
+
+    def test_markdown_stream_reaches_tts_clean_only_after_construct_closes(self):
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.voice.chunk("**Bonjour. Voici [le guide](https://example")
+        self.assertEqual(self.voice.speech.commands, [])
+        self.voice.chunk(".org)** 👩🏽‍🚀. ")
+        self.voice.finish_turn("complete")
+        phrases = [command for command in self.voice.speech.commands if command is not None]
+        self.assertTrue(phrases)
+        spoken = " ".join(phrases)
+        self.assertIn("Bonjour", spoken)
+        self.assertIn("le guide", spoken)
+        for marker in ("*", "[", "]", "https", "👩", "fusée", "astronaute"):
+            self.assertNotIn(marker, spoken)
+        self.assertIn("👩🏽‍🚀", "".join(phrase.display_text for phrase in phrases))
+        self.assertTrue(any(event.kind == "emoji" for phrase in phrases for event in phrase.events))
+        self.assertEqual([phrase.segment_id for phrase in phrases], list(range(1, len(phrases) + 1)))
+
+    def test_interruption_discards_incomplete_markup_before_next_turn(self):
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.voice.chunk("**Ancienne réponse inachevée")
+        self.assertTrue(self.voice.segmenter.pending)
+        self.voice.cancel_speech()
+        self.assertEqual(self.voice.segmenter.pending, "")
+        self.voice.finish_turn("complete")
+        self.assertEqual(self.voice.speech.commands, [])
+        next_mid = self.store.begin_turn(self.app.session_id, "Suite", "local", source="voice")
+        self.voice.begin_turn(next_mid, "voice")
+        self.voice.chunk("Nouvelle réponse.")
+        self.assertEqual(self.voice.speech.commands, ["Nouvelle réponse."])
 
     def test_rejected_voice_send_keeps_transcript_in_composer(self):
         self.activate()
@@ -267,7 +309,9 @@ class VoiceFlowTests(unittest.TestCase):
             self.assertEqual(fixture.server.request_body["messages"][-1],
                              {"role": "user", "content": "Bonjour depuis le microphone"})
             self.voice.poll()
-            self.assertEqual(self.voice.speech.commands, ["Bonjour été 🚀", None])
+            self.assertEqual(self.voice.speech.commands, ["Bonjour été", None])
+            self.assertIn("🚀", self.voice.speech.commands[0].display_text)
+            self.assertEqual(self.voice.speech.commands[0].original, "Bonjour été 🚀")
             self.assertIn({"kind": "mute", "value": True}, self.voice.capture.commands)
             self.assertEqual(json.loads(assistant["metadata"])["tts_engine"], "piper")
             self.voice.speech.events.append(AudioEvent("speech_done", generation=self.voice.epoch))

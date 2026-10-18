@@ -201,7 +201,7 @@ def capture_worker(outbox, commands, profile):
 def speech_worker(outbox, commands, profile, generation, persistent=False):
     loading = True
     try:
-        from .tts import AudioPlayer, PiperSpeech
+        from .tts import AudioPlayer, PiperSpeech, SpeechText
         settings = VoiceSettings(**profile).validate()
         loaded_at = time.monotonic()
         speech = PiperSpeech(settings)
@@ -219,10 +219,24 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
                     continue  # Keep the loaded CPU voice only; no open audio stream.
                 return
             # Piper may split a phrase; report per-chunk captions as an approximation.
+            playback_emit = emit
+            if isinstance(text, SpeechText):
+                from dataclasses import asdict
+                caption_metadata = {"text": text.display_text, "spoken_text": str(text),
+                    "original_start": text.start, "original_end": text.end,
+                    "segment_id": text.segment_id,
+                    "text_events": [asdict(event) for event in text.events],
+                    "alignment": "phrase / bloc PCM approximatif"}
+
+                def playback_emit(event):
+                    if event.kind == "played":
+                        event = AudioEvent(event.kind, {**event.payload, **caption_metadata}, event.generation)
+                    emit(event)
+
             synthesis_at = time.monotonic()
-            for pcm in speech.synthesize(text):
+            for pcm in speech.synthesize(str(text)):
                 emit(AudioEvent("tts_pcm_ready", {"elapsed_ms": round((time.monotonic() - synthesis_at) * 1000)}, generation))
-                player.play(pcm, text, emit, generation)
+                player.play(pcm, str(text), playback_emit, generation)
                 synthesis_at = time.monotonic()
     except Exception as exc:
         emit_event(outbox, AudioEvent("tts_load_error" if persistent and loading else "error", audio_error(exc), generation))

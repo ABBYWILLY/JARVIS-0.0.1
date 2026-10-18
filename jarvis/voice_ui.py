@@ -6,7 +6,8 @@ from collections import deque
 from dataclasses import replace
 from tkinter import filedialog, messagebox, ttk
 
-from .tts import SentenceBuffer
+from .richtext import SpeechBuffer, parse_text
+from .tts import SpeechText
 from .voice_config import PERSONALITY_PROMPTS, VOICES, VoiceSettings
 from .voice_runtime import AudioProcess, audio_error
 
@@ -31,7 +32,8 @@ class VoiceControls:
         self.last_sample = None
         self.stt_details = {}
         self.reference_result = ""
-        self.segmenter = SentenceBuffer()
+        self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
+        self.segment_id = 0
         self.last_capture = self.last_speech = 0.0
         self.pending_visuals = []
         self.pending_phrases = deque(maxlen=64)
@@ -103,6 +105,7 @@ class VoiceControls:
         self.epoch += 1
         self.pending_visuals.clear()
         self.pending_phrases.clear()
+        self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
         self.end_pending = self.reading = self.listening = False
         self.tts_active = self.tts_ready = False
         self.transcribing = False
@@ -121,7 +124,8 @@ class VoiceControls:
         self.llm_started_at = time.monotonic()
         self.mid = mid if self.listening else None
         self.reading = self.listening
-        self.segmenter = SentenceBuffer()
+        self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
+        self.segment_id = 0
         self.notify_presence("thinking")
         if self.reading:
             self.prepare_speech()
@@ -173,16 +177,24 @@ class VoiceControls:
             if text and self.first_llm_at is None:
                 self.first_llm_at = time.monotonic()
                 self.mark_latency("Ollama : envoi → premier texte reçu", self.llm_started_at, self.first_llm_at)
-            for phrase in self.segmenter.feed(text):
-                self.submit_phrase(phrase)
+            self.feed_speech(text)
+
+    def feed_speech(self, text, final=False):
+        for segment in self.segmenter.feed(text, final=final):
+            self.segment_id += 1
+            # Keep display/emoji text out of the engine; retain source positions
+            # for captions and later PCM-triggered visual events.
+            display = parse_text(segment.original).text
+            self.submit_phrase(SpeechText(segment.text, original=segment.original,
+                display_text=display[:4000], start=segment.start, end=segment.end,
+                events=segment.events, segment_id=self.segment_id))
 
     def finish_turn(self, status):
         if status != "complete":
             self.cancel_speech()
             return
         if self.reading:
-            for phrase in self.segmenter.feed("", final=True):
-                self.submit_phrase(phrase)
+            self.feed_speech("", final=True)
             if self.tts_active:
                 self.end_pending = True
             else:
@@ -205,6 +217,7 @@ class VoiceControls:
         self.epoch += 1
         self.pending_visuals.clear()
         self.pending_phrases.clear()
+        self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
         self.end_pending = False
         self.reading = False
         if not self.app.operation:
@@ -561,11 +574,15 @@ class VoiceControls:
                 widget = ttk.Entry(dialog, textvariable=values[key], width=48)
             widget.grid(row=row, column=1, sticky="ew", padx=8)
         ttk.Button(dialog, text="Choisir dossier…", command=lambda: values["models_dir"].set(filedialog.askdirectory(parent=dialog) or values["models_dir"].get())).grid(row=8, column=1, sticky="e")
+        speak_code = tk.BooleanVar(value=self.settings.speak_code)
+        ttk.Checkbutton(dialog, text="Lire le contenu des blocs de code (sinon : « Bloc de code non lu »)",
+                        variable=speak_code).grid(row=9, column=0, columnspan=2, sticky="w")
 
         def save(close=True):
             try:
                 candidate = replace(self.settings, **{k: v.get() for k, v in values.items() if k not in {"speed", "silence_ms"}},
-                                    speed=float(values["speed"].get()), silence_ms=int(values["silence_ms"].get())).validate()
+                                    speed=float(values["speed"].get()), silence_ms=int(values["silence_ms"].get()),
+                                    speak_code=speak_code.get()).validate()
                 if candidate.personality != self.settings.personality and candidate.personality in PERSONALITY_PROMPTS:
                     model_settings = replace(self.app.settings, system_prompt=PERSONALITY_PROMPTS[candidate.personality])
                     self.app.store.save_settings(model_settings)
@@ -582,6 +599,6 @@ class VoiceControls:
                 self.preview()
 
         tk.Label(dialog, text="Modèles à installer séparément (guide docs/VOICE.md). Aucun téléchargement automatique.\nCasque requis pour interrompre par la voix pendant la lecture. Aucun AEC haut-parleurs annoncé.",
-                 bg="#121c29", fg="#a6b8cb", wraplength=700, justify="left").grid(row=9, column=0, columnspan=2, pady=12, sticky="w")
-        ttk.Button(dialog, text="Préécoute réelle", command=lambda: save(False)).grid(row=10, column=0, sticky="w")
-        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=10, column=1, sticky="e")
+                 bg="#121c29", fg="#a6b8cb", wraplength=700, justify="left").grid(row=10, column=0, columnspan=2, pady=12, sticky="w")
+        ttk.Button(dialog, text="Préécoute réelle", command=lambda: save(False)).grid(row=11, column=0, sticky="w")
+        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=11, column=1, sticky="e")
