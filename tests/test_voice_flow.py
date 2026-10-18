@@ -321,6 +321,42 @@ class VoiceFlowTests(unittest.TestCase):
             self.assertFalse(self.voice.tts_active)
             self.pump_until(lambda: self.voice.capture.commands[-1] == {"kind": "mute", "value": False})
 
+    def test_positioned_spectrum_changes_only_on_pcm_and_is_cleared_by_interruption(self):
+        from dataclasses import asdict
+        from jarvis.presence import PresenceView
+        self.app.presence = PresenceView(self.app)
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        source = "**Je suis furieux !** Je suis confiant."
+        self.voice.chunk(source)
+        self.voice.finish_turn("complete")
+        phrases = [command for command in self.voice.speech.commands if command is not None]
+        # Balanced emphasis is kept atomic for TTS; one audio phrase may still
+        # contain several positioned colour passages.
+        self.assertEqual(len(phrases), 1)
+        self.assertEqual(self.app.presence.tone.name, "neutralité")
+        phrase = phrases[0]
+        self.assertEqual(source[phrase.start:phrase.end], phrase.original)
+        self.assertEqual([event.tone.name for event in phrase.spectrum_events], ["colère", "espoir"])
+        for fraction, expected in ((0.05, "colère"), (0.95, "espoir")):
+            self.voice.speech.events.append(AudioEvent("played", {
+                "text": phrase.display_text, "spoken_text": str(phrase), "fraction": fraction,
+                "segment_id": phrase.segment_id, "original_start": phrase.start,
+                "original_end": phrase.end, "spectrum_mode": phrase.spectrum_mode,
+                "spectrum_events": [asdict(event) for event in phrase.spectrum_events],
+                "emitted_at": time.monotonic() - 0.01, "delay": 0,
+                "rms": 0.1, "wave": [0.1, -0.1]}, self.voice.epoch))
+            self.voice.poll()
+            self.assertEqual(self.app.presence.tone.name, expected)
+        old_epoch = self.voice.epoch
+        self.voice.capture.events.append(AudioEvent("speech_start", generation=1))
+        self.voice.poll()
+        self.assertGreater(self.voice.epoch, old_epoch)
+        self.assertEqual(self.app.presence.tone.name, "neutralité")
+        self.assertEqual(self.voice.pending_visuals, [])
+        self.assertIsNone(self.app.presence.caption_data)
+
     def test_headphone_voice_interrupt_stops_audio_and_invalidates_old_visuals(self):
         self.activate("headphones")
         mid = self.begin_simulated_audio_turn()

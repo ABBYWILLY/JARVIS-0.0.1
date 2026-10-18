@@ -1,15 +1,17 @@
 """Geometry and real Tk rendering contracts; no simulated audio is called live."""
 import math
 import tempfile
+import time
 import tkinter as tk
 import unittest
 from pathlib import Path
+from tkinter import ttk
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from jarvis.presence import (POINT_COUNT, PROFILES, PresenceModel, PresenceSettings,
-                             PresenceView, contrast, core_radius, palette, readable_accent)
-from jarvis.spectrum import OPERATIONAL, caption_group
+from jarvis.presence import (POINT_COUNT, PROFILES, AccentTransition, PresenceModel, PresenceSettings,
+                             PresenceView, contrast, core_radius, mix, palette, readable_accent)
+from jarvis.spectrum import CYAN, OPERATIONAL, Tone, caption_group
 from jarvis.storage import Store
 
 
@@ -19,6 +21,108 @@ SIGNAL = {"rms": 0.12, "wave": [0.05, -0.2, 0.15, 0.08, -0.13, 0.3, -0.08, 0.02]
 def bounds(points):
     xs, ys = zip(*points)
     return min(xs), min(ys), max(xs), max(ys)
+
+
+class PlaybackSpectrumTests(unittest.TestCase):
+    def setUp(self):
+        self.app = SimpleNamespace(root=Mock(), store=Mock(), voice=Mock(listening=False))
+        self.app.store.get_preference.return_value = {}
+        self.view = PresenceView(self.app)
+
+    def event(self, name, color, start=0, end=10):
+        return {"start": start, "end": end, "text": "texte source",
+                "tone": {"name": name, "color": color, "words": [], "confidence": 1}}
+
+    def test_new_spectrum_preferences_are_validated(self):
+        self.assertEqual(PresenceSettings().spectrum_mode, "expression")
+        self.assertEqual(PresenceSettings().spectrum_intensity, 65)
+        for mode in ("expression", "thematic", "neutral"):
+            self.assertEqual(PresenceSettings.from_dict({"spectrum_mode": mode}).spectrum_mode, mode)
+        for value in (-1, 101, True, "90", float("nan"), float("inf"), None):
+            self.assertEqual(PresenceSettings.from_dict({"spectrum_intensity": value}).spectrum_intensity, 65)
+        self.assertEqual(PresenceSettings.from_dict({"spectrum_mode": []}).spectrum_mode, "expression")
+
+    def test_color_transition_is_smooth_and_retargets_without_a_flash(self):
+        transition = AccentTransition()
+        transition.retarget("#ff717a", 10)
+        self.assertEqual(transition.color(10), CYAN)
+        middle = transition.color(10.2)
+        self.assertNotIn(middle, (CYAN, "#ff717a"))
+        transition.retarget("#70dca0", 10.2)
+        self.assertEqual(transition.color(10.2), middle)
+        self.assertEqual(transition.color(11), "#70dca0")
+        self.assertFalse(transition.active(11))
+
+    def test_text_estimation_never_changes_visible_tone_before_pcm(self):
+        self.view.set_options(spectrum_mode="thematic")
+        self.assertEqual(self.view.interpret_text("colère et rage").name, "colère")
+        self.assertEqual(self.view.tone, Tone())
+        self.assertEqual(self.view.mesh_accent(), CYAN)
+        self.view.update_event("thinking", caption={"text": "colère et rage"})
+        self.assertEqual(self.view.tone, Tone())
+        self.view.update_event("jarvis_speaking", SIGNAL, {"text": "colère et rage", "fraction": 0})
+        self.assertEqual(self.view.tone.name, "colère")
+        self.assertEqual(self.view.caption_text, "")
+
+    def test_passage_offsets_are_monotone_when_piper_block_fraction_restarts(self):
+        caption = {"text": "Un premier passage puis un deuxième passage.", "segment_id": 1,
+                   "original_start": 100, "original_end": 120,
+                   "spectrum_events": [self.event("colère", "#ff717a", 100, 110),
+                                       self.event("espoir", "#73bfff", 110, 120)]}
+        with patch.object(self.view.analyzer, "update", wraps=self.view.analyzer.update) as analyze:
+            self.view.update_event("jarvis_speaking", SIGNAL, {**caption, "fraction": 0})
+            self.assertEqual(self.view.tone.name, "colère")
+            self.view.update_event("jarvis_speaking", SIGNAL, {**caption, "fraction": 0.8})
+            self.assertEqual(self.view.tone.name, "espoir")
+            text = self.view.caption_text
+            self.view.update_event("jarvis_speaking", SIGNAL, {**caption, "fraction": 0.1})
+            self.assertEqual(self.view.tone.name, "espoir")
+            self.assertEqual(self.view.caption_text, text)
+            self.view.update_event("jarvis_speaking", SIGNAL, {**caption, "segment_id": 2, "fraction": 0})
+            self.assertEqual(self.view.tone.name, "colère")
+        analyze.assert_not_called()
+
+    def test_neutral_passage_and_interruption_clear_tone_without_semantic_hold(self):
+        with patch("jarvis.presence.time.monotonic", return_value=10):
+            self.view.update_event("jarvis_speaking", SIGNAL,
+                                   {"text": "colère", "fraction": 1, "segment_id": 1,
+                                    "spectrum_events": [self.event("colère", "#ff717a")]})
+        self.assertNotEqual(self.view.mesh_accent(11), CYAN)
+        with patch("jarvis.presence.time.monotonic", return_value=11):
+            self.view.update_event("jarvis_speaking", SIGNAL,
+                                   {"text": "Fait ordinaire.", "fraction": 1, "segment_id": 2,
+                                    "spectrum_events": [self.event("neutralité", CYAN)]})
+        self.assertEqual(self.view.tone, Tone(confidence=1))
+        self.assertNotEqual(self.view.mesh_accent(11), CYAN)
+        self.assertEqual(self.view.mesh_accent(12), CYAN)
+        self.view.update_event("listening")
+        self.assertEqual(self.view.state, "listening")
+        self.assertEqual(self.view.caption_text, "")
+        self.assertIsNone(self.view.caption_data)
+        self.assertIsNone(self.view._segment_key)
+        self.assertEqual(self.view._segment_events, [])
+
+    def test_preview_is_local_and_real_voice_events_take_priority(self):
+        self.view.set_options(spectrum_mode="thematic", spectrum_intensity=100)
+        self.assertEqual(self.view.preview_text("colère et rage").name, "colère")
+        self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), self.view.tone.color)
+        self.view.set_options(spectrum_intensity=0)
+        self.assertEqual(self.view.tone.name, "colère")
+        self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), CYAN)
+        self.view.set_options(spectrum_intensity=65)
+        self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), mix(CYAN, self.view.tone.color, 0.65))
+        self.view.update_event("listening")
+        self.assertIsNone(self.view._preview_text)
+        self.assertEqual(self.view.tone, Tone())
+        self.assertIsNone(self.view.preview_text("colère et rage"))
+        self.app.voice.toggle.assert_not_called()
+        self.app.voice.emergency.assert_not_called()
+        self.view.set_options(spectrum_mode="neutral", spectrum_intensity=0)
+        self.view.update_event("jarvis_speaking", SIGNAL,
+                               {"text": "colère", "fraction": 1,
+                                "spectrum_events": [self.event("colère", "#ff717a")]})
+        self.assertEqual(self.view.tone, Tone())
+        self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), CYAN)
 
 
 class GeometryTests(unittest.TestCase):
@@ -290,6 +394,41 @@ class PresenceTkTests(unittest.TestCase):
         self.assertEqual(reopened.settings.wave_expressivity, 90)
         self.assertEqual(self.store.get_preference("voice"), {"vad_threshold": 0.6, "silence_ms": 800})
 
+    def test_spectrum_controls_persist_and_preview_never_starts_voice(self):
+        self.view.show()
+        self.view.set_options(reduced_motion=True)
+        self.root.update()
+        size = (self.view.canvas.winfo_width(), self.view.canvas.winfo_height())
+        self.view.open_settings()
+        children = self.view.settings_dialog.winfo_children()
+        mode = [widget for widget in children if isinstance(widget, ttk.Combobox)][2]
+        self.assertEqual(mode.get(), "Émotion exprimée")
+        mode.set("Ambiance du sujet")
+        mode.event_generate("<<ComboboxSelected>>")
+        slider = [widget for widget in children if isinstance(widget, tk.Scale)][1]
+        self.assertEqual(slider.get(), 65)
+        slider.set(85)
+        entry = next(widget for widget in children if type(widget) is ttk.Entry)
+        entry.delete(0, "end")
+        entry.insert(0, "colère et rage")
+        button = next(widget for widget in children if isinstance(widget, ttk.Button)
+                      and widget.cget("text") == "Prévisualiser la phrase")
+        self.root.update()
+        button.invoke()
+        self.assertEqual(self.view.tone.name, "colère")
+        self.assertEqual(self.view.caption_text, "")
+        self.assertEqual((self.view.canvas.winfo_width(), self.view.canvas.winfo_height()), size)
+        self.assertEqual(self.view.state, "silent")
+        reopened = PresenceView(self.app)
+        self.addCleanup(reopened.close)
+        self.assertEqual(reopened.settings.spectrum_mode, "thematic")
+        self.assertEqual(reopened.settings.spectrum_intensity, 85)
+        self.view.update_event("listening")
+        self.assertIsNone(self.view._preview_text)
+        self.assertEqual(self.view.tone, Tone())
+        self.app.voice.toggle.assert_not_called()
+        self.app.voice.emergency.assert_not_called()
+
     def test_caption_overlay_never_changes_canvas_or_core_centre(self):
         self.view.show()
         self.view.set_options(reduced_motion=True)
@@ -379,13 +518,14 @@ class PresenceTkTests(unittest.TestCase):
 
     def test_emotional_modes_persist_and_never_recolor_operational_controls(self):
         self.view.show()
+        self.view.set_options(spectrum_mode="thematic")
         self.view.update_operation("error", "Arrêt explicite")
         old_operation_color = self.view.operation_label.cget("foreground")
         old_background = self.view.canvas.cget("background")
         old_button_color = self.view.listen_button.cget("foreground")
         old_identity_color = self.view.identity.cget("foreground")
-        self.assertEqual(self.view.interpret_text("Une colère et une rage explicites.").name, "colère")
-        self.assertEqual(self.view.mesh_accent(), self.view.tone.color)
+        self.assertEqual(self.view.preview_text("Une colère et une rage explicites.").name, "colère")
+        self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), mix(CYAN, self.view.tone.color, 0.65))
         self.assertEqual(self.view.operation, "error")
         self.assertEqual(self.view.operation_label.cget("foreground"), old_operation_color)
         self.assertIn(OPERATIONAL["error"]["label"], self.view.operation_label.cget("text"))
@@ -400,16 +540,17 @@ class PresenceTkTests(unittest.TestCase):
             self.assertEqual(reopened.settings.accent_mode, mode)
             self.assertEqual(reopened.settings.fixed_color, "#ab78ef")
             if mode == "cyan":
-                self.assertEqual(self.view.mesh_accent(), "#69edf5")
+                self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), "#69edf5")
             elif mode == "fixed":
-                self.assertEqual(self.view.mesh_accent(), "#ab78ef")
+                self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), "#ab78ef")
             elif mode == "none":
-                self.assertEqual(self.view.mesh_accent(), palette("#000000")["muted"])
+                self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), palette("#000000")["muted"])
         self.app.voice.toggle.assert_not_called()
         self.app.voice.emergency.assert_not_called()
 
     def test_captions_follow_played_fraction_and_only_keywords_receive_accents(self):
         self.view.show()
+        self.view.set_options(spectrum_mode="thematic")
         text = "La colère et la rage, le reste demeure une simple phrase ordinaire."
         self.view.interpret_text(text)
         self.assertEqual(self.view.caption_label.winfo_manager(), "")
@@ -424,7 +565,10 @@ class PresenceTkTests(unittest.TestCase):
         emphasized = [self.view.caption_label.get(start, end) for start, end in zip(ranges[::2], ranges[1::2])]
         self.assertEqual(emphasized, ["colère", "rage"])
         self.assertEqual(self.view.caption_label.cget("foreground"), palette("#000000")["foreground"])
-        self.assertEqual(self.view.caption_label.tag_cget("keyword", "foreground"), self.view.tone.color)
+        with patch("jarvis.presence.time.monotonic", return_value=time.monotonic() + 1):
+            self.view._render_caption()
+        self.assertEqual(self.view.caption_label.tag_cget("keyword", "foreground"),
+                         mix(CYAN, self.view.tone.color, 0.65))
         self.view.copy_caption()
         self.assertEqual(self.root.clipboard_get(), caption_group(text, 0.4))
         self.view.update_event("jarvis_speaking", SIGNAL, {"text": text, "fraction": 1})
@@ -436,6 +580,7 @@ class PresenceTkTests(unittest.TestCase):
 
     def test_none_mode_removes_keyword_tags_without_affecting_audio_or_text(self):
         self.view.show()
+        self.view.set_options(spectrum_mode="thematic")
         self.view.update_event("jarvis_speaking", SIGNAL,
                                {"text": "Une colère et une rage explicites", "fraction": 1})
         self.assertTrue(self.view.caption_label.tag_ranges("keyword"))
@@ -447,11 +592,12 @@ class PresenceTkTests(unittest.TestCase):
         self.app.voice.emergency.assert_not_called()
 
     def test_dark_emotional_and_fixed_colors_retain_visible_contours(self):
-        self.assertEqual(self.view.interpret_text("La mort et le deuil.").name, "deuil")
-        self.assertGreaterEqual(contrast(self.view.mesh_accent(), "#000000"), 3)
+        self.view.set_options(spectrum_mode="thematic")
+        self.assertEqual(self.view.preview_text("La mort et le deuil.").name, "deuil")
+        self.assertGreaterEqual(contrast(self.view.mesh_accent(time.monotonic() + 1), "#000000"), 3)
         self.view.set_options(accent_mode="fixed", fixed_color="#000000")
-        self.assertNotEqual(self.view.mesh_accent(), "#000000")
-        self.assertGreaterEqual(contrast(self.view.mesh_accent(), "#000000"), 3)
+        self.assertNotEqual(self.view.mesh_accent(time.monotonic() + 1), "#000000")
+        self.assertGreaterEqual(contrast(self.view.mesh_accent(time.monotonic() + 1), "#000000"), 3)
         for background in ("#000000", "#ffffff", "#ffcc00", "#808080"):
             self.assertGreaterEqual(contrast(readable_accent(background, background), background), 3)
 
@@ -464,13 +610,13 @@ class PresenceTkTests(unittest.TestCase):
             self.view.update_event("jarvis_speaking", SIGNAL, {"text": text, "fraction": 0.8})
         analyze.assert_called_once_with(text)
 
-    def test_ambiguous_caption_returns_to_cyan_after_inertia(self):
-        with patch("jarvis.presence.time.monotonic", return_value=10):
-            self.assertEqual(self.view.interpret_text("colère et rage", render=False).name, "colère")
-        with patch("jarvis.presence.time.monotonic", return_value=11):
-            self.assertEqual(self.view.interpret_text("Une réponse ambiguë", render=False).name, "colère")
-        with patch("jarvis.presence.time.monotonic", return_value=14):
-            self.assertEqual(self.view.interpret_text("Une réponse ambiguë", render=False).name, "neutralité")
+    def test_ambiguous_caption_has_no_semantic_hold_and_returns_smoothly_to_cyan(self):
+        self.view.set_options(spectrum_mode="thematic")
+        self.view.update_event("jarvis_speaking", SIGNAL, {"text": "colère et rage", "fraction": 1})
+        self.assertEqual(self.view.tone.name, "colère")
+        self.view.update_event("jarvis_speaking", SIGNAL, {"text": "Une réponse ambiguë", "fraction": 1})
+        self.assertEqual(self.view.tone.name, "neutralité")
+        self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), CYAN)
 
 
 if __name__ == "__main__":

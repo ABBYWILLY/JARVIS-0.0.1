@@ -225,7 +225,9 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
                 caption_metadata = {"text": text.display_text, "spoken_text": str(text),
                     "original_start": text.start, "original_end": text.end,
                     "segment_id": text.segment_id,
-                    "text_events": [asdict(event) for event in text.events],
+                    "text_events": [dict(asdict(event), value=event.value[:256]) for event in text.events],
+                    "spectrum_events": [dict(asdict(event), text=event.text[:512]) for event in text.spectrum_events],
+                    "spectrum_mode": text.spectrum_mode,
                     "alignment": "phrase / bloc PCM approximatif"}
 
                 def playback_emit(event):

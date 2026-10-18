@@ -6,7 +6,7 @@ import tkinter as tk
 from dataclasses import asdict, dataclass, replace
 from tkinter import colorchooser, messagebox, ttk
 
-from .spectrum import OPERATIONAL, ToneAnalyzer, caption_group, keyword_spans
+from .spectrum import CYAN, OPERATIONAL, Tone, ToneAnalyzer, caption_group, keyword_spans
 
 
 STATES = {"silent", "listening", "user_speaking", "thinking", "jarvis_speaking", "dormant"}
@@ -14,6 +14,8 @@ PROFILES = {"eco": (16, 1), "balanced": (30, 2), "cinematic": (45, 4)}
 PROFILE_LABELS = {"eco": "Éco", "balanced": "Équilibré", "cinematic": "Cinématique"}
 ACCENT_LABELS = {"adaptive": "Spectre adaptatif", "cyan": "Cyan fixe",
                  "fixed": "Couleur personnalisée", "none": "Aucun accent émotionnel"}
+SPECTRUM_LABELS = {"expression": "Émotion exprimée", "thematic": "Ambiance du sujet",
+                   "neutral": "Neutre · cyan"}
 STATE_LABELS = {"silent": "SILENCE", "listening": "ÉCOUTE LOCALE",
                 "user_speaking": "VOUS PARLEZ", "thinking": "TRAITEMENT LOCAL",
                 "jarvis_speaking": "JARVIS PARLE", "dormant": "EN SOMMEIL"}
@@ -31,6 +33,8 @@ class PresenceSettings:
     fixed_color: str = "#69edf5"
     wave_expressivity: int = 65
     timing_monitor: bool = True
+    spectrum_mode: str = "expression"
+    spectrum_intensity: int = 65
 
     @classmethod
     def from_dict(cls, values):
@@ -52,10 +56,13 @@ class PresenceSettings:
         color = values.get("fixed_color")
         if isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", color):
             valid["fixed_color"] = color.lower()
-        expressivity = values.get("wave_expressivity")
-        if (isinstance(expressivity, (int, float)) and not isinstance(expressivity, bool)
-                and math.isfinite(expressivity) and 0 <= expressivity <= 100):
-            valid["wave_expressivity"] = round(expressivity)
+        if isinstance(values.get("spectrum_mode"), str) and values["spectrum_mode"] in SPECTRUM_LABELS:
+            valid["spectrum_mode"] = values["spectrum_mode"]
+        for key in ("wave_expressivity", "spectrum_intensity"):
+            value = values.get(key)
+            if (isinstance(value, (int, float)) and not isinstance(value, bool)
+                    and math.isfinite(value) and 0 <= value <= 100):
+                valid[key] = round(value)
         return replace(defaults, **valid)
 
 
@@ -66,6 +73,26 @@ def _rgb(color):
 def mix(background, foreground, amount):
     return "#" + "".join(f"{round(a + (b - a) * amount):02x}"
                          for a, b in zip(_rgb(background), _rgb(foreground)))
+
+
+class AccentTransition:
+    """Time-based interpolation; retargeting always starts at the visible colour."""
+    duration = 0.45
+
+    def __init__(self, color=CYAN):
+        self.source = self.target = color
+        self.started = float("-inf")
+
+    def color(self, now):
+        fraction = max(0.0, min(1.0, (now - self.started) / self.duration))
+        return mix(self.source, self.target, fraction * fraction * (3 - 2 * fraction))
+
+    def retarget(self, color, now):
+        if color != self.target:
+            self.source, self.target, self.started = self.color(now), color, now
+
+    def active(self, now):
+        return self.source != self.target and now < self.started + self.duration
 
 
 def luminance(color):
@@ -279,9 +306,15 @@ class PresenceView:
         self._saved_preferences = dict(raw) if isinstance(raw, dict) else {}
         self.settings = PresenceSettings.from_dict(raw)
         self.model = PresenceModel(self.settings)
-        self.analyzer = ToneAnalyzer()
+        self.analyzer = ToneAnalyzer(mode=self.settings.spectrum_mode, hold_seconds=0)
         self.tone = self.analyzer.current
         self._last_text = None
+        self._last_estimate = Tone()
+        self._preview_text = None
+        self._segment_key = None
+        self._segment_fraction = 0.0
+        self._segment_events = []
+        self._accent = AccentTransition(self._target_accent())
         self.operation = "inactive"
         self.operation_detail = ""
         self._operation_explicit = False
@@ -358,7 +391,7 @@ class PresenceView:
         self.caption_label.tag_configure("center", justify="center")
         self.caption_footer = tk.Frame(window)
         self.caption_note = tk.Label(self.caption_footer, font=(family, 8),
-                                     text="Synchronisation estimée depuis l’audio")
+                                     text="Synchronisation estimée par phrase / bloc audio Piper")
         self.caption_note.pack(side="left", padx=6)
         self._button(self.caption_footer, "Copier l’extrait", self.copy_caption).pack(side="left", padx=6)
         self.timing_panel = tk.Frame(window, padx=10, pady=8, highlightthickness=1)
@@ -388,40 +421,122 @@ class PresenceView:
     def update_event(self, state, signal=None, caption=None):
         if state not in STATES or self.state == "dormant" and state != "dormant":
             return
+        # Real voice/state events always take priority over an optional local preview.
+        if self._preview_text is not None:
+            self._preview_text = None
+            self._set_tone(Tone())
         self.model.update_event(state, signal)
         if not self._operation_explicit:
             self.operation = "inactive" if state in {"silent", "dormant"} else "info"
         if isinstance(caption, dict) and state == "jarvis_speaking":
-            self.caption_data = caption
+            self.caption_data = dict(caption)
             text = str(caption.get("text", ""))
-            self.interpret_text(text, render=False)
-            # Fractions come only from the PCM playback callback, never LLM tokens.
-            self.caption_text = caption_group(text, caption.get("fraction", 0))
+            key = ("segment", caption["segment_id"]) if "segment_id" in caption else ("text", text)
+            fraction = max(0.0, min(1.0, _finite(caption.get("fraction"))))
+            if key != self._segment_key:
+                self._segment_key, self._segment_fraction = key, fraction
+            else:
+                # Piper may restart its fraction at each PCM block. This is only a
+                # phrase/block estimate: never regress within the same segment.
+                self._segment_fraction = max(self._segment_fraction, fraction)
+            self._segment_events = self._events_for_caption(caption)
+            self._update_playback_tone()
+            self.caption_text = caption_group(text, self._segment_fraction)
         elif state != "jarvis_speaking":
-            self.caption_text = ""
-            self.caption_data = None
+            self._clear_playback()
+            self._set_tone(Tone())
         if self._visible():
             self._render()
 
     def interpret_text(self, text, render=True):
+        """Estimate text without changing the displayed tone ahead of playback."""
         text = str(text)
-        now = time.monotonic()
-        if text != self._last_text or now >= getattr(self, "_tone_recheck_at", float("inf")):
-            self.tone = self.analyzer.update(text)
+        if text != self._last_text:
+            self._last_estimate = self.analyzer.update(text)
             self._last_text = text
-            hold_until = self.analyzer.changed_at + self.analyzer.hold_seconds
-            self._tone_recheck_at = hold_until if self.tone.name != "neutralité" and hold_until > now else float("inf")
-        if render and self._visible():
-            self._render()
-        return self.tone
+        return self._last_estimate
 
-    def mesh_accent(self):
+    def _set_tone(self, tone):
+        self.tone = tone
+        self._accent.retarget(self._target_accent(), time.monotonic())
+
+    def _clear_playback(self):
+        self.caption_text, self.caption_data = "", None
+        self._segment_key, self._segment_fraction, self._segment_events = None, 0.0, []
+
+    def _events_for_caption(self, caption):
+        events = caption.get("spectrum_events")
+        result = []
+        if isinstance(events, (list, tuple)):
+            for event in events:
+                if not isinstance(event, dict):
+                    continue
+                start, end = _finite(event.get("start"), -1), _finite(event.get("end"), -1)
+                if start < 0 or end <= start:
+                    continue
+                text = str(event.get("text", ""))
+                raw = event.get("tone")
+                if (caption.get("spectrum_mode", "expression") == self.settings.spectrum_mode
+                        and isinstance(raw, dict) and isinstance(raw.get("name"), str)
+                        and isinstance(raw.get("color"), str)
+                        and re.fullmatch(r"#[0-9a-fA-F]{6}", raw["color"])):
+                    words = raw.get("words", ())
+                    tone = Tone(raw["name"], raw["color"],
+                                tuple(word for word in words if isinstance(word, str))
+                                if isinstance(words, (list, tuple)) else (),
+                                max(0.0, min(1.0, _finite(raw.get("confidence")))))
+                else:
+                    tone = self.interpret_text(text, render=False)
+                # A stale or malformed event must never override an explicit neutral mode.
+                result.append((start, end, Tone() if self.settings.spectrum_mode == "neutral" else tone))
+        if not result:
+            text = str(caption.get("text", ""))
+            result = [(0, max(1, len(text)), self.interpret_text(text, render=False))]
+        return sorted(result, key=lambda event: event[0])
+
+    def _update_playback_tone(self):
+        if not self._segment_events or self.caption_data is None:
+            return
+        events = self._segment_events
+        start = _finite(self.caption_data.get("original_start"), events[0][0])
+        end = _finite(self.caption_data.get("original_end"), events[-1][1])
+        position = start + self._segment_fraction * max(0, end - start)
+        chosen = events[0]
+        for event in events[1:]:
+            if event[0] > position:
+                break
+            chosen = event
+        self._set_tone(chosen[2])
+
+    def preview_text(self, text):
+        """Explicit visual-only preview; never starts capture, inference or speech."""
+        if self.state not in {"silent", "dormant"} or self.app.voice.listening:
+            return None
+        self._preview_text = str(text)
+        tone = self.interpret_text(self._preview_text, render=False)
+        self._set_tone(tone)
+        if self._visible():
+            self._render()
+        return tone
+
+    def clear_preview(self):
+        if self._preview_text is not None:
+            self._preview_text = None
+            self._set_tone(Tone())
+            if self._visible():
+                self._render()
+
+    def _target_accent(self):
         mode = self.settings.accent_mode
         if mode == "none":
             return palette(self.settings.background)["muted"]
         color = (self.settings.fixed_color if mode == "fixed" else
-                 "#69edf5" if mode == "cyan" else self.tone.color)
+                 CYAN if mode == "cyan" else mix(CYAN, self.tone.color,
+                                                 self.settings.spectrum_intensity / 100))
         return readable_accent(color, self.settings.background)
+
+    def mesh_accent(self, now=None):
+        return self._accent.color(time.monotonic() if now is None else now)
 
     def update_operation(self, key, detail=""):
         if key not in OPERATIONAL:
@@ -509,7 +624,7 @@ class PresenceView:
         count = PROFILES[self.settings.profile][1]
         if self.settings.reduced_motion:
             count = 1
-        accent = self.mesh_accent()
+        accent = self.mesh_accent(started)
         strength = 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
         breath = 0.0
         if self.state == "thinking" and not self.settings.reduced_motion:
@@ -529,7 +644,7 @@ class PresenceView:
         elapsed = time.monotonic() - started
         if elapsed > 0.012:
             self._slow_until = started + 3
-        if self.model.needs_animation(started):
+        if self.model.needs_animation(started) or self.state != "dormant" and self._accent.active(started):
             fps = PROFILES[self.settings.profile][0]
             if started < self._slow_until:
                 fps = min(fps, 16)
@@ -546,8 +661,9 @@ class PresenceView:
         self.listen_button.configure(text="Désactiver l’écoute" if listening else "Activer l’écoute")
         self.sleep_button.configure(text="Réveiller" if self.state == "dormant" else "Sommeil")
         mode = self.settings.accent_mode
-        self.tone_label.configure(text=("Tonalité estimée : " + self.tone.name if mode == "adaptive"
-                                        else ACCENT_LABELS[mode]))
+        self.tone_label.configure(text=(("Aperçu local : " if self._preview_text is not None else
+                                        SPECTRUM_LABELS[self.settings.spectrum_mode] + " · estimation : ")
+                                       + self.tone.name if mode == "adaptive" else ACCENT_LABELS[mode]))
         operational = OPERATIONAL[self.operation]
         symbol = {"allowed": "✓", "info": "●", "caution": "!", "confirm": "?", "error": "!", "inactive": "○"}[self.operation]
         detail = self.operation_detail.strip()
@@ -619,7 +735,17 @@ class PresenceView:
             messagebox.showerror("Préférences PRESENCE", "Impossible d’enregistrer les préférences locales. Vérifiez les droits et l’espace disque.", parent=self.window or self.app.root)
             return False
         self._saved_preferences = values
+        old_mode = self.settings.spectrum_mode
         self.settings = self.model.settings = candidate
+        if candidate.spectrum_mode != old_mode:
+            self.analyzer = ToneAnalyzer(mode=candidate.spectrum_mode, hold_seconds=0)
+            self._last_text = None
+            if self.caption_data is not None and self.state == "jarvis_speaking":
+                self._segment_events = self._events_for_caption(self.caption_data)
+                self._update_playback_tone()
+            elif self._preview_text is not None:
+                self._set_tone(self.interpret_text(self._preview_text, render=False))
+        self._accent.retarget(self._target_accent(), time.monotonic())
         self._apply_colors()
         self._render()
         return True
@@ -677,6 +803,43 @@ class PresenceView:
         accent_choice.pack(fill="x", pady=4)
         accent_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
             accent_mode=next(key for key, label in ACCENT_LABELS.items() if label == accent.get())))
+        tk.Label(dialog, text="Interprétation du spectre", bg=colors["background"],
+                 fg=colors["foreground"]).pack(anchor="w", pady=(10, 4))
+        spectrum = tk.StringVar(value=SPECTRUM_LABELS[self.settings.spectrum_mode])
+        spectrum_choice = ttk.Combobox(dialog, state="readonly", values=list(SPECTRUM_LABELS.values()),
+                                       textvariable=spectrum, width=35)
+        spectrum_choice.pack(fill="x", pady=4)
+        spectrum_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
+            spectrum_mode=next(key for key, label in SPECTRUM_LABELS.items() if label == spectrum.get())))
+        tk.Label(dialog, text="Intensité du spectre (%)", bg=colors["background"],
+                 fg=colors["foreground"]).pack(anchor="w")
+        intensity = tk.IntVar(value=self.settings.spectrum_intensity)
+        tk.Scale(dialog, from_=0, to=100, resolution=1, orient="horizontal", variable=intensity,
+                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
+                 troughcolor=colors["button"],
+                 command=lambda value: self.set_options(spectrum_intensity=round(float(value)))).pack(fill="x")
+        tk.Label(dialog, text="Aperçu local · phrase au choix", bg=colors["background"],
+                 fg=colors["muted"]).pack(anchor="w", pady=(10, 4))
+        preview_phrase = tk.StringVar(value="Je suis heureux et ravi.")
+        ttk.Entry(dialog, textvariable=preview_phrase).pack(fill="x")
+        preview_result = tk.Label(dialog, text="Sans micro, modèle ni réseau", anchor="w",
+                                  bg=colors["background"], fg=colors["muted"])
+        preview_result.pack(fill="x", pady=4)
+
+        def preview():
+            tone = self.preview_text(preview_phrase.get())
+            preview_result.configure(text=("Aperçu : " + tone.name if tone is not None else
+                                           "Aperçu disponible lorsque la voix est au repos"),
+                                     fg=self._target_accent() if tone is not None else colors["muted"])
+
+        ttk.Button(dialog, text="Prévisualiser la phrase", command=preview).pack(fill="x", pady=4)
+
+        def closed(event):
+            if event.widget is dialog:
+                self.clear_preview()
+                self.settings_dialog = None
+
+        dialog.bind("<Destroy>", closed)
 
         def choose_accent():
             _rgb_value, color = colorchooser.askcolor(self.settings.fixed_color,
@@ -717,7 +880,9 @@ class PresenceView:
     def wake(self):
         self.app.voice.stop_listening()
         self.model.update_event("silent")
-        self.caption_text, self.caption_data = "", None
+        self._preview_text = None
+        self._clear_playback()
+        self._set_tone(Tone())
         self.update_operation("inactive", "Microphone désactivé. Activez l’écoute pour parler.")
         self._render()
 

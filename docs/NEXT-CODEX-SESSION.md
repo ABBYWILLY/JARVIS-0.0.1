@@ -10,8 +10,18 @@
   lecture ; décimaux et URL protégés. Préchargement Piper et annulation préservés.
 - Événements avec positions source transmis avec les callbacks PCM. Synchronisation
   approximative par phrase/bloc Piper, aucun alignement mot à mot annoncé.
-- Prochaine étape autorisée : spectre organique local par passage, modes ambiance /
-  expression / neutre, interpolation/intensité/prévisualisation, puis tests et push.
+- Lot spectre organique livré : modes ambiance / expression (défaut) / neutre,
+  intensité 0–100 (défaut65), aperçu local dans Affichage PRESENCE. Aucun second LLM.
+  Indices affirmés, négations/citations/questions/ambiguïtés prudentes ; heuristique
+  lexicale locale, aucune prétention à comprendre toutes les émotions ou le sarcasme.
+- Couleurs seulement à la lecture PCM, transitions450ms, fractions monotones par
+  segment Piper ; interruption efface immédiatement la file et les sous-titres,
+  couleur revient doucement cyan. Géométrie unique et permissions préservées.
+- Validation finale : 140 tests ciblés sans ignoré sous Tk8.6 ; PRESENCE également
+  testé sous Tk9. Source --smoke-test réussi, aucun modèle ou audio matériel exécuté.
+- Markdown/TTS publié fa4e6f6 +6e4312f (UnicodeTk8.6) +12e47ab (devises).
+  Build Windows12e47ab vert : actions/runs/39122219877. Vérifier le run du dernier
+  commit spectre avant d’annoncer son EXE validé en CI.
 - Recette matérielle Windows toujours requise : écoute réelle Tom/Siwis, Markdown,
   devises/formules, sous-titres avec emojis, interruption. Aucun modèle téléchargé.
 - Ne pas reprendre J2.8, la voix premium ou la bibliothèque Semantic Morphing.

@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from jarvis.audio import AudioEvent
 from jarvis.richtext import SpeechBuffer, parse_text
+from jarvis.spectrum import analyze_passages
 from jarvis.tts import PCM, SpeechText
 from jarvis.voice_config import VoiceSettings
 from jarvis.voice_runtime import speech_worker
@@ -29,7 +30,8 @@ class SpeechPipelineTests(unittest.TestCase):
         source = "**Bonjour** ❤️, le prix est $12."
         document = parse_text(source)
         command = SpeechText(document.speech, original=source, display_text=document.text,
-            start=12, end=12 + len(source), events=document.events, segment_id=3)
+            start=12, end=12 + len(source), events=document.events, segment_id=3,
+            spectrum_events=analyze_passages(source, start=12))
         outbox, inbox = queue.Queue(), queue.Queue()
         inbox.put(pickle.loads(pickle.dumps(command)))
         inbox.put(None)
@@ -55,6 +57,12 @@ class SpeechPipelineTests(unittest.TestCase):
         self.assertNotIn("❤️", event.payload["spoken_text"])
         self.assertEqual(event.payload["original_start"], 12)
         self.assertEqual(event.payload["segment_id"], 3)
+        self.assertEqual(event.payload["spectrum_mode"], "expression")
+        self.assertTrue(event.payload["spectrum_events"])
+        for passage in event.payload["spectrum_events"]:
+            self.assertEqual(source[passage["start"] - 12:passage["end"] - 12], passage["text"])
+            self.assertGreaterEqual(passage["start"], 12)
+            self.assertLessEqual(passage["end"], 12 + len(source))
         self.assertIn("approximatif", event.payload["alignment"])
         self.assertTrue(any(item["kind"] == "emoji" for item in event.payload["text_events"]))
         self.assertEqual(event.payload["delay"], 0.02)

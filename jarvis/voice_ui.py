@@ -7,6 +7,7 @@ from dataclasses import replace
 from tkinter import filedialog, messagebox, ttk
 
 from .richtext import SpeechBuffer, parse_text
+from .spectrum import analyze_passages
 from .tts import SpeechText
 from .voice_config import PERSONALITY_PROMPTS, VOICES, VoiceSettings
 from .voice_runtime import AudioProcess, audio_error
@@ -185,9 +186,15 @@ class VoiceControls:
             # Keep display/emoji text out of the engine; retain source positions
             # for captions and later PCM-triggered visual events.
             display = parse_text(segment.original).text
+            mode = getattr(getattr(getattr(self.app, "presence", None), "settings", None),
+                           "spectrum_mode", "expression")
+            if mode not in {"expression", "thematic", "neutral"}:
+                mode = "expression"
             self.submit_phrase(SpeechText(segment.text, original=segment.original,
                 display_text=display[:4000], start=segment.start, end=segment.end,
-                events=segment.events, segment_id=self.segment_id))
+                events=segment.events, segment_id=self.segment_id,
+                spectrum_events=analyze_passages(segment.original, mode=mode, start=segment.start),
+                spectrum_mode=mode))
 
     def finish_turn(self, status):
         if status != "complete":

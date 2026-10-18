@@ -473,3 +473,23 @@ sur chaque version). Premier run Windows fa4e6f6 échoué ; logs détaillés mas
 sans connexion, API403. Statut du prochain run à vérifier, sans présumer sa cause.
 Vérification devises complémentaire : `20 $.` et `$5+$10` conservent chaque
 mention dollars, sans les traiter comme une formule LaTeX. 16 tests parser réussis.
+
+
+## Correctif spectre organique — 18 octobre 2026
+
+Modes persistants expression/ambiance/neutre, intensité0–100, prévisualisation
+visuelle locale sans micro/TTS/modèle. Classifieur lexical par passage : affirmation
+explicite suffisante, joie ajoutée, négations/citations/hypothèses/ambiguïtés neutres.
+Aucune inertie sémantique3s ; interpolation couleur450ms sur le même maillage.
+Événements avec offsets originaux transmis dans l’IPC ; couleur déclenchée par les
+callbacks PCM réellement lus, jamais par l’arrivée du texte LLM. Progression monotone
+si Piper remet la fraction à zéro. Synchronisation estimée par phrase/bloc Piper,
+pas de timestamp mot à mot ; précision limitée si une phrase produit plusieurs blocs.
+Interruption prioritaire, file et sous-titres vidés, retour progressif cyan, réduction
+des mouvements conservée. Aucun changement aux alertes ou permissions opérationnelles.
+Validation : **140 tests ciblés réussis, zéro ignoré**, avec `/usr/bin/python3`
+sous Tk8.6 : spectrum, presence, presence_integration, speech_pipeline, voice_flow,
+richtext, markdown_ui, metrics, test_jarvis.ProtocolTests/ DesktopTests. Inclut raccord
+source→voix→PCM→PRESENCE et interruption. PRESENCE38 tests aussi passés sous Tk9.
+Aucune dépendance nouvelle, téléchargement de poids ou validation matérielle Windows.
+Build Windows Markdown/TTS12e47ab réussi (run39122219877), après correctif UnicodeTk8.6.
