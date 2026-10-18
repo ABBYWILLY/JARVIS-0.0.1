@@ -471,3 +471,5 @@ comptent les points de code Unicode. Le calcul par longueur Tcl décalait les st
 après un emoji ; corrigé et reproduit/testé sous Tk 8.6 et Tk 9 (6 tests de rendu
 sur chaque version). Premier run Windows fa4e6f6 échoué ; logs détaillés masqués
 sans connexion, API403. Statut du prochain run à vérifier, sans présumer sa cause.
+Vérification devises complémentaire : `20 $.` et `$5+$10` conservent chaque
+mention dollars, sans les traiter comme une formule LaTeX. 16 tests parser réussis.

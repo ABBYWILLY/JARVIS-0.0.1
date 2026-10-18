@@ -74,6 +74,14 @@ class RichTextTests(unittest.TestCase):
         self.assertIn("10 puissance moins 3", spoken)
         self.assertIn("2.14 widgets", spoken)
 
+    def test_currency_suffix_before_punctuation_and_adjacent_prices_are_not_latex(self):
+        doc = parse_text("Le total est 20 $. Deux prix : $5+$10.")
+        self.assertIn("20 dollars.", doc.speech)
+        self.assertIn("5 dollars", doc.speech)
+        self.assertIn("10 dollars", doc.speech)
+        self.assertEqual(doc.speech.count("dollars"), 3)
+        self.assertFalse(any(event.kind == "math" for event in doc.events))
+
     def test_paragraphs_and_lists_keep_audible_pauses(self):
         raw = "**Premier paragraphe\n\nDeuxième paragraphe.**\n- Un élément\n- Deuxième élément !\nFin"
         expected = "Premier paragraphe. Deuxième paragraphe. Un élément. Deuxième élément ! Fin"

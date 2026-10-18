@@ -408,6 +408,15 @@ class _Scanner:
 
     def _math(self, start, end):
         text = self.text
+        # A suffix currency sign belongs to the amount, including before a
+        # sentence ending (20 $.). It cannot open a LaTeX expression.
+        previous = start - 1
+        while previous >= 0 and text[previous] in " \t":
+            previous -= 1
+        if (text[start] == "$" and previous >= 0 and text[previous].isdigit()
+                and (start + 1 == end or text[start + 1].isspace()
+                     or text[start + 1] in ".,!?;:")):
+            return None
         for opening, closing in ((r"\(", r"\)"), (r"\[", r"\]"), ("$$", "$$")):
             if text.startswith(opening, start):
                 close = text.find(closing, start + len(opening), end)
@@ -422,6 +431,10 @@ class _Scanner:
             if close < 0:
                 break
             if text[close - 1] != "\\":
+                # '$5+$10' contains two prices; the second sign opens a price
+                # rather than closing the first expression.
+                if close + 1 < end and text[close + 1].isdigit():
+                    break
                 body = text[start + 1:close]
                 if body and not body[-1].isspace() and "\n" not in body:
                     return start + 1, close, close + 1, True
