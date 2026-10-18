@@ -17,7 +17,8 @@ class AssistantRegion:
 class MarkdownView:
     """Render only the assistant region being streamed, on Tk's main thread.
 
-    All Tk offsets are measured by Tcl, including on UTF-16 Windows builds.
+    Relative Tk character offsets count Unicode code points, even when Tk 8.6
+    reports UTF-16 column numbers. Never use Tcl string length for +Nc offsets.
     No HTML widget, browser, network request, or interpreter handles message text.
     """
 
@@ -74,7 +75,7 @@ class MarkdownView:
         self.widget = None
 
     def units(self, text):
-        return int(self.widget.tk.call("string", "length", text))
+        return len(text)
 
     def offset(self, start, text):
         return self.widget.index(f"{start}+{self.units(text)}c")

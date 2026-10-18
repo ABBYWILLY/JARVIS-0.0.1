@@ -454,7 +454,7 @@ Lots4/5 non commencés, aucune suppression ni modification du moteurPiper.
 Rendu Markdown natif Tk pour réponses et historique, sans interprétation HTML ou
 script. Styles combinés, titres/listes/citations/code, formules en texte et liens
 HTTPS validés avec aperçu/copie. Mise à jour de la seule réponse courante, sélection
-et défilement préservés, indices Unicode calculés par Tcl pour Windows.
+et défilement préservés, indices Unicode relatifs compatibles Tk 8.6/9.
 Pipeline source/affichage/parole/événements commun : emojis et source conservés dans
 SQLite/sous-titres, ponctuation/pauses et montants préservés ; maths usuelles
 verbalisées, code omis explicitement par défaut ou lecture activable/persistante.
@@ -465,3 +465,9 @@ Validation : **73 tests ciblés réussis, zéro ignoré** (richtext, pipeline vo
 voice_flow, Markdown Tk, métriques, protocole HTTP et bureau). Démarrage source
 `--smoke-test` réussi sous Linux/Tk virtuel ; aucune validation sonore matérielle.
 Fixtures Tk libérées sur le thread principal, évitant leur GC dans le serveur HTTP.
+
+Compatibilité Tk 8.6 : les colonnes Tcl sont UTF-16 mais les déplacements `+Nc`
+comptent les points de code Unicode. Le calcul par longueur Tcl décalait les styles
+après un emoji ; corrigé et reproduit/testé sous Tk 8.6 et Tk 9 (6 tests de rendu
+sur chaque version). Premier run Windows fa4e6f6 échoué ; logs détaillés masqués
+sans connexion, API403. Statut du prochain run à vérifier, sans présumer sa cause.
