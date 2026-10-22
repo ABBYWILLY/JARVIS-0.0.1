@@ -566,3 +566,15 @@ attend désormais le layout et vérifie les mots exacts, les tags, la copie et l
 deux lignes mesurées. 21 tests ciblés Tk8.6 et le test concerné Tk9 réussis.
 Annotations d'échec ajoutées au runner CI ; aucune validation désactivée.
 Compilation du dernier correctif à confirmer avant livraison.
+
+## PRESENCE 3.2 — lot 1 Rich Conversation
+
+Scanner et renderer existants étendus : ++soulignage++, ==surlignage==, titres,
+styles combinés, listes visibles/indentées, séparateurs et tableaux monospace
+textuels (repli possible). Typographie persistante : police installée, taille,
+échelle et interligne, polices réutilisées sans reparsing de l'historique.
+Copie source par clic droit/Ctrl+Maj+C ; sélection rendue conservée. Liens HTTPS
+validés, aperçu puis ouverture explicite confirmée. Aucun HTML actif.
+Cache interactif borné à 256 URL ; originaux et texte toujours conservés.
+Validation : 390 tests exécutés, 381 réussis, 9 ignorés (natifs/modèles absents).
+16 tests de rendu réussis sous Tk8.6 et Tk9. Recette Windows physique à effectuer.

@@ -70,6 +70,7 @@ class App:
         self.delete_button.pack(fill="x", pady=(10, 6))
         self.settings_button = ttk.Button(sidebar, text="Paramètres", command=self.open_settings)
         self.settings_button.pack(fill="x")
+        ttk.Button(sidebar, text="Lecture et typographie", command=self.open_conversation_settings).pack(fill="x", pady=4)
         from .voice_ui import VoiceControls
         self.voice = VoiceControls(self, sidebar)
         from .presence import PresenceView
@@ -110,8 +111,13 @@ class App:
         self.metrics_visible = tk.BooleanVar(value=store.get_preference("show_generation_metrics", True) is not False)
         self.chat.tag_configure("metrics", foreground=MUTED, font=(self.font_family, 9),
                                 spacing3=10, elide=not self.metrics_visible.get())
-        from .markdown_view import MarkdownView
+        from .markdown_view import ConversationTypography, MarkdownView
         self.markdown = MarkdownView(self.chat, self.font_family, TEXT, MUTED, CYAN, FIELD)
+        self.conversation_families = tuple(sorted(font.families(root), key=str.casefold))
+        self.conversation_preferences = store.get_preference("conversation", {})
+        self.typography = ConversationTypography.from_dict(self.conversation_preferences, self.conversation_families)
+        self._apply_conversation_typography(self.typography)
+        self.conversation_dialog = None
         self.assistant_region = None
         compose = tk.Frame(root, bg=BG, padx=20, pady=14)
         compose.grid(row=2, column=1, sticky="ew")
@@ -120,6 +126,7 @@ class App:
             highlightthickness=1, highlightcolor=CYAN, highlightbackground=FIELD)
         self.input.pack(fill="x")
         self.input.bind("<Control-Return>", lambda e: self.send() or "break")
+        self.input.configure(font=self.markdown.body_font)
         actions = tk.Frame(compose, bg=BG)
         actions.pack(fill="x", pady=(10, 0))
         tk.Label(actions, text="Ctrl + Entrée : envoyer · Entrée : nouvelle ligne",
@@ -151,6 +158,99 @@ class App:
         self.poll_id = root.after(40, self.poll)
         if refresh:
             self.refresh_models()
+
+    def set_conversation_typography(self, **changes):
+        from .markdown_view import ConversationTypography
+        options = {**self.typography.to_dict(), **changes}
+        validated = ConversationTypography.from_dict(options, self.conversation_families)
+        if any(getattr(validated, key, None) != value for key, value in changes.items()):
+            raise ValueError("Choisissez une police installée, une taille de 9 à 24 et une échelle de 75 à 175 %.")
+        saved = self.conversation_preferences if isinstance(self.conversation_preferences, dict) else {}
+        saved = {**saved, **validated.to_dict()}
+        self.store.set_preference("conversation", saved)
+        self.conversation_preferences, self.typography = saved, validated
+        self._apply_conversation_typography(validated)
+
+    def _apply_conversation_typography(self, validated):
+        self.markdown.configure_typography(validated)
+        # The input shares this reusable font; controls and PRESENCE retain
+        # their own geometry and preferences.
+        for tag, base in (("speaker", 10), ("meta", 9), ("metrics", 9)):
+            size = max(8, round((base + validated.size - 12) * validated.scale / 100))
+            self.chat.tag_configure(tag, font=(validated.family or self.font_family, size,
+                                              "bold" if tag == "speaker" else "normal"))
+
+    def open_conversation_settings(self):
+        if self.conversation_dialog is not None and self.conversation_dialog.winfo_exists():
+            self.conversation_dialog.lift()
+            return
+        dialog = self.conversation_dialog = tk.Toplevel(self.root)
+        dialog.title("COMMAND OS · lecture")
+        dialog.transient(self.root)
+        dialog.configure(bg=PANEL, padx=16, pady=12)
+        width, height = min(620, dialog.winfo_screenwidth() - 60), min(430, dialog.winfo_screenheight() - 100)
+        dialog.geometry(f"{width}x{height}")
+        footer = ttk.Frame(dialog)
+        footer.pack(side="bottom", fill="x", pady=(12, 0))
+        body = tk.Frame(dialog, bg=PANEL)
+        body.pack(fill="both", expand=True)
+        canvas = tk.Canvas(body, bg=PANEL, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(body, command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        content = tk.Frame(canvas, bg=PANEL)
+        item = canvas.create_window(0, 0, anchor="nw", window=content)
+        content.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(item, width=event.width))
+        def reveal(event):
+            if not str(event.widget).startswith(str(content) + "."):
+                return
+            y = event.widget.winfo_rooty() - content.winfo_rooty()
+            bottom = y + event.widget.winfo_height()
+            top = canvas.canvasy(0)
+            if y < top or bottom > top + canvas.winfo_height():
+                canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, content.winfo_height()))
+        dialog.bind("<FocusIn>", reveal, add="+")
+        variables = {
+            "family": tk.StringVar(value=self.typography.family or self.markdown.family),
+            "size": tk.StringVar(value=str(self.typography.size)),
+            "scale": tk.StringVar(value=str(self.typography.scale)),
+            "spacing": tk.StringVar(value="Compact" if self.typography.spacing == "compact" else "Confortable"),
+        }
+        for key, label, values in (("family", "Police installée", self.conversation_families),
+                                    ("size", "Taille du texte (9–24 points)", None),
+                                    ("scale", "Échelle de lecture (75–175 %)", None),
+                                    ("spacing", "Interlignage", ("Compact", "Confortable"))):
+            tk.Label(content, text=label, bg=PANEL, fg=TEXT).pack(anchor="w", pady=(8, 3))
+            if values is None:
+                ttk.Entry(content, name=key, textvariable=variables[key]).pack(fill="x")
+            else:
+                ttk.Combobox(content, name=key, textvariable=variables[key], values=values,
+                             state="readonly").pack(fill="x")
+        tk.Label(content, bg=PANEL, fg=MUTED, justify="left", wraplength=max(240, width - 55),
+                 text="Titres, listes et code gardent leur hiérarchie.\n"
+                      "++souligné++ · ==surligné==\n"
+                      "Clic droit ou Ctrl+Maj+C : copier la réponse originale.\n"
+                      "Ctrl+C : copier la sélection affichée.").pack(anchor="w", pady=12)
+
+        def save():
+            try:
+                self.set_conversation_typography(family=variables["family"].get(), size=int(variables["size"].get()),
+                    scale=int(variables["scale"].get()),
+                    spacing="compact" if variables["spacing"].get() == "Compact" else "comfortable")
+            except (ValueError, sqlite3.Error) as exc:
+                messagebox.showerror("Lecture", str(exc), parent=dialog)
+                return
+            dialog.destroy()
+
+        def closed(event):
+            if event.widget is dialog:
+                self.conversation_dialog = None
+
+        dialog.bind("<Destroy>", closed)
+        ttk.Button(footer, text="Enregistrer", command=save).pack(side="right")
+        ttk.Button(footer, text="Fermer", command=dialog.destroy).pack(side="left")
 
     def set_status(self, text, error=False):
         from .spectrum import OPERATIONAL

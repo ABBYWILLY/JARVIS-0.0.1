@@ -252,6 +252,97 @@ class _Scanner:
         if not complete and not self.final:
             self.incomplete.append(start)
 
+    def _cells(self, start, end):
+        """Source intervals, respecting escaped pipes and inline code."""
+        text = self.text
+        while start < end and text[start].isspace():
+            start += 1
+        while end > start and text[end - 1].isspace():
+            end -= 1
+        if start < end and text[start] == "|":
+            start += 1
+        if end > start and text[end - 1] == "|" and (end < 2 or text[end - 2] != "\\"):
+            end -= 1
+        cells, left, i, code = [], start, start, ""
+        while i < end:
+            if text[i] == "\\":
+                i += 2
+                continue
+            if text[i] == "`":
+                run = re.match(r"`+", text[i:end])[0]
+                if code == run:
+                    code = ""
+                elif not code:
+                    code = run
+                i += len(run)
+                continue
+            if text[i] == "|" and not code:
+                cells.append((left, i))
+                left = i + 1
+            i += 1
+        cells.append((left, end))
+        return tuple((left + len(text[left:right]) - len(text[left:right].lstrip()),
+                      right - len(text[left:right]) + len(text[left:right].rstrip()))
+                     for left, right in cells)
+
+    def _table(self, start, end, inherited):
+        """Render a conventional pipe table through the existing span scanner."""
+        text = self.text
+        header_end = text.find("\n", start, end)
+        if header_end < 0:
+            if not self.final and "|" in text[start:end]:
+                self.protect(start, end, False)
+            return None
+        if "|" not in text[start:header_end]:
+            return None
+        rule_end = text.find("\n", header_end + 1, end)
+        rule_end = end if rule_end < 0 else rule_end
+        header = self._cells(start, header_end)
+        rules = self._cells(header_end + 1, rule_end)
+        if not (2 <= len(header) <= 32 and len(rules) == len(header)
+                and all(re.fullmatch(r":?-{3,}:?", text[a:b]) for a, b in rules)):
+            if not self.final and rule_end == end and re.fullmatch(r"[ \t|:\-]*", text[header_end + 1:end]):
+                self.protect(start, end, False)
+            return None
+        rows, stop = [header], rule_end + (rule_end < end)
+        while stop < end:
+            right = text.find("\n", stop, end)
+            right = end if right < 0 else right
+            if "|" not in text[stop:right]:
+                break
+            cells = self._cells(stop, right)
+            if len(cells) != len(header):
+                break
+            rows.append(cells)
+            stop = right + (right < end)
+        # A growing table is indivisible for speech: never pronounce a partial
+        # separator row or treat the following data row as ordinary prose.
+        complete = self.final or stop < end and "\n" in text[stop:end]
+        self.protect(start, stop, complete)
+        self.event("table", start, stop, "")
+        prepared, widths = [], [0] * len(header)
+        for row_index, row in enumerate(rows):
+            cells = []
+            for column, (left, right) in enumerate(row):
+                saved_spans, saved_speech = self.spans, self.speech
+                self.spans, self.speech = [], []
+                self.scan(left, right, inherited + ("table",) + (("tableheader",) if row_index == 0 else ()))
+                spans, speech = self.spans, "".join(self.speech)
+                self.spans, self.speech = saved_spans, saved_speech
+                width = len("".join(span.text for span in spans))
+                widths[column] = max(widths[column], min(40, width))
+                cells.append((spans, speech, width))
+            prepared.append(cells)
+        for row in prepared:
+            for column, (spans, speech, width) in enumerate(row):
+                if column:
+                    self.add(" │ ", inherited + ("table",), speech=" ; ")
+                for span in spans:
+                    self.add(span.text, span.tags, span.url, speech="")
+                self.add(" " * max(0, widths[column] - width), inherited + ("table",), speech=speech)
+            self.add("\n", inherited + ("table",))
+        return stop
+
     def scan(self, start=0, end=None, inherited=()):
         text = self.text
         end = len(text) if end is None else end
@@ -276,12 +367,31 @@ class _Scanner:
                         self.add("\n", inherited)
                     i = stop
                     continue
+                table_end = self._table(i, end, inherited)
+                if table_end is not None:
+                    i = table_end
+                    continue
+                separator = re.match(r" {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})(?:\n|$)", text[i:end])
+                if separator:
+                    stop = i + separator.end()
+                    self.add("────────────────────────\n", inherited + ("separator",), speech="\n")
+                    self.event("markup", i, stop, text[i:stop])
+                    self.protect(i, stop, stop < end or self.final or text[stop - 1:stop] == "\n")
+                    i = stop
+                    continue
                 prefix = re.match(r" {0,3}(#{1,6})[ \t]+", text[i:end])
                 quote = re.match(r" {0,3}(?:>[ \t]?)+", text[i:end])
                 listing = re.match(r"[ \t]*(?:[-+*]|\d+[.)])[ \t]+", text[i:end])
                 match = prefix or quote or listing
                 block = (("heading" + str(len(prefix[1])),) if prefix else ("quote",) if quote else ("list",) if listing else ())
                 if match:
+                    if listing and not prefix and not quote:
+                        marker = listing[0].strip()
+                        indent = listing[0][:len(listing[0]) - len(listing[0].lstrip())]
+                        depth = min(6, len(indent.expandtabs(4)) // 2)
+                        block += (f"list_depth_{depth}",)
+                        self.add(("•" if marker in "-+*" else marker) + " ",
+                                 inherited + block, speech="")
                     self.event("markup", i, i + match.end(), text[i:i + match.end()])
                     i += match.end()
                     continue
@@ -297,7 +407,7 @@ class _Scanner:
                 block = ()
                 i += 1
                 continue
-            if char == "\\" and i + 1 < end and text[i + 1] in r"\`*_{}[]<>#$!":
+            if char == "\\" and i + 1 < end and text[i + 1] in r"\`*_{}[]<>#$!+=|":
                 self.add(text[i + 1], tags)
                 self.protect(i, i + 2)
                 i += 2
@@ -313,6 +423,31 @@ class _Scanner:
                 self.protect(i, stop, close >= 0)
                 i = stop
                 continue
+            # Deliberate non-HTML extensions. A technical equality/increment
+            # inside an identifier or an equation is not expressive styling.
+            if char in "+=" and text[i:i + 2] == char * 2:
+                before = text[i - 1] if i > start else " "
+                after = text[i + 2] if i + 2 < end else ""
+                if not before.isalnum() and after and not after.isspace():
+                    marker = char * 2
+                    close = i + 2
+                    while True:
+                        close = text.find(marker, close, end)
+                        if close < 0 or (text[close - 1] != "\\" and not text[close - 1].isspace()):
+                            break
+                        close += 2
+                    if close >= 0:
+                        stop = close + 2
+                        self.scan(i + 2, close, tags + (("underline" if char == "+" else "highlight"),))
+                        self.event("markup", i, stop, marker)
+                        self.protect(i, stop)
+                        i = stop
+                        continue
+                    if not self.final:
+                        self.add(text[i + 2:end], tags)
+                        self.protect(i, end, False)
+                        i = end
+                        continue
             # Label and destination are one indivisible source interval.
             if char == "[":
                 label_end = self._closing(i, "[", "]", end)
@@ -387,7 +522,7 @@ class _Scanner:
                 continue
             # Coalesce plain runs rather than processing every character separately.
             stop = i + 1
-            while stop < end and text[stop] not in "\n\\`[*_$" and not text.startswith(("http://", "https://", "ftp://", "www."), stop):
+            while stop < end and text[stop] not in "\n\\`[*_$+=" and not text.startswith(("http://", "https://", "ftp://", "www."), stop):
                 stop += 1
             self.add(text[i:stop], tags)
             i = stop

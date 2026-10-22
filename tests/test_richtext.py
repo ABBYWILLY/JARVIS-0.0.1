@@ -6,7 +6,7 @@ from jarvis.richtext import SpeechBuffer, parse_text, safe_url, verbalize_math
 class RichTextTests(unittest.TestCase):
     def test_nested_emphasis_and_blocks(self):
         doc = parse_text("# Bonjour **cher *ami***\n- un\n> deux")
-        self.assertEqual(doc.text, "Bonjour cher ami\nun\ndeux")
+        self.assertEqual(doc.text, "Bonjour cher ami\n• un\ndeux")
         self.assertEqual(doc.speech, "Bonjour cher ami. un. deux")
         ami = next(span for span in doc.spans if "ami" in span.text)
         self.assertEqual(set(ami.tags), {"heading1", "bold", "italic"})
@@ -98,6 +98,71 @@ class RichTextTests(unittest.TestCase):
                               ("[guide](https://example", "guide"), (r"\(x^2", "x au carré")]:
             with self.subTest(raw=raw):
                 self.assertEqual(parse_text(raw).speech, expected)
+
+    def test_controlled_styles_compose_without_html_or_technical_false_positives(self):
+        raw = "++souligné **gras**++ et ==très *clair*==. C++ et a==b ; $2+2=4$."
+        doc = parse_text(raw)
+        self.assertEqual(doc.original, raw)
+        self.assertEqual(doc.text, "souligné gras et très clair. C++ et a==b ; 2+2=4.")
+        self.assertIn("C++ et a==b", doc.speech)
+        self.assertIn("2 plus 2 égal à 4", doc.speech)
+        self.assertFalse(any(marker in doc.speech for marker in ("++souligné", "==très")))
+        self.assertTrue(any(span.text == "gras" and {"underline", "bold"} <= set(span.tags) for span in doc.spans))
+        self.assertTrue(any(span.text == "clair" and {"highlight", "italic"} <= set(span.tags) for span in doc.spans))
+        opaque = parse_text("`++a++ ==b==` et \\++sans++ https://example.com/a==b")
+        self.assertFalse(any({"underline", "highlight"} & set(span.tags) for span in opaque.spans))
+        self.assertIn("++a++ ==b==", opaque.text)
+
+    def test_controlled_partial_styles_are_provisional_until_closed(self):
+        for marker, tag in (("++", "underline"), ("==", "highlight")):
+            with self.subTest(marker=marker):
+                partial = parse_text(marker + "Été", final=False)
+                self.assertEqual(partial.text, "Été")
+                self.assertFalse(any(tag in span.tags for span in partial.spans))
+                complete = parse_text(marker + "Été" + marker, final=False)
+                self.assertEqual(complete.text, "Été")
+                self.assertTrue(all(tag in span.tags for span in complete.spans))
+                buffer = SpeechBuffer()
+                self.assertEqual(buffer.feed(marker + "Été. "), [])
+                self.assertEqual([segment.text for segment in buffer.feed("Fini" + marker + ". ")], ["Été. Fini."])
+
+    def test_lists_show_markers_and_indentation_without_pronouncing_prefixes(self):
+        doc = parse_text("- Un\n  2. Deux\n    + Trois")
+        self.assertEqual(doc.text, "• Un\n2. Deux\n• Trois")
+        self.assertEqual(doc.speech, "Un. Deux. Trois")
+        self.assertTrue(any("list_depth_2" in span.tags for span in doc.spans))
+        self.assertEqual(parse_text("Avant\n---\nAprès").speech, "Avant. Après")
+        self.assertIn("separator", parse_text("***\n").spans[0].tags)
+        self.assertEqual(parse_text("`---`\n```\n---\n```").text, "---\n---\n")
+
+    def test_tables_preserve_styles_unicode_values_and_source_offsets(self):
+        raw = "| Nom | Valeur |\n| :--- | ---: |\n| **Été** | 20 $ |\n| 👩🏽‍💻 | `a|b` |\n\nFin."
+        doc = parse_text(raw)
+        self.assertEqual(doc.original, raw)
+        self.assertIn("Nom", doc.text)
+        self.assertIn("Été", doc.text)
+        self.assertIn("👩🏽‍💻", doc.text)
+        self.assertIn("a|b", doc.text)
+        self.assertNotIn("---", doc.text)
+        self.assertNotIn("**", doc.text)
+        self.assertTrue(any({"table", "tableheader"} <= set(span.tags) for span in doc.spans))
+        self.assertTrue(any(span.text == "Été" and "bold" in span.tags for span in doc.spans))
+        self.assertEqual(doc.speech, "Nom ; Valeur. Été ; 20 dollars. ; a|b. Fin.")
+        emoji = next(event for event in doc.events if event.kind == "emoji")
+        self.assertEqual(raw[emoji.start:emoji.end], "👩🏽‍💻")
+        buffer, segments = SpeechBuffer(), []
+        for char in raw:
+            segments.extend(buffer.feed(char))
+        segments.extend(buffer.feed("", final=True))
+        self.assertEqual(" ".join(segment.text for segment in segments), doc.speech)
+        for segment in segments:
+            self.assertEqual(segment.original, raw[segment.start:segment.end])
+
+    def test_non_tables_and_escaped_pipes_remain_literal_or_cell_content(self):
+        self.assertEqual(parse_text("a | b\nordinary prose").text, "a | b\nordinary prose")
+        doc = parse_text("A | B\n--- | ---\nx\\|y | z\n")
+        self.assertIn("x|y", doc.text)
+        self.assertIn("x|y ; z", doc.speech)
 
 
 class SpeechBufferTests(unittest.TestCase):
