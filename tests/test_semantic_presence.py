@@ -210,6 +210,20 @@ class SemanticPresenceTests(unittest.TestCase):
         self.assertFalse(self.view.semantic.active)
         self.assertIsNone(self.view.after_id)
 
+    def test_field_preview_preempts_a_symbol_and_a_symbol_clears_the_field_preview(self):
+        self.assertTrue(self.view.preview_expression("smile"))
+        self.view.preview_text("Je suis heureux.")
+        self.assertFalse(self.view.semantic.active)
+        self.assertEqual(self.view.tone.name, "joie")
+        self.assertTrue(self.view.preview_expression("affection"))
+        self.assertTrue(self.view.preview_scenario())
+        self.assertFalse(self.view.semantic.active)
+        self.assertEqual(self.view.state, "thinking")
+        self.view.clear_preview()
+        self.assertEqual(self.view.state, "silent")
+        self.assertTrue(self.view.preview_expression("wink"))
+        self.assertIsNone(self.view._preview_id)
+
 
 if __name__ == "__main__":
     unittest.main()

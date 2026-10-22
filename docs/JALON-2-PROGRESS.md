@@ -598,3 +598,34 @@ une interruption ; vraie voix, nouvelle parole, erreur et arrêt restent priorit
 Validation : suite433/424réussis/9ignorés avant derniers cas de queue inconnue, puis
 39 tests ciblés réussis (Tk8.6, géométries/parseur/intégration) après correctifs.
 Suite finale et CI du dernier SHA à confirmer ; recette physique Windows restante.
+
+## PRESENCE 3.2 — finition et validation
+
+Les aperçus Emotional Field et Semantic Morphing s'annulent mutuellement :
+aucun symbole ne masque le scénario THINKING existant. 435 tests exécutés,
+426 réussis et 9 ignorés localement (dépendances natives/modèles non installés).
+Tk8.6 : 80 tests ciblés puis 26 après cette finition ; Tk9 : suite complète.
+Démarrages source isolés Tk8.6/9 réussis, capture réelle de l'aperçu intégrée inspectée.
+CI Windows Rich Conversation2f896d7 et moteur959a94d vertes (runs39842257220 et
+39844486651), avec compilation et démarrages de contrôle EXE ; dernier SHA à vérifier.
+
+Coûts Linux960×640, sonde étendue5×400frames, CPU du processus Python/Tcl :
+THINKING équilibré579→517µs/frame, utilisateur546→534µs, JARVIS623→538µs ;
+silence315→278µs, sommeil212→200µs. Comparaison au code2f896d7 avec dépendances
+courantes identiques ; VM partagée et dispersion observée dans les passes courtes :
+aucun gain matériel global ou vocal déduit. Pool Canvas7→23objets, stable, détails
+masqués non mis à jour au repos ; aucun timer silence/sommeil/fenêtre masquée.
+Pic tracemalloc THINKING92,1Kio et paroleJARVIS96,1Kio inchangés sur24frames.
+Contrôleur final seul : entrée11,24µs/frame, maintien1,55µs, retour11,79µs ;
+picPython52 464octets avec contrôleur/origine/cache et24frames, catalogue préexistant
+exclu. Pas de mesure RAM système/VRAM/énergie/latence audio/Windows physique.
+Sonde existante étendue par --baseline-revision (SHA), aucun modèle téléchargé.
+
+Recette Windows11 : COMMAND OS → Lecture et typographie, titres/styles/listes/
+tableaux, copie source et sélection, liens confirmés, DPI100/150/200/250%.
+PRESENCE → Réglages → Expressions, sélectionner chaque famille puis Prévisualiser ;
+avec mouvement réduit, forme statique. Ensuite utiliser Piper réel avec une phrase
+se terminant par :) ou ❤️, une expression au milieu, une queue emoji après ponctuation,
+puis interrompre/reprendre la parole. Contrôler glyphes français, Bluetooth,
+synchronisation approximative et priorité de la capture réelle. Cette recette
+matérielle n'a pas été exécutée ici. La bibliothèque100emojis reste différée.

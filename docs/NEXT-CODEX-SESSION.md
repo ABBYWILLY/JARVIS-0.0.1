@@ -24,7 +24,21 @@ Synchro approximative : emoji final à fin du segment réellement joué ; milieu
 un creux PCM estimé, sinon report à fin de segment. Reprise de parole, erreur,
 arrêt, masque et nouvelle réponse annulent ; micro ouvert silencieux peut maintenir
 un symbole bref sans retarder sa reprise350ms. Aucun timestamp mot à mot.
-Tests complets, mesures finales et CI du dernier SHA à confirmer avant livraison.
+Validation finale : 435 tests exécutés, 426 réussis, 9 ignorés (natifs/modèles
+absents). Parcours Tk8.6 : 80 tests ciblés puis 26 après priorité entre aperçus ;
+Tk9 : suite complète. Démarrages source isolés Tk8.6/9 réussis. CI du moteur
+959a94d verte : run 39844486651. Vérifier le SHA du dernier lot de finition.
+Capture réelle source Tk8.6/Linux : /workspace/artifacts/presence32-smile-linux.png.
+Mesure Linux étendue (CPU processus, médiane5×400 frames, hors audio/affichage GPU) :
+THINKING équilibré 517µs contre579 avant2f896d7 ; paroleJARVIS538µs contre623 ;
+pool Canvas23 objets stables, aucun timer silence/sommeil/masque. Variations VM :
+pas de gain matériel ni de latence Windows déduit. Contrôleur seul≈11µs transition,
+picPython≈52Ko origine/cache inclus, catalogue préexistant exclu.
+Recette PCWindows11 restante : Réglages→Expressions, tester8familles uneàune,
+réduction mouvements, puis vraie phrase 'Heureux de te revoir Abraham :)', ❤️,
+emoji final/après ponctuation, reprise voix et arrêt. COMMAND OS : Lecture et
+typographie, copier source vs sélection, lien confirmé et DPI100/150/200/250%.
+Synchronisation estimée explicitée ; Bluetooth et latence réelle non mesurés.
 Ne pas reprendre Emotional Field 3.0, Living Core 3.1 ni les optimisations J2.8.
 La cible historique de 100 emojis reste différée : cette mission porte sur 8 familles.
 Aucun téléchargement de modèle ou dépendance supplémentaire autorisé/nécessaire.

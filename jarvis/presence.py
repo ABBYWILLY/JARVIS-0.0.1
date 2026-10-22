@@ -901,6 +901,7 @@ class PresenceView:
         """Explicit visual-only preview; never starts capture, inference or speech."""
         if self.state not in {"silent", "dormant"} or self.app.voice.listening:
             return None
+        self._cancel_semantics()
         self._cancel_scenario()
         self._preview_text = str(text)
         tone = self.interpret_text(self._preview_text, render=False)
@@ -932,6 +933,7 @@ class PresenceView:
         """Offline symbolic forms/colors only. It never invents an audio signal."""
         if self.app.voice.listening or self.state not in {"silent", "dormant"}:
             return False
+        self._cancel_semantics()
         self._cancel_scenario()
         self._scenario_index = 0
         self._scenario_step()

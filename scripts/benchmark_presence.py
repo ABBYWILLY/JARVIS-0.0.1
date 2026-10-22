@@ -5,7 +5,8 @@ Run each mode in the same Python/Tk/display environment, for example:
     DISPLAY=:99 python scripts/benchmark_presence.py baseline --output /tmp/before.json
     DISPLAY=:99 python scripts/benchmark_presence.py candidate --output /tmp/after.json
 
-The baseline presence.py comes from git revision 55311d1. Both modes import
+The baseline defaults to git revision 55311d1; --baseline-revision selects a SHA.
+Both modes import
 jarvis.spectrum and jarvis.audio from the current checkout. Source snapshots are
 temporary files outside the checkout. No models, microphone or playback are used.
 Only standard-library modules and the local repository are imported.
@@ -19,6 +20,7 @@ import math
 import os
 from pathlib import Path
 import platform
+import re
 import statistics
 import subprocess
 import sys
@@ -43,11 +45,15 @@ def parse_args():
         "Measure PRESENCE process CPU/frame and Python allocation peaks with "
         "a real Tk display and a generated synthetic PCM fixture. No real "
         "microphone, playback, models or audio-latency measurements are used. "
-        "Baseline: git 55311d1 presence.py, with current checkout dependencies."))
+        "Baseline: selected commit's presence.py, with current checkout dependencies."))
     parser.add_argument("mode", choices=("baseline", "candidate"))
+    parser.add_argument("--baseline-revision", default=BASE_REV,
+                        help="Baseline commit SHA (7–40 hex digits; default: %(default)s)")
     parser.add_argument("--output", type=Path, required=True,
                         help="New JSON output path; an existing file is never overwritten")
     args = parser.parse_args()
+    if not re.fullmatch(r"[0-9a-fA-F]{7,40}", args.baseline_revision):
+        parser.error("Baseline revision must be a commit SHA")
     if args.output.exists():
         parser.error(f"Output already exists: {args.output}")
     if not args.output.parent.is_dir():
@@ -172,8 +178,8 @@ def main():
     args = parse_args()
     if args.mode == "baseline":
         source_bytes = subprocess.check_output([
-            "git", "-C", str(REPO), "show", BASE_REV + ":jarvis/presence.py"])
-        source_label = "git:" + BASE_REV + ":jarvis/presence.py"
+            "git", "-C", str(REPO), "show", args.baseline_revision + ":jarvis/presence.py"])
+        source_label = "git:" + args.baseline_revision + ":jarvis/presence.py"
     else:
         source_bytes = (REPO / "jarvis/presence.py").read_bytes()
         source_label = str(REPO / "jarvis/presence.py")
@@ -186,7 +192,7 @@ def main():
     result = {
         "mode": args.mode, "source": source_label,
         "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
-        "baseline_revision": BASE_REV,
+        "baseline_revision": args.baseline_revision,
         "dependencies": "jarvis.spectrum and jarvis.audio from current checkout in both modes",
         "python": platform.python_version(), "platform": platform.platform(),
         "display": os.environ.get("DISPLAY"), "dimensions": [960, 640],
