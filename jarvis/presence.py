@@ -3,12 +3,16 @@ import math
 import re
 import time
 import tkinter as tk
+from collections import deque
 from dataclasses import asdict, dataclass, replace
 from tkinter import colorchooser, messagebox, ttk
 from tkinter import font as tkfont
 
 from .spectrum import CYAN, OPERATIONAL, FieldEvent, MoodTracker, Tone, ToneAnalyzer, analyze_passages
 from .captions import CaptionPlan, CaptionWindow, prepare_caption
+from .expressions import expression_family
+from .morphing import FAMILIES, MorphController
+from .richtext import parse_text
 
 
 STATES = {"silent", "listening", "user_speaking", "thinking", "jarvis_speaking", "dormant"}
@@ -28,6 +32,9 @@ COLORING_LABELS = {"discreet": "Discrète", "normal": "Normale", "expressive": "
 MIC_LABELS = {"disabled": "MICRO DÉSACTIVÉ", "starting": "MICRO · INITIALISATION",
               "open": "MICRO OUVERT", "voice": "MICRO · VOIX DÉTECTÉE", "stt": "MICRO · STT LOCAL",
               "suspended": "MICRO SUSPENDU · LECTURE", "error": "MICRO · ERREUR"}
+EXPRESSION_LABELS = dict(zip(FAMILIES, ("Sourire", "Rire", "Affection", "Tristesse",
+                                       "Colère", "Surprise", "Réflexion", "Complicité")))
+MORPH_INTENSITY_LABELS = {"discreet": "Discrète", "normal": "Normale", "expressive": "Expressive"}
 _POSITIONS = tuple(i / (POINT_COUNT - 1) for i in range(POINT_COUNT))
 _ANGLES = tuple(-math.pi / 2 + math.tau * t for t in _POSITIONS)
 _WINDOW = tuple(math.sin(math.pi * t) ** 2 for t in _POSITIONS)
@@ -54,6 +61,8 @@ class PresenceSettings:
     subtitle_coloring: str = "normal"
     subtitle_size: int = 18
     diagnostic_mode: bool = True
+    semantic_morphing: bool = True
+    morph_intensity: str = "normal"
 
     @classmethod
     def from_dict(cls, values):
@@ -68,7 +77,7 @@ class PresenceSettings:
         if isinstance(values.get("profile"), str) and values["profile"] in PROFILES:
             valid["profile"] = values["profile"]
         for key in ("reduced_motion", "subtitles", "timing_monitor", "halos", "animations",
-                    "emotional_subtitles", "diagnostic_mode"):
+                    "emotional_subtitles", "diagnostic_mode", "semantic_morphing"):
             if isinstance(values.get(key), bool):
                 valid[key] = values[key]
         if isinstance(values.get("accent_mode"), str) and values["accent_mode"] in ACCENT_LABELS:
@@ -87,13 +96,25 @@ class PresenceSettings:
         if (isinstance(value, (int, float)) and not isinstance(value, bool)
                 and math.isfinite(value) and 1 <= value <= 10):
             valid["visualizer_thickness"] = round(value)
-        for key, choices in (("fluidity", FLUIDITY_LABELS), ("subtitle_coloring", COLORING_LABELS)):
+        for key, choices in (("fluidity", FLUIDITY_LABELS), ("subtitle_coloring", COLORING_LABELS),
+                             ("morph_intensity", MORPH_INTENSITY_LABELS)):
             if isinstance(values.get(key), str) and values[key] in choices:
                 valid[key] = values[key]
         value = values.get("subtitle_size")
         if isinstance(value, int) and not isinstance(value, bool) and 12 <= value <= 32:
             valid["subtitle_size"] = value
         return replace(defaults, **valid)
+
+
+@dataclass(frozen=True)
+class ExpressionCue:
+    response_id: int
+    segment_id: int
+    start: int
+    end: int
+    family: str
+    fraction: float
+    terminal: bool
 
 
 def _rgb(color):
@@ -443,6 +464,18 @@ class PresenceView:
         self._timing_recorded = False
         self._timing_render_key = None
         self._overlay_key = None
+        self.semantic = MorphController()
+        self.semantic_paths = []
+        self._semantic_response = -1
+        self._semantic_closed = False
+        self._semantic_cues = deque(maxlen=64)
+        self._semantic_completed = deque(maxlen=64)
+        self._semantic_playing = None
+        self._semantic_plans = {}
+        self._prepared_semantic_caption = None
+        self._semantic_last_trigger = float("-inf")
+        self._semantic_preview = False
+        self._semantic_drawn = False
 
     @property
     def state(self):
@@ -477,6 +510,11 @@ class PresenceView:
         self.orbital_paths = [self.canvas.create_line(0, 0, 1, 0, smooth=True, splinesteps=12,
                                                      capstyle="round", joinstyle="round", state="hidden")
                               for _ in range(3)]
+        # Secondary facial strokes belong to the same morphing entity, and are
+        # permanently pooled. No image, extra avatar, or new Canvas is created.
+        self.semantic_paths = [tuple(self.canvas.create_line(0, 0, 1, 0, smooth=True,
+                               splinesteps=12, capstyle="round", joinstyle="round", state="hidden")
+                               for _ in range(2)) for _ in range(8)]
         family = getattr(self.app, "font_family", "Segoe UI")
         self.identity = tk.Label(window, text="J A R V I S", font=(family, 18, "bold"))
         self.identity.place(relx=0.045, rely=0.045, anchor="nw")
@@ -542,6 +580,14 @@ class PresenceView:
             return
         # Actual functional events cancel the offline scenario before any drawing.
         self._cancel_scenario()
+        if state in {"user_speaking", "thinking", "dormant"} or self._semantic_preview:
+            self._cancel_semantics()
+        elif state == "jarvis_speaking":
+            # Any new real audio pre-empts a held symbol immediately. Future
+            # events in the response remain available; no audio is delayed.
+            incoming = (caption.get("response_id", -1), caption.get("segment_id", -1)) if isinstance(caption, dict) else None
+            if incoming != self._semantic_playing or _finite((signal or {}).get("rms")) > .008:
+                self.semantic.cancel()
         # Real voice/state events always take priority over an optional local preview.
         if self._preview_text is not None:
             self._preview_text = None
@@ -550,25 +596,31 @@ class PresenceView:
         if not self._operation_explicit:
             self.operation = "inactive" if state in {"silent", "dormant"} else "info"
         if isinstance(caption, dict) and state == "jarvis_speaking":
+            semantic_key = (caption.get("response_id", -1), caption.get("segment_id", -1))
+            self._semantic_playing = semantic_key
             self.caption_data = dict(caption)
             text = str(caption.get("text", ""))
-            key = ("segment", caption["segment_id"]) if "segment_id" in caption else ("text", text)
+            key = ("segment", caption.get("response_id"), caption["segment_id"]) if "segment_id" in caption else ("text", text)
             fraction = max(0.0, min(1.0, _finite(caption.get("fraction"))))
             if key != self._segment_key:
                 self._segment_key, self._segment_fraction = key, fraction
                 self._segment_events = self._events_for_caption(caption)
                 plan = caption.get("caption_plan")
-                self._caption_plan = (CaptionPlan.from_dict(plan) if isinstance(plan, dict)
-                                      else prepare_caption(text, mode=self.settings.spectrum_mode))
+                self._caption_plan = self._semantic_plans.get(semantic_key)
+                if self._caption_plan is None:
+                    self._caption_plan = (CaptionPlan.from_dict(plan) if isinstance(plan, dict)
+                                          else prepare_caption(text, mode=self.settings.spectrum_mode))
             else:
                 # Piper may restart its fraction at each PCM block. This is only a
                 # phrase/block estimate: never regress within the same segment.
                 self._segment_fraction = max(self._segment_fraction, fraction)
             self._update_playback_tone()
             self._layout_caption()
+            self._advance_expressions(semantic_key, self._segment_fraction, signal)
         elif state != "jarvis_speaking":
             self._clear_playback()
-            self._set_tone(Tone())
+            if not self.semantic.active:
+                self._set_tone(Tone())
         if self._visible():
             self._render()
 
@@ -581,6 +633,7 @@ class PresenceView:
         return self._last_estimate
 
     def begin_response(self):
+        self._cancel_semantics()
         self.mood_tracker = MoodTracker(mode=self.settings.spectrum_mode)
         self._clear_playback()
         self._set_tone(Tone())
@@ -598,7 +651,140 @@ class PresenceView:
         last = events[-1].end if events else start
         if last < start + len(original):
             events += (FieldEvent(last, start + len(original), "", Tone(), Tone()),)
-        return events, prepare_caption(display, mode=mode)
+        plan = prepare_caption(display, mode=mode)
+        self._prepared_semantic_caption = plan
+        return events, plan
+
+    def _cancel_semantics(self):
+        self.semantic.cancel()
+        self._semantic_cues.clear()
+        self._semantic_completed.clear()
+        self._semantic_plans.clear()
+        self._semantic_playing = None
+        self._semantic_closed = True
+        self._semantic_preview = False
+
+    def queue_expressions(self, response_id, segment_id, original, start, end, events):
+        """Prepare a bounded timeline on text arrival, never on paint/PCM threads."""
+        if (type(response_id) is not int or type(segment_id) is not int
+                or response_id < self._semantic_response or segment_id <= 0):
+            return
+        if response_id > self._semantic_response:
+            self._cancel_semantics()
+            self._semantic_response, self._semantic_closed = response_id, False
+            self._semantic_last_trigger = float("-inf")
+        if self._semantic_closed:
+            return
+        key = (response_id, segment_id)
+        source = str(original)[:4000]
+        document = parse_text(source)
+        visual_only = not any(char.isalnum() for char in document.speech)
+        if visual_only and key in self._semantic_plans:
+            previous = self._semantic_plans[key]
+            self._semantic_plans[key] = prepare_caption(previous.text + document.text,
+                                                       mode=self.settings.spectrum_mode)
+            if key == self._semantic_playing:
+                self._caption_plan = self._semantic_plans[key]
+                self._caption_layout_key = None
+                self._layout_caption()
+        elif not visual_only and self._prepared_semantic_caption is not None:
+            self._semantic_plans[key] = self._prepared_semantic_caption
+        while len(self._semantic_plans) > 64:
+            del self._semantic_plans[next(iter(self._semantic_plans))]
+        if not self.settings.semantic_morphing:
+            return  # Caption preservation is independent of the optional effect.
+        candidates = []
+        for event in events[:64]:
+            if event.kind != "expression" or not start <= event.start < event.end <= min(end, start + len(source)):
+                continue
+            family = expression_family(event.value)
+            if family is None:
+                continue
+            tail = source[max(0, event.end - start):]
+            terminal = not any(char.isalnum() for char in parse_text(tail).speech)
+            cue = ExpressionCue(response_id, segment_id, event.start, event.end, family,
+                                min(1., max(0., (event.start - start) / max(1, end - start))), terminal)
+            if candidates:
+                gap = source[max(0, candidates[-1].end - start):event.start - start]
+                if len(gap) <= 8 and not any(char.isalnum() for char in gap):
+                    prior = candidates[-1]
+                    candidates[-1] = replace(prior, end=cue.end, terminal=cue.terminal)
+                    continue
+            candidates.append(cue)
+        existing = {(cue.response_id, cue.segment_id, cue.start, cue.end) for cue in self._semantic_cues}
+        for cue in candidates:
+            if (cue.response_id, cue.segment_id, cue.start, cue.end) not in existing:
+                self._semantic_cues.append(cue)
+        if key in self._semantic_completed and self.state in {"silent", "listening"}:
+            self._start_expression(key, final=True)
+        if self._visible():
+            self._render()
+
+    def _advance_expressions(self, key, fraction, signal):
+        ready = any((cue.response_id, cue.segment_id) == key and not cue.terminal
+                    and cue.fraction <= fraction for cue in self._semantic_cues)
+        if ready and isinstance(signal, dict) and _finite(signal.get("rms")) <= .008:
+            # A middle-of-phrase cue uses an actual quiet PCM interval. It yields
+            # immediately to the next nonquiet callback; this is approximate.
+            self._start_expression(key, fraction=fraction)
+
+    def _start_expression(self, key, *, fraction=1., final=False):
+        if (not self.settings.semantic_morphing or self._semantic_closed or not self._visible()
+                or self.state in {"user_speaking", "thinking", "dormant"}):
+            return
+        now = time.monotonic()
+        eligible = [cue for cue in self._semantic_cues
+                    if (cue.response_id, cue.segment_id) == key
+                    and (final or not cue.terminal and cue.fraction <= fraction)]
+        if not eligible:
+            return
+        # One shape at a time, and no rapid sequence of decorative transformations.
+        selected = eligible[0]
+        for cue in eligible:
+            self._semantic_cues.remove(cue)
+        if now - self._semantic_last_trigger < 1.25:
+            return
+        if self._trigger_morph(selected.family, now):
+            self._semantic_last_trigger = now
+            self._render()
+
+    def complete_segment(self, payload):
+        """Actual worker completion, after its PCM callbacks; never an audio timer."""
+        key = (payload.get("response_id"), payload.get("segment_id"))
+        if self._semantic_closed or key[0] != self._semantic_response:
+            return
+        if key in self._semantic_completed:
+            return
+        self._semantic_completed.append(key)
+        if key != self._semantic_playing:
+            self._semantic_cues = deque((cue for cue in self._semantic_cues
+                                        if (cue.response_id, cue.segment_id) != key), maxlen=64)
+            return  # A newer segment already owns the real speaking visualizer.
+        self._segment_fraction = 1.
+        self._update_playback_tone()
+        self._layout_caption()
+        self.model.update_event("silent")
+        self._start_expression(key, final=True)
+        if self._visible():
+            self._render()
+
+    def preview_expression(self, family):
+        if family not in FAMILIES or self.state != "silent" or self.app.voice.listening or not self._visible():
+            return False
+        self.clear_preview()
+        self._semantic_preview = True
+        self._preview_text = "Expression : " + EXPRESSION_LABELS[family]
+        self._trigger_morph(family, time.monotonic())
+        if self._visible():
+            self._render()
+        return True
+
+    def _trigger_morph(self, family, now):
+        coords = self.canvas.coords(self.paths[-1])
+        origin = tuple(zip(coords[::2], coords[1::2]))
+        return self.semantic.trigger(family, now, intensity=self.settings.morph_intensity,
+            reduced_motion=self.settings.reduced_motion or not self.settings.animations,
+            origin=origin, viewport=(self.canvas.winfo_width(), self.canvas.winfo_height()))
 
     def _set_tone(self, tone, dominant=None):
         self.tone = tone
@@ -724,6 +910,8 @@ class PresenceView:
         return tone
 
     def clear_preview(self):
+        if self._semantic_preview:
+            self._cancel_semantics()
         scenario = self._scenario_index is not None
         self._cancel_scenario()
         if self._preview_text is not None:
@@ -793,6 +981,7 @@ class PresenceView:
         self.operation_detail = str(detail)
         self._operation_explicit = True
         if key in {"error", "inactive"}:
+            self._cancel_semantics()
             self._cancel_scenario()
             self._cancel_animation()
             self._preview_text = None
@@ -831,6 +1020,8 @@ class PresenceView:
         if state not in MIC_LABELS:
             raise ValueError("État du microphone inconnu.")
         self.microphone_state, self.microphone_detail = state, str(detail)[:256]
+        if state in {"disabled", "error", "starting", "voice", "stt"}:
+            self._cancel_semantics()
         if state in {"disabled", "error"}:
             self._cancel_scenario()
             self._preview_text = None
@@ -899,6 +1090,15 @@ class PresenceView:
         started = time.monotonic()
         width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
         points = self.model.frame(width, height, started)
+        was_semantic = self.semantic.active
+        semantic_frame = self.semantic.frame(points, width, height, started, profile=self.settings.profile)
+        if semantic_frame is not None:
+            points = semantic_frame.contour
+        elif was_semantic:
+            self._semantic_preview = False
+            self._preview_text = None
+            if self.state in {"silent", "listening"}:
+                self._set_tone(Tone())
         coords = [coordinate for point in points for coordinate in point]
         scale = dpi_scale(self.canvas.tk.call("tk", "scaling"))
         fps, count, arc_count = render_quality(self.settings, width, height, scale,
@@ -912,7 +1112,7 @@ class PresenceView:
         # Speech displacement and amplitude still come exclusively from PCM.
         mood_halo = {"colère": 1.15, "peur": 1.08, "apaisement": .85,
                      "attachement": 1.1}.get(self.dominant_tone.name, 1.0)
-        strength = 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
+        strength = 1.0 if semantic_frame is not None else 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
         breath = 0.0
         if self.state == "thinking" and self.model.motion_allowed:
             breath = math.sin((started - self.model.state_since) * 1.1)
@@ -929,19 +1129,38 @@ class PresenceView:
         highlight = mix(accent, self._colors["foreground"], .32)
         for index, (path, offset, length) in enumerate(zip(self.orbital_paths,
                                                          (0.03, 0.43, 0.72), (0.20, 0.12, 0.16))):
-            visible = self.state == "thinking" and index < arc_count
+            visible = semantic_frame is None and self.state == "thinking" and index < arc_count
             if visible:
                 self.canvas.coords(path, *_mesh_arc(points, offset + phase, length))
             self.canvas.itemconfigure(path, state="normal" if visible else "hidden",
                                       width=widths[3] * (0.72 + index * 0.09),
                                       fill=mix(self.settings.background, highlight, 0.98 - index * 0.07))
+        detail_paths = self.semantic_paths if semantic_frame is not None or self._semantic_drawn else ()
+        for index, paths in enumerate(detail_paths):
+            detail = (semantic_frame.details[index] if semantic_frame is not None
+                      and index < len(semantic_frame.details) else ())
+            for layer, path in enumerate(paths):
+                visible = bool(detail) and (layer == 1 or self.settings.halos and count > 1)
+                if visible:
+                    self.canvas.coords(path, *[coordinate for point in detail for coordinate in point])
+                    opacity = semantic_frame.detail_opacity * (.18 if layer == 0 else .96)
+                    self.canvas.itemconfigure(path, width=widths[1 if layer == 0 else 3] * .65,
+                                              fill=mix(self.settings.background, accent, opacity))
+                self.canvas.itemconfigure(path, state="normal" if visible else "hidden")
+        self._semantic_drawn = semantic_frame is not None
         self._update_overlays(width)
         elapsed = time.monotonic() - started
         if elapsed > 0.012:
             self._slow_until = started + 3
-        if (self.model.needs_animation(started) or self.state != "dormant"
-                and self.settings.animations and self._accent.active(started)):
-            self.after_id = self.app.root.after(round(1000 / fps), self._tick)
+        normal_animation = (self.model.needs_animation(started) or self.state != "dormant"
+                            and self.settings.animations and self._accent.active(started))
+        delay = round(1000 / fps)
+        if self.semantic.active:
+            semantic_delay = self.semantic.next_delay_ms(started, delay)
+            if semantic_delay is not None:
+                delay = min(delay, semantic_delay) if normal_animation else semantic_delay
+        if normal_animation or self.semantic.active:
+            self.after_id = self.app.root.after(delay, self._tick)
 
     def _tick(self):
         self.after_id = None
@@ -1072,6 +1291,13 @@ class PresenceView:
         self._saved_preferences = values
         old_mode = self.settings.spectrum_mode
         self.settings = self.model.settings = candidate
+        if not candidate.semantic_morphing:
+            self.semantic.cancel()
+            self._semantic_cues.clear()
+            if self._semantic_preview:
+                self._semantic_preview, self._preview_text = False, None
+        elif self.semantic.active and (candidate.reduced_motion or not candidate.animations):
+            self._trigger_morph(self.semantic.family, time.monotonic())
         if candidate.spectrum_mode != old_mode:
             self.analyzer = ToneAnalyzer(mode=candidate.spectrum_mode, hold_seconds=0)
             self.mood_tracker = MoodTracker(mode=candidate.spectrum_mode)
@@ -1150,6 +1376,37 @@ class PresenceView:
         visual = page("Visualiseur")
         spectrum_page = page("Spectre et aperçu")
         captions_page = page("Sous-titres")
+        expressions_page = page("Expressions")
+        morph_enabled = tk.BooleanVar(value=self.settings.semantic_morphing)
+        ttk.Checkbutton(expressions_page, text="Semantic Morphing", variable=morph_enabled,
+                        command=lambda: self.set_options(semantic_morphing=morph_enabled.get())).pack(anchor="w", pady=8)
+        tk.Label(expressions_page, text="Intensité de l’expression", bg=colors["background"],
+                 fg=colors["foreground"]).pack(anchor="w")
+        morph_intensity = tk.StringVar(value=MORPH_INTENSITY_LABELS[self.settings.morph_intensity])
+        morph_choice = ttk.Combobox(expressions_page, state="readonly", textvariable=morph_intensity,
+                                    values=list(MORPH_INTENSITY_LABELS.values()))
+        morph_choice.pack(fill="x", pady=8)
+        morph_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
+            morph_intensity=next(key for key, label in MORPH_INTENSITY_LABELS.items() if label == morph_intensity.get())))
+        tk.Label(expressions_page, text="Aperçu vectoriel local · huit familles", bg=colors["background"],
+                 fg=colors["foreground"]).pack(anchor="w", pady=(12, 4))
+        morph_family = tk.StringVar(value=EXPRESSION_LABELS["smile"])
+        ttk.Combobox(expressions_page, state="readonly", textvariable=morph_family,
+                     values=list(EXPRESSION_LABELS.values())).pack(fill="x", pady=4)
+        morph_status = tk.StringVar(value="Au repos, sans Ollama ni Piper")
+        def preview_morph():
+            family = next(key for key, label in EXPRESSION_LABELS.items() if label == morph_family.get())
+            available = self.preview_expression(family)
+            morph_status.set("Aperçu hors ligne : " + EXPRESSION_LABELS[family] if available
+                             else "Désactivez l’écoute et attendez le repos pour cet aperçu.")
+        ttk.Button(expressions_page, text="Prévisualiser l’expression", command=preview_morph).pack(fill="x", pady=6)
+        ttk.Button(expressions_page, text="Arrêter l’aperçu", command=self.clear_preview).pack(fill="x", pady=4)
+        tk.Label(expressions_page, textvariable=morph_status, bg=colors["background"],
+                 fg=colors["muted"], wraplength=360).pack(anchor="w", pady=8)
+        tk.Label(expressions_page, text="Réduction des mouvements / animations désactivées : symbole statique.\n"
+                 "Synchronisation estimée par segment PCM. Au milieu d’une phrase, un creux audio est prioritaire ;\n"
+                 "sinon l’expression attend la fin du segment. Toute reprise audio ou parole micro annule le symbole.",
+                 bg=colors["background"], fg=colors["muted"], wraplength=360, justify="left").pack(anchor="w", pady=8)
         tk.Label(visual, text="Profil graphique", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
         profile = tk.StringVar(value=PROFILE_LABELS[self.settings.profile])
         choice = ttk.Combobox(visual, state="readonly", values=list(PROFILE_LABELS.values()), textvariable=profile)
@@ -1313,6 +1570,7 @@ class PresenceView:
         return "break"
 
     def return_to_command(self):
+        self._cancel_semantics()
         self.clear_preview()
         if self.window is not None:
             self.window.withdraw()
@@ -1332,11 +1590,13 @@ class PresenceView:
 
     def _on_unmap(self, event):
         if event.widget is self.window:
+            self._cancel_semantics()
             self.clear_preview()
             self._cancel_animation()
 
     def _on_destroy(self, event):
         if event.widget is self.window:
+            self._cancel_semantics()
             self._cancel_scenario()
             self._caption_font = None
             self._cancel_animation()
@@ -1344,6 +1604,7 @@ class PresenceView:
             self.settings_dialog = None
 
     def close(self):
+        self._cancel_semantics()
         self.clear_preview()
         self._cancel_scenario()
         self._cancel_animation()

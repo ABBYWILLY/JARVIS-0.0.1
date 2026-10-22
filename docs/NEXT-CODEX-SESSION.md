@@ -7,8 +7,24 @@ Typographie persistante via préférence `conversation`, copie source explicite,
 liens HTTPS validés puis ouverture confirmée. SQLite et sélection affichée préservés.
 Lot 1 validé : 390 tests exécutés, 381 réussis et 9 ignorés (dépendances/modèles
 absents). Rendu : 16 tests verts sous Tk8.6 et Tk9. Tableaux textuels avec repli ;
-256 URL interactives au maximum, texte/source conservés au-delà. Lots 2–3 à suivre :
-morphing vectoriel réel, fin de segment audio, huit familles et prévisualisation.
+256 URL interactives au maximum, texte/source conservés au-delà. CI lot 1 verte :
+run 39842257220, commit 2f896d7.
+Lots 2–3 implémentés ensemble sur le même moteur vectoriel : huit familles réelles
+(sourire, rire, affection, tristesse, colère, surprise, réflexion, complicité).
+Contour principal existant transformé ; détails et halos réutilisés, catalogue local.
+Événements source/response_id/segment_id préparés à l’arrivée ; fin de segment émise
+après tous les blocs réellement joués, derniers PCM conservés avant fin visuelle.
+Queues bornées (64), maintien statique sans frames inutiles, contexte et annulation
+par réponse. Émojis inconnus préservés dans les sous-titres sans forme inventée.
+Queues d’emojis après une phrase conservées sans requête TTS vide ; ASCII expressif
+retiré du TTS seulement, code/liens/chemins/citations/technique exclus du morphing.
+PRESENCE → Réglages → Expressions : activation, intensité, aperçu local 8 familles.
+Réduction de mouvement existante : symbole statique. Couleur Emotional Field conservée.
+Synchro approximative : emoji final à fin du segment réellement joué ; milieu lors
+un creux PCM estimé, sinon report à fin de segment. Reprise de parole, erreur,
+arrêt, masque et nouvelle réponse annulent ; micro ouvert silencieux peut maintenir
+un symbole bref sans retarder sa reprise350ms. Aucun timestamp mot à mot.
+Tests complets, mesures finales et CI du dernier SHA à confirmer avant livraison.
 Ne pas reprendre Emotional Field 3.0, Living Core 3.1 ni les optimisations J2.8.
 La cible historique de 100 emojis reste différée : cette mission porte sur 8 familles.
 Aucun téléchargement de modèle ou dépendance supplémentaire autorisé/nécessaire.

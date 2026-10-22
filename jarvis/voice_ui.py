@@ -42,6 +42,8 @@ class VoiceControls:
         self.segment_id = 0
         self.last_capture = self.last_speech = 0.0
         self.pending_visuals = []
+        self.pending_segment_ends = []
+        self.visual_end_pending = None
         self.pending_phrases = deque(maxlen=64)
         self.resume_id = None
         self.transcribing = False
@@ -125,6 +127,8 @@ class VoiceControls:
         self.speech.stop()
         self.epoch += 1
         self.pending_visuals.clear()
+        self.pending_segment_ends.clear()
+        self.visual_end_pending = None
         self.pending_phrases.clear()
         self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
         self.end_pending = self.reading = self.listening = False
@@ -209,7 +213,20 @@ class VoiceControls:
 
     def feed_speech(self, text, final=False):
         for segment in self.segmenter.feed(text, final=final):
-            self.segment_id += 1
+            if not self.reading:
+                break  # A saturated/cancelled submission invalidates its tail.
+            visual_only = getattr(segment, "visual_only", False)
+            if not visual_only:
+                self.segment_id += 1
+            presence = getattr(self.app, "presence", None)
+            queue_expressions = getattr(type(presence), "queue_expressions", None)
+            if visual_only:
+                # A streamed emoji after an already submitted sentence belongs
+                # to its visual timeline, never to an empty Piper request.
+                if callable(queue_expressions):
+                    queue_expressions(presence, self.epoch, self.segment_id,
+                                      segment.original, segment.start, segment.end, segment.events)
+                continue
             # Keep display/emoji text out of the engine; retain source positions
             # for captions and later PCM-triggered visual events.
             document = parse_text(segment.original)
@@ -222,16 +239,18 @@ class VoiceControls:
                            "spectrum_mode", "expression")
             if mode not in {"expression", "thematic", "neutral"}:
                 mode = "expression"
-            presence = getattr(self.app, "presence", None)
             prepare_field = getattr(type(presence), "prepare_segment", None)
             if callable(prepare_field):
                 events, plan = prepare_field(presence, segment.original, display, segment.start)
             else:
                 events = analyze_passages(segment.original, mode=mode, start=segment.start)
                 plan = prepare_caption(display, mode=mode)
+            if callable(queue_expressions):
+                queue_expressions(presence, self.epoch, self.segment_id,
+                                  segment.original, segment.start, segment.end, segment.events)
             self.submit_phrase(SpeechText(segment.text, original=segment.original,
                 display_text=display, start=segment.start, end=segment.end,
-                events=segment.events, segment_id=self.segment_id,
+                events=segment.events, segment_id=self.segment_id, response_id=self.epoch,
                 spectrum_events=events, spectrum_mode=mode, caption_plan=plan))
 
     def finish_turn(self, status):
@@ -261,6 +280,8 @@ class VoiceControls:
         self.playing_sample = False
         self.epoch += 1
         self.pending_visuals.clear()
+        self.pending_segment_ends.clear()
+        self.visual_end_pending = None
         self.pending_phrases.clear()
         self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
         self.end_pending = False
@@ -430,6 +451,14 @@ class VoiceControls:
                     self.publish_timing(complete=True)
                 self.pending_visuals.append((view["emitted_at"] + view["delay"], view, self.epoch))
                 self.pending_visuals = self.pending_visuals[-64:]
+            elif event.kind == "segment_done":
+                # Keep this boundary behind every preceding DAC-timed callback.
+                # No audio waits for the UI; only the visual notification does.
+                due = max(now, event.payload.get("completed_at", now),
+                          max((due for due, _view, epoch in self.pending_visuals
+                               if epoch == self.epoch), default=now))
+                self.pending_segment_ends.append((due, event.payload, self.epoch))
+                self.pending_segment_ends = self.pending_segment_ends[-64:]
             elif event.kind == "tts_pcm_ready":
                 if "Piper : synthèse du premier bloc" not in self.latencies:
                     self.set_latency("Piper : synthèse du premier bloc", event.payload["elapsed_ms"])
@@ -445,25 +474,41 @@ class VoiceControls:
                 self.reading = False
                 if not self.app.operation:
                     self.app.stop_button.configure(state="disabled")
-                self.pending_visuals.clear()
                 self.status.set("Lecture terminée")
                 if self.listening:
                     self.schedule_resume()
-                self.notify_presence("listening" if self.listening else "silent")
+                self.visual_end_pending = (self.epoch, "listening" if self.listening else "silent")
             elif event.kind == "error":
                 self.cancel_speech(status="error")
                 self.status.set(str(event.payload))
-        for due, view, epoch in self.pending_visuals[:]:
-            if due <= now:
-                if epoch == self.epoch:
-                    self.notify_presence("jarvis_speaking", signal=view, caption=view)
-                self.pending_visuals.remove((due, view, epoch))
+        self._drain_visuals(now)
         self.drain_phrases()
         if self.end_pending and not self.pending_phrases and self.speech.send(None):
             self.end_pending = False
         if self.speech.process is not None and not self.speech.alive() and now - self.last_speech > 0.5:
             self.cancel_speech(status="error")
             self.status.set("Processus de lecture arrêté ; texte conservé.")
+
+    def _drain_visuals(self, now):
+        """Deliver final PCM, segment boundaries, then the final functional state."""
+        for due, view, epoch in self.pending_visuals[:]:
+            if due <= now:
+                if epoch == self.epoch:
+                    self.notify_presence("jarvis_speaking", signal=view, caption=view)
+                self.pending_visuals.remove((due, view, epoch))
+        for due, payload, epoch in self.pending_segment_ends[:]:
+            if due <= now:
+                if epoch == self.epoch:
+                    presence = getattr(self.app, "presence", None)
+                    complete = getattr(type(presence), "complete_segment", None)
+                    if callable(complete):
+                        complete(presence, payload)
+                self.pending_segment_ends.remove((due, payload, epoch))
+        if self.visual_end_pending is not None and not self.pending_visuals and not self.pending_segment_ends:
+            epoch, state = self.visual_end_pending
+            self.visual_end_pending = None
+            if epoch == self.epoch:
+                self.notify_presence(state)
 
     def record_diagnostic(self, kind, payload):
         stamp = time.strftime("%H:%M:%S")

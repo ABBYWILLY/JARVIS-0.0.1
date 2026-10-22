@@ -8,6 +8,9 @@ import ipaddress
 import re
 from urllib.parse import urlsplit
 
+from .expressions import (ascii_expressions, context_exclusions, expression_family,
+                          merge_ranges, overlaps, spoken_context_symbols)
+
 
 @dataclass(frozen=True)
 class Span:
@@ -43,6 +46,7 @@ class SpeechSegment:
     start: int
     end: int
     events: tuple = ()
+    visual_only: bool = False
 
 
 def safe_url(value):
@@ -214,6 +218,7 @@ def verbalize_math(text):
 
 
 def _speech_text(text):
+    text = spoken_context_symbols(text)
     ranges = list(_emoji_ranges(text))
     for start, end in reversed(ranges):
         text = text[:start] + " " + text[end:]
@@ -231,6 +236,9 @@ class _Scanner:
         self.text, self.final, self.speak_code = text, final, speak_code
         self.spans, self.speech, self.events = [], [], []
         self.protected, self.incomplete = [], []
+        self.expression_exclusions = context_exclusions(text)
+        self.ascii_expressions = {start: (end, value) for start, end, value in
+                                  ascii_expressions(text, self.expression_exclusions)}
 
     def add(self, text, tags=(), url=None, speech=None):
         if not text and speech is None:
@@ -397,6 +405,14 @@ class _Scanner:
                     continue
                 tags = inherited + tuple(tag for _, tag, _ in stack)
             char = text[i]
+            expression = self.ascii_expressions.get(i)
+            if expression and not {"code", "codeblock", "link", "math"}.intersection(tags):
+                stop, value = expression
+                self.add(value, tags, speech=" ")
+                self.event("expression", i, stop, value)
+                self.protect(i, stop)
+                i = stop
+                continue
             keycap = re.match("\\*[\ufe0e\ufe0f]?\u20e3", text[i:i + 3])
             if keycap:
                 self.add(keycap[0], tags)
@@ -522,7 +538,9 @@ class _Scanner:
                 continue
             # Coalesce plain runs rather than processing every character separately.
             stop = i + 1
-            while stop < end and text[stop] not in "\n\\`[*_$+=" and not text.startswith(("http://", "https://", "ftp://", "www."), stop):
+            while (stop < end and stop not in self.ascii_expressions
+                   and text[stop] not in "\n\\`[*_$+="
+                   and not text.startswith(("http://", "https://", "ftp://", "www."), stop)):
                 stop += 1
             self.add(text[i:stop], tags)
             i = stop
@@ -588,8 +606,12 @@ class _Scanner:
 
     def document(self):
         self.scan()
+        excluded = merge_ranges(self.expression_exclusions + tuple((event.start, event.end)
+                                for event in self.events if event.kind in {"code", "link", "math"}))
         for start, end in _emoji_ranges(self.text):
             self.event("emoji", start, end, self.text[start:end])
+            if expression_family(self.text[start:end]) and not overlaps(start, end, excluded):
+                self.event("expression", start, end, self.text[start:end])
         return RichDocument(self.text, tuple(self.spans), _speech_text("".join(self.speech)),
                             tuple(sorted(self.events, key=lambda event: (event.start, event.end, event.kind))))
 
@@ -628,7 +650,7 @@ class SpeechBuffer:
                 position = match.start()
                 # A trailing colon may still become an URL scheme (https:).
                 # Ordinary sentence endings can start playback immediately.
-                if position + 1 == len(source) and source[position] == ":" and not final:
+                if position + 1 == len(source) and source[position] in ":;" and not final:
                     continue
                 # Decimal points are never sentence endings, including a streamed '2.'.
                 if source[position] == "." and position and source[position - 1].isdigit():
@@ -656,7 +678,11 @@ class SpeechBuffer:
             start = self._cursor
             self._cursor += stop
             events = tuple(TextEvent(event.kind, event.start + start, event.end + start, event.value) for event in document.events)
-            if document.speech:
+            expressive = any(event.kind in {"expression", "emoji"} for event in events)
+            punctuation_only = not document.speech.strip(" \t\r\n.!?,;:…-–—()[]{}")
+            if document.speech and not (expressive and punctuation_only):
                 result.append(SpeechSegment(document.speech, raw, start, self._cursor, events))
                 self.emitted = True
+            elif expressive:
+                result.append(SpeechSegment("", raw, start, self._cursor, events, visual_only=True))
         return result

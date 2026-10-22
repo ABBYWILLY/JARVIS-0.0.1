@@ -55,6 +55,33 @@ class SimulatedAudioProcess:
         return self.process is not None
 
 
+class SemanticPresenceRecorder:
+    """Record optional semantic hooks without a graphics or audio engine."""
+    state = "silent"
+
+    def __init__(self):
+        self.events, self.queued = [], []
+
+    def update_event(self, state, signal=None, caption=None):
+        self.state = state
+        self.events.append((state, caption))
+
+    def queue_expressions(self, *args):
+        self.queued.append(args)
+
+    def complete_segment(self, payload):
+        self.events.append(("segment_done", payload))
+
+    def update_microphone(self, state, detail=""):
+        pass
+
+    def update_timing(self, *args, **kwargs):
+        pass
+
+    def close(self):
+        pass
+
+
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")
 class VoiceFlowTests(unittest.TestCase):
     def setUp(self):
@@ -98,6 +125,83 @@ class VoiceFlowTests(unittest.TestCase):
         self.voice.chunk("Voici une phrase complète.")
         self.assertTrue(self.voice.speech.alive())
         return mid
+
+    def semantic_playback(self, *, delay=0):
+        recorder = self.app.presence = SemanticPresenceRecorder()
+        self.activate("headphones")
+        self.begin_simulated_audio_turn()
+        recorder.events.clear()
+        epoch = self.voice.epoch
+        payload = {"text": "Voici une phrase complète.", "response_id": epoch, "segment_id": 1,
+                   "fraction": 1, "rms": .1, "wave": [.1, -.1],
+                   "emitted_at": 10.0, "delay": delay, "started_at": 10.0 + delay}
+        self.voice.speech.events.extend([
+            AudioEvent("played", payload, epoch),
+            AudioEvent("segment_done", {**payload, "completed_at": 10.0}, epoch),
+            AudioEvent("speech_done", generation=epoch),
+        ])
+        return recorder, epoch
+
+    def test_final_pcm_is_delivered_before_segment_completion_and_final_state(self):
+        recorder, epoch = self.semantic_playback()
+        with patch("jarvis.voice_ui.time.monotonic", return_value=10.1):
+            self.voice.poll()
+        self.assertEqual([kind for kind, _ in recorder.events],
+                         ["jarvis_speaking", "segment_done", "listening"])
+        self.assertEqual(recorder.events[1][1]["response_id"], epoch)
+        self.assertFalse(self.voice.pending_visuals)
+        self.assertFalse(self.voice.pending_segment_ends)
+        self.assertIsNone(self.voice.visual_end_pending)
+        self.assertFalse(self.voice.tts_active)
+
+    def test_dac_delay_defers_only_visual_completion_without_delaying_audio_finish(self):
+        recorder, epoch = self.semantic_playback(delay=2)
+        with patch("jarvis.voice_ui.time.monotonic", return_value=10.1):
+            self.voice.poll()
+        self.assertEqual(recorder.events, [])
+        self.assertFalse(self.voice.tts_active)
+        self.assertFalse(self.voice.reading)
+        self.assertEqual(self.voice.visual_end_pending, (epoch, "listening"))
+        self.assertEqual(len(self.voice.pending_visuals), 1)
+        self.assertEqual(len(self.voice.pending_segment_ends), 1)
+        with patch("jarvis.voice_ui.time.monotonic", return_value=12.1):
+            self.voice.poll()
+        self.assertEqual([kind for kind, _ in recorder.events],
+                         ["jarvis_speaking", "segment_done", "listening"])
+        self.assertIsNone(self.voice.visual_end_pending)
+
+    def test_interruption_invalidates_delayed_segment_completion_and_old_generation(self):
+        recorder, old_epoch = self.semantic_playback(delay=2)
+        with patch("jarvis.voice_ui.time.monotonic", return_value=10.1):
+            self.voice.poll()
+        self.voice.cancel_speech()
+        recorder.events.clear()
+        self.voice.speech.events.append(AudioEvent("segment_done", {"completed_at": 10.0}, old_epoch))
+        with patch("jarvis.voice_ui.time.monotonic", return_value=12.1):
+            self.voice.poll()
+        self.assertEqual(recorder.events, [])
+        self.assertFalse(self.voice.pending_visuals)
+        self.assertFalse(self.voice.pending_segment_ends)
+        self.assertIsNone(self.voice.visual_end_pending)
+
+    def test_visual_only_emoji_tail_attaches_to_previous_segment_without_empty_piper_request(self):
+        recorder = self.app.presence = SemanticPresenceRecorder()
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.voice.chunk("Bonjour. ")
+        self.voice.chunk("😊")
+        self.voice.finish_turn("complete")
+        phrases = [command for command in self.voice.speech.commands if command is not None]
+        self.assertEqual([str(command) for command in phrases], ["Bonjour."])
+        self.assertEqual(self.voice.segment_id, 1)
+        self.assertTrue(all(command.response_id == self.voice.epoch for command in phrases))
+        self.assertEqual([entry[1] for entry in recorder.queued], [1, 1])
+        response_id, segment_id, original, start, end, events = recorder.queued[-1]
+        self.assertEqual((response_id, segment_id), (self.voice.epoch, 1))
+        self.assertEqual(original, "😊")
+        self.assertEqual((start, end), (9, 10))
+        self.assertEqual([event.value for event in events if event.kind == "expression"], ["😊"])
 
     def test_microphone_closed_until_explicit_acceptance_and_toggle_stops_it(self):
         self.assertFalse(self.voice.listening)

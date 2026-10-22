@@ -20,11 +20,12 @@ class SpeechPipelineTests(unittest.TestCase):
         segment = SpeechBuffer().feed(source, final=True)[0]
         command = SpeechText(segment.text, original=segment.original,
             display_text=parse_text(segment.original).text, start=segment.start,
-            end=segment.end, events=segment.events, segment_id=7,
+            end=segment.end, events=segment.events, segment_id=7, response_id=41,
             caption_plan=prepare_caption(parse_text(segment.original).text))
         restored = pickle.loads(pickle.dumps(command))
         self.assertEqual(str(restored), segment.text)
         self.assertEqual(restored.__dict__, command.__dict__)
+        self.assertEqual(restored.response_id, 41)
         self.assertIn("👩🏽‍🚀", restored.display_text)
         self.assertNotIn("👩", str(restored))
 
@@ -51,7 +52,7 @@ class SpeechPipelineTests(unittest.TestCase):
         piper.return_value.synthesize.assert_called_once_with(document.speech)
         events = list(outbox.queue)
         self.assertEqual([event.kind for event in events],
-            ["tts_ready", "tts_pcm_ready", "played", "speech_done"])
+            ["tts_ready", "tts_pcm_ready", "played", "segment_done", "speech_done"])
         event = events[2]
         self.assertEqual(event.generation, 9)
         self.assertEqual(event.payload["text"], document.text)
@@ -62,6 +63,7 @@ class SpeechPipelineTests(unittest.TestCase):
         self.assertNotIn("❤️", event.payload["spoken_text"])
         self.assertEqual(event.payload["original_start"], 12)
         self.assertEqual(event.payload["segment_id"], 3)
+        self.assertEqual(event.payload["response_id"], 9)
         self.assertEqual(event.payload["spectrum_mode"], "expression")
         self.assertTrue(event.payload["spectrum_events"])
         for passage in event.payload["spectrum_events"]:
@@ -71,6 +73,30 @@ class SpeechPipelineTests(unittest.TestCase):
         self.assertIn("approximatif", event.payload["alignment"])
         self.assertTrue(any(item["kind"] == "emoji" for item in event.payload["text_events"]))
         self.assertEqual(event.payload["delay"], 0.02)
+        completed = events[3]
+        self.assertEqual(completed.generation, 9)
+        self.assertEqual(completed.payload["segment_id"], 3)
+        self.assertEqual(completed.payload["response_id"], 9)
+        self.assertIsInstance(completed.payload["completed_at"], float)
+
+    def test_completion_is_once_after_all_pcm_blocks_not_after_the_first_fraction(self):
+        command = SpeechText("Bonjour.", segment_id=2, response_id=8)
+        inbox, outbox = queue.Queue(), queue.Queue()
+        inbox.put(command)
+        inbox.put(None)
+
+        def played(pcm, text, emit, generation):
+            emit(AudioEvent("played", {"fraction": 1, "rms": .1}, generation))
+
+        with patch("jarvis.tts.PiperSpeech") as piper, patch("jarvis.tts.AudioPlayer") as player:
+            piper.return_value.synthesize.return_value = [PCM([.1], 16000), PCM([.2], 16000)]
+            player.return_value.play.side_effect = played
+            speech_worker(outbox, inbox, VoiceSettings().to_dict(), 8)
+        events = list(outbox.queue)
+        self.assertEqual([event.kind for event in events], ["tts_ready", "tts_pcm_ready", "played",
+            "tts_pcm_ready", "played", "segment_done", "speech_done"])
+        self.assertEqual([event.payload["response_id"] for event in events if event.kind == "played"], [8, 8])
+        self.assertEqual(events[-2].payload["segment_id"], 2)
 
     def test_code_reading_is_explicit_and_preferences_round_trip(self):
         self.assertFalse(VoiceSettings().speak_code)

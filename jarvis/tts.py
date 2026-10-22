@@ -17,7 +17,7 @@ class PCM:
 class SpeechText(str):
     """Clean speech plus source metadata, picklable across Windows spawn IPC."""
     def __new__(cls, text, *, original=None, display_text=None, start=0, end=None,
-                events=(), segment_id=0, spectrum_events=(), spectrum_mode="expression", caption_plan=None):
+                events=(), segment_id=0, response_id=0, spectrum_events=(), spectrum_mode="expression", caption_plan=None):
         instance = super().__new__(cls, text)
         instance.original = text if original is None else original
         instance.display_text = text if display_text is None else display_text
@@ -25,6 +25,7 @@ class SpeechText(str):
         instance.end = start + len(instance.original) if end is None else end
         instance.events = tuple(events)
         instance.segment_id = segment_id
+        instance.response_id = response_id
         instance.spectrum_events = tuple(spectrum_events)
         instance.spectrum_mode = spectrum_mode
         instance.caption_plan = caption_plan

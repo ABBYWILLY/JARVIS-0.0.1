@@ -578,3 +578,23 @@ validés, aperçu puis ouverture explicite confirmée. Aucun HTML actif.
 Cache interactif borné à 256 URL ; originaux et texte toujours conservés.
 Validation : 390 tests exécutés, 381 réussis, 9 ignorés (natifs/modèles absents).
 16 tests de rendu réussis sous Tk8.6 et Tk9. Recette Windows physique à effectuer.
+
+## PRESENCE 3.2 — lots 2–3 Semantic Morphing
+
+Un même moteur vectoriel léger pour les huit familles (pas de placeholders) :
+sourire, rire, affection, tristesse, colère, surprise, réflexion, complicité.
+Le contour principal du Canvas existant se contracte depuis sa géométrie visible,
+se transforme en symbole puis retrouve l’état réel ; détails et halos mutualisés.
+Réglages persistants d’activation/intensité, aperçu hors ligne des huit familles,
+réduction du mouvement statique. Couleur du mood conservée, aucun moteur nouveau.
+Événements source et scopes réponse/segment préparés à l’arrivée. Worker : fin de
+segment après tous les PCM réellement joués. Drain final préservé, annulation et
+queues64 bornées. Tails visuels après ponctuation attachés à la phrase précédente,
+emojis connus/inconnus conservés dans les sous-titres, aucun audio fictif.
+Synchronisation estimée, jamais mot à mot : milieu sur creux PCM réel puis cède à
+la reprise ; à défaut, report à fin de segment. Les expressions finales ne
+retardent ni l’audio ni la reprise micro350ms. Un micro ouvert silencieux n’est pas
+une interruption ; vraie voix, nouvelle parole, erreur et arrêt restent prioritaires.
+Validation : suite433/424réussis/9ignorés avant derniers cas de queue inconnue, puis
+39 tests ciblés réussis (Tk8.6, géométries/parseur/intégration) après correctifs.
+Suite finale et CI du dernier SHA à confirmer ; recette physique Windows restante.

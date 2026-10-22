@@ -220,11 +220,13 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
                 return
             # Piper may split a phrase; report per-chunk captions as an approximation.
             playback_emit = emit
+            caption_metadata = None
+            played_any = False
             if isinstance(text, SpeechText):
                 from dataclasses import asdict
                 caption_metadata = {"text": text.display_text, "spoken_text": str(text),
                     "original_start": text.start, "original_end": text.end,
-                    "segment_id": text.segment_id,
+                    "segment_id": text.segment_id, "response_id": generation,
                     "text_events": [dict(asdict(event), value=event.value[:256]) for event in text.events],
                     "spectrum_events": [dict(asdict(event), text=event.text[:512]) for event in text.spectrum_events],
                     "spectrum_mode": text.spectrum_mode,
@@ -233,7 +235,9 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
                     caption_metadata["caption_plan"] = asdict(text.caption_plan)
 
                 def playback_emit(event):
+                    nonlocal played_any
                     if event.kind == "played":
+                        played_any = True
                         event = AudioEvent(event.kind, {**event.payload, **caption_metadata}, event.generation)
                     emit(event)
 
@@ -242,6 +246,11 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
                 emit(AudioEvent("tts_pcm_ready", {"elapsed_ms": round((time.monotonic() - synthesis_at) * 1000)}, generation))
                 player.play(pcm, str(text), playback_emit, generation)
                 synthesis_at = time.monotonic()
+            if caption_metadata is not None and played_any:
+                # AudioPlayer returns after the device stream finishes. This is
+                # a whole-segment boundary, unlike per-Piper-block fractions.
+                emit(AudioEvent("segment_done", {**caption_metadata,
+                    "completed_at": time.monotonic()}, generation))
     except Exception as exc:
         emit_event(outbox, AudioEvent("tts_load_error" if persistent and loading else "error", audio_error(exc), generation))
 
