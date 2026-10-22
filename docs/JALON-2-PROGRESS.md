@@ -493,3 +493,32 @@ richtext, markdown_ui, metrics, test_jarvis.ProtocolTests/ DesktopTests. Inclut 
 source→voix→PCM→PRESENCE et interruption. PRESENCE38 tests aussi passés sous Tk9.
 Aucune dépendance nouvelle, téléchargement de poids ou validation matérielle Windows.
 Build Windows Markdown/TTS12e47ab réussi (run39122219877), après correctif UnicodeTk8.6.
+
+
+## PRESENCE3 — sous-lot1, 22 octobre 2026
+
+Demande complète : PRESENCE-3-SPEC.md. Épaisseur persistante1–10/défaut6 ; trait
+3,44px et halo11px@96DPI, couches coïncidentes et trois sous-arcs préalloués issus
+du mesh unique. THINKING orbital centré (diamètre~29% petit côté), symbolique ;
+transitions ligne/noyau/PCM, silence parfaitement plat, sommeil compact immobile.
+Halos et animations désactivables, réduction des mouvements, profils/DPI/charge
+adaptatifs ; caches de signal/géométrie bornés et contrôles mis à jour si modifiés.
+Tests :106 ciblés (presence/integration/voice_flow/spectrum) sous Tk9 ;48 sous Tk8.6.
+Pas de modification moteur audio/LLM/SQLite ni de modèle/dépendance supplémentaire.
+
+Mesure reproductible : `DISPLAY=:99 python scripts/benchmark_presence.py candidate
+--output /tmp/presence-apres.json` (nouveau fichier obligatoire), `baseline` pour55311d1.
+Linux/Python3.12/Tk9/Xorg960×640, fixture PCM générée explicitement, deux séries de
+3 répétitions. CPU Python/Tcl par frame THINKING équilibré :599–659→489–555µs ;
+silence410–429→297–299µs. JARVIS parle560–589→546–662µs : aucun gain confirmé.
+7 objets canvas stables (4 auparavant), pas de timer silence/sommeil/masqué.
+Pic allocations Python Tk THINKING/24frames :99,54→94,90Kio ; pic modèle
+31,95→35,05Kio (hausse). Pas de mesure latence vocale réelle, Windows, RSS, VRAM
+ou énergie. Ne pas extrapoler ces micro-mesures à une amélioration matérielle.
+
+Recette Thinking Halo : PRESENCE→Réglages→Visualiseur ; épaisseur6, halos/animations
+actifs, Équilibré. Observer une vraie attente Ollama : noyau centré sans bruit audio,
+sous-arcs fluides, puis passage à la voix au premier PCM. Tester épaisseur1/10,
+DPI100/150/200%, fenêtre redimensionnée, Réduire mouvements, masque et sommeil,
+arrêt/interruption. Capture source Linux horsligne inspectée ; rendu Windows réel
+et périphériques à vérifier sur le PC, sans prétendre que la CI remplace cette recette.

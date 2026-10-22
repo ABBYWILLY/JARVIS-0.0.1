@@ -10,7 +10,8 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from jarvis.presence import (POINT_COUNT, PROFILES, AccentTransition, PresenceModel, PresenceSettings,
-                             PresenceView, contrast, core_radius, mix, palette, readable_accent)
+                             PresenceView, _mesh_arc, _smooth_wave, contrast, core_radius,
+                             dpi_scale, mix, palette, readable_accent, render_quality, stroke_widths)
 from jarvis.spectrum import CYAN, OPERATIONAL, Tone, caption_group
 from jarvis.storage import Store
 
@@ -21,6 +22,11 @@ SIGNAL = {"rms": 0.12, "wave": [0.05, -0.2, 0.15, 0.08, -0.13, 0.3, -0.08, 0.02]
 def bounds(points):
     xs, ys = zip(*points)
     return min(xs), min(ys), max(xs), max(ys)
+
+
+def widgets(parent):
+    return [widget for child in parent.winfo_children()
+            for widget in [child, *widgets(child)]]
 
 
 class PlaybackSpectrumTests(unittest.TestCase):
@@ -126,6 +132,85 @@ class PlaybackSpectrumTests(unittest.TestCase):
 
 
 class GeometryTests(unittest.TestCase):
+    def test_thickness_is_validated_and_independent_of_audio_expressivity(self):
+        self.assertEqual(PresenceSettings().visualizer_thickness, 6)
+        for value in (-1, 0, 11, True, "6", None, float("nan"), float("inf")):
+            self.assertEqual(PresenceSettings.from_dict({"visualizer_thickness": value}).visualizer_thickness, 6)
+        for value in (1, 6, 10):
+            self.assertEqual(PresenceSettings.from_dict({"visualizer_thickness": value}).visualizer_thickness, value)
+        models = [PresenceModel(PresenceSettings(visualizer_thickness=value)) for value in (1, 6, 10)]
+        for model in models:
+            model.update_event("user_speaking", SIGNAL, now=1)
+        self.assertTrue(all(model.target_geometry(1000, 700, now=1) ==
+                            models[0].target_geometry(1000, 700, now=1) for model in models))
+        widths = stroke_widths(6)
+        self.assertTrue(3 <= widths[-1] <= 4)
+        self.assertTrue(8 <= widths[0] <= 14)
+        self.assertAlmostEqual(dpi_scale(96 / 72), 1)
+        self.assertAlmostEqual(dpi_scale(144 / 72), 1.5)
+        self.assertEqual(stroke_widths(6, 1.5), tuple(width * 1.5 for width in widths))
+
+    def test_processing_core_diameter_and_real_pcm_expansion_are_bounded(self):
+        model = PresenceModel(PresenceSettings(reduced_motion=True))
+        for width, height in ((620, 440), (480, 840), (1920, 1080), (3440, 1440), (10000, 10000)):
+            model.update_event("thinking", now=1)
+            core = model.frame(width, height, now=1)
+            self.assert_centered(core, width, height)
+            diameter = bounds(core)[2] - bounds(core)[0]
+            self.assertTrue(0.25 <= diameter / min(width, height) <= 0.35)
+            model.update_event("jarvis_speaking", SIGNAL, now=2)
+            speaking = model.frame(width, height, now=2)
+            self.assertGreater(bounds(speaking)[2] - bounds(speaking)[0], diameter)
+            self.assertEqual(len(speaking), len(core))
+            model.update_event("jarvis_speaking", {"rms": 0, "wave": [1, -1]}, now=2.1)
+            self.assertTrue(all(y == height / 2 for _, y in model.frame(width, height, now=2.1)))
+
+    def test_reduced_motion_and_disabled_animations_freeze_orbital_geometry(self):
+        for settings in (PresenceSettings(reduced_motion=True), PresenceSettings(animations=False)):
+            model = PresenceModel(settings)
+            model.update_event("thinking", now=1)
+            self.assertEqual(model.frame(1000, 700, now=1), model.frame(1000, 700, now=90))
+            self.assertFalse(model.needs_animation(now=90))
+            model.update_event("silent", now=91)
+            self.assertTrue(all(y == 350 for _, y in model.frame(1000, 700, now=91)))
+
+    def test_pcm_filter_is_cached_at_event_arrival_and_static_mesh_cache_is_bounded(self):
+        model = PresenceModel()
+        with patch("jarvis.presence._smooth_wave", wraps=_smooth_wave) as smooth:
+            model.update_event("user_speaking", SIGNAL, now=1)
+            for index in range(5):
+                model.frame(1000, 700, now=1 + index * 0.02)
+            smooth.assert_called_once()
+            model.update_event("user_speaking", SIGNAL, now=2)
+            self.assertEqual(smooth.call_count, 2)
+        self.assertEqual(len(model._wave), POINT_COUNT)
+        model.update_event("silent", now=3)
+        first = model.target_geometry(1000, 700, now=3)
+        self.assertIs(first, model.target_geometry(1000, 700, now=4))
+        self.assertIsNot(first, model.target_geometry(900, 700, now=5))
+
+    def test_quality_profiles_cap_layers_fps_for_dpi_pixel_area_and_load(self):
+        for profile in PROFILES:
+            settings = PresenceSettings(profile=profile)
+            base = render_quality(settings, 1000, 700)
+            self.assertEqual(base[:2], PROFILES[profile])
+            for quality in (render_quality(settings, 3840, 2160, 2),
+                            render_quality(settings, 1000, 700, overloaded=True)):
+                self.assertLessEqual(quality[0], 16)
+                self.assertLessEqual(quality[1], 2)
+                self.assertLessEqual(quality[2], 1)
+            self.assertEqual(render_quality(PresenceSettings(profile=profile, halos=False), 1000, 700)[1:], (1, 0))
+
+    def test_circulating_arcs_are_interpolated_subsets_of_the_current_mesh(self):
+        model = PresenceModel()
+        model.update_event("thinking", now=1)
+        points = model.target_geometry(1000, 700, now=1.8)
+        arc = _mesh_arc(points, 0.95, 0.2)  # Wrap through the mesh seam.
+        for x, y in zip(arc[::2], arc[1::2]):
+            self.assertTrue(any(abs(math.dist(a, (x, y)) + math.dist((x, y), b) - math.dist(a, b)) < 1e-6
+                                for a, b in zip(points, points[1:])))
+        self.assertLess(len(arc), POINT_COUNT)
+
     def test_thinking_has_visible_organic_deformation_on_the_same_closed_mesh(self):
         model = PresenceModel()
         model.update_event("thinking", now=1)
@@ -236,7 +321,7 @@ class GeometryTests(unittest.TestCase):
         model = PresenceModel(PresenceSettings(reduced_motion=True))
         for width, height in ((620, 440), (480, 840), (1920, 1080), (3440, 1440), (900, 600)):
             for signal in (None, SIGNAL):
-                model.update_event("jarvis_speaking", signal, now=0)
+                model.update_event("thinking" if signal is None else "jarvis_speaking", signal, now=0)
                 points = model.frame(width, height, now=0.01)
                 self.assert_centered(points, width, height)
                 if signal is None:
@@ -244,8 +329,7 @@ class GeometryTests(unittest.TestCase):
                     for x, y in points:
                         self.assertAlmostEqual(math.hypot(x - width / 2, y - height / 2), radius, places=6)
                     self.assertAlmostEqual(bounds(points)[2] - bounds(points)[0], 2 * radius)
-        self.assertAlmostEqual(core_radius(1000, 700), 126)
-        self.assertLessEqual(core_radius(10000, 10000), 260)
+        self.assertAlmostEqual(core_radius(1000, 700), 101.5)
 
     def test_one_mesh_morphs_reversibly_and_interrupts_without_waiting(self):
         model = PresenceModel()
@@ -310,6 +394,88 @@ def display_available():
 
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")
 class PresenceTkTests(unittest.TestCase):
+    def test_thickness_halos_and_animations_controls_persist_and_fit_the_screen(self):
+        self.view.show()
+        self.view.open_settings()
+        self.root.update()
+        children = widgets(self.view.settings_dialog)
+        thickness = next(widget for widget in children if isinstance(widget, tk.Scale)
+                         and float(widget.cget("from")) == 1)
+        self.assertEqual(thickness.get(), 6)
+        thickness.set(9)
+        for text in ("Halos lumineux", "Animations visuelles"):
+            next(widget for widget in children if isinstance(widget, tk.Checkbutton)
+                 and widget.cget("text") == text).invoke()
+        self.root.update()
+        reopened = PresenceView(self.app)
+        self.addCleanup(reopened.close)
+        self.assertEqual(reopened.settings.visualizer_thickness, 9)
+        self.assertFalse(reopened.settings.halos)
+        self.assertFalse(reopened.settings.animations)
+        self.assertLessEqual(self.view.settings_dialog.winfo_height(), self.root.winfo_screenheight())
+
+    def test_layers_use_scaled_widths_and_orbital_highlights_reuse_canvas_items(self):
+        old_scaling = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", old_scaling))
+        self.root.tk.call("tk", "scaling", 96 / 72)
+        self.view.set_options(profile="cinematic", reduced_motion=True)
+        self.view.show()
+        self.view.update_event("thinking")
+        self.root.update()
+        items = self.view.canvas.find_all()
+        coords = self.view.canvas.coords(self.view.paths[-1])
+        widths = stroke_widths(6, dpi_scale(self.root.tk.call("tk", "scaling")))
+        for path, expected in zip(self.view.paths, widths):
+            self.assertEqual(self.view.canvas.coords(path), coords)
+            self.assertAlmostEqual(float(self.view.canvas.itemcget(path, "width")), expected)
+            self.assertEqual(self.view.canvas.itemcget(path, "capstyle"), "round")
+        for path in self.view.orbital_paths:
+            self.assertEqual(self.view.canvas.itemcget(path, "state"), "normal")
+            self.assertLess(len(self.view.canvas.coords(path)), len(coords))
+        for _ in range(5):
+            self.view._render()
+        self.assertEqual(self.view.canvas.find_all(), items)
+        self.assertIsNone(self.view.after_id)
+        self.view.set_options(halos=False)
+        self.assertEqual([self.view.canvas.itemcget(path, "state") for path in self.view.paths],
+                         ["hidden", "hidden", "hidden", "normal"])
+        self.assertTrue(all(self.view.canvas.itemcget(path, "state") == "hidden"
+                            for path in self.view.orbital_paths))
+
+    def test_disabled_motion_profiles_and_hidden_window_leave_no_orbital_callbacks(self):
+        self.view.show()
+        self.root.update()
+        for profile in PROFILES:
+            self.view.set_options(profile=profile, animations=False)
+            self.view.update_event("thinking")
+            before = self.view.canvas.coords(self.view.paths[-1])
+            self.view._render()
+            self.assertEqual(self.view.canvas.coords(self.view.paths[-1]), before)
+            self.assertIsNone(self.view.after_id)
+        self.view.set_options(animations=True)
+        self.assertIsNotNone(self.view.after_id)
+        self.view.return_to_command()
+        self.assertIsNone(self.view.after_id)
+        self.view.update_event("thinking")
+        self.assertIsNone(self.view.after_id)
+
+    def test_error_and_microphone_off_operations_immediately_clear_pending_morph_and_caption(self):
+        self.view.show()
+        self.root.update()
+        for operation in ("error", "inactive"):
+            self.view.update_event("jarvis_speaking", SIGNAL, {"text": "Phrase en cours", "fraction": 1})
+            self.assertTrue(self.view.caption_text)
+            self.view.update_event("thinking")
+            self.assertIsNotNone(self.view.after_id)
+            self.view.update_operation(operation, "Arrêt fonctionnel")
+            self.assertEqual(self.view.state, "silent")
+            self.assertTrue(all(y == self.view.canvas.winfo_height() / 2 for _, y in self.view.model.points))
+            self.assertEqual(self.view.caption_text, "")
+            self.assertIsNone(self.view.caption_data)
+            self.assertIsNone(self.view.after_id)
+            self.assertTrue(all(self.view.canvas.itemcget(path, "state") == "hidden"
+                                for path in self.view.orbital_paths))
+
     def test_timing_monitor_uses_measured_history_hides_and_preserves_core_centre(self):
         self.view.set_options(reduced_motion=True)
         self.view.show()
@@ -378,12 +544,15 @@ class PresenceTkTests(unittest.TestCase):
         self.view.show()
         self.assertIsNot(self.view.window, original)
         self.assertEqual(self.view.state, "thinking")
+        self.root.update()
+        self.assertEqual(self.view.state_label.cget("text"), "TRAITEMENT LOCAL")
+        self.assertEqual(self.view.timing_panel.winfo_manager(), "place")
 
     def test_expressivity_slider_persists_without_touching_voice_preferences(self):
         self.store.set_preference("voice", {"vad_threshold": 0.6, "silence_ms": 800})
         self.view.show()
         self.view.open_settings()
-        slider = next(child for child in self.view.settings_dialog.winfo_children() if isinstance(child, tk.Scale))
+        slider = next(child for child in widgets(self.view.settings_dialog) if isinstance(child, tk.Scale))
         self.assertEqual(slider.get(), 65)
         self.root.update()
         slider.set(90)
@@ -400,12 +569,15 @@ class PresenceTkTests(unittest.TestCase):
         self.root.update()
         size = (self.view.canvas.winfo_width(), self.view.canvas.winfo_height())
         self.view.open_settings()
-        children = self.view.settings_dialog.winfo_children()
+        next(widget for widget in self.view.settings_dialog.winfo_children()
+             if isinstance(widget, ttk.Notebook)).select(1)
+        self.root.update()
+        children = widgets(self.view.settings_dialog)
         mode = [widget for widget in children if isinstance(widget, ttk.Combobox)][2]
         self.assertEqual(mode.get(), "Émotion exprimée")
         mode.set("Ambiance du sujet")
         mode.event_generate("<<ComboboxSelected>>")
-        slider = [widget for widget in children if isinstance(widget, tk.Scale)][1]
+        slider = [widget for widget in children if isinstance(widget, tk.Scale) and float(widget.cget("from")) == 0][1]
         self.assertEqual(slider.get(), 65)
         slider.set(85)
         entry = next(widget for widget in children if type(widget) is ttk.Entry)

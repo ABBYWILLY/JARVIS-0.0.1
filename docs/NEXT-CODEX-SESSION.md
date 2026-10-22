@@ -1,3 +1,26 @@
+# Reprise PRESENCE 3 — 22 octobre 2026
+
+Demande complète conservée dans `docs/PRESENCE-3-SPEC.md` ; elle remplace les
+priorités PRESENCE précédentes, sans retirer les exigences DOCX/J2.8.
+
+Sous-lot1 livré : épaisseur1–10 (défaut6), trait3,44px/halo11px à100%DPI,
+réglages halos/animations, THINKING orbital29% du petit côté avec sous-arcs issus
+du même mesh. Aucun second visualiseur. Arrivée PCM→forme parlante ; PCM nul ou
+expiré→plat ; sommeilcompactimmobile ; fenêtre masquée→aucun timer d’animation.
+Caches bornés (dernier signal/géométrie), profils+DPI+charge ; onglets de réglages.
+106 tests ciblés sous Tk9 et48 sous Tk8.6 réussis. Capture Linux inspectée, pas Windows.
+
+Reste à implémenter dans les sous-lots suivants : dominante émotionnelle stable
+par réponse et nuances/pivots, défaut ambiance, expressivité75, fluidité3modes,
+effets mood sur halo/inertie/courbes, timeline/caches sans analyse dans le rendu,
+sous-titres2lignes contextuels (expressions/mots pertinents prononcés seulement),
+réglages couleur/taille, Immersion/Diagnostic clavier, états micro structurés et
+scénario horsligne espoir→affection→tension→apaisement. Préserver prefs déjà sauvées.
+Ne pas annoncer ces éléments terminés avant tests/commit/push. CI du nouveau SHA
+à vérifier ; recette matérielle Windows/DPI/micro/Bluetooth toujours ouverte.
+
+---
+
 # Reprise — Markdown, TTS et spectre organique (18 octobre 2026)
 
 - Lot Markdown/TTS : rendu Tk sûr en streaming/historique, source SQLite intacte,
