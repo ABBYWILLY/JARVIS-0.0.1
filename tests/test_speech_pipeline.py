@@ -6,6 +6,7 @@ from dataclasses import replace
 from unittest.mock import patch
 
 from jarvis.audio import AudioEvent
+from jarvis.captions import CaptionPlan, prepare_caption
 from jarvis.richtext import SpeechBuffer, parse_text
 from jarvis.spectrum import analyze_passages
 from jarvis.tts import PCM, SpeechText
@@ -19,7 +20,8 @@ class SpeechPipelineTests(unittest.TestCase):
         segment = SpeechBuffer().feed(source, final=True)[0]
         command = SpeechText(segment.text, original=segment.original,
             display_text=parse_text(segment.original).text, start=segment.start,
-            end=segment.end, events=segment.events, segment_id=7)
+            end=segment.end, events=segment.events, segment_id=7,
+            caption_plan=prepare_caption(parse_text(segment.original).text))
         restored = pickle.loads(pickle.dumps(command))
         self.assertEqual(str(restored), segment.text)
         self.assertEqual(restored.__dict__, command.__dict__)
@@ -31,7 +33,7 @@ class SpeechPipelineTests(unittest.TestCase):
         document = parse_text(source)
         command = SpeechText(document.speech, original=source, display_text=document.text,
             start=12, end=12 + len(source), events=document.events, segment_id=3,
-            spectrum_events=analyze_passages(source, start=12))
+            spectrum_events=analyze_passages(source, start=12), caption_plan=prepare_caption(document.text))
         outbox, inbox = queue.Queue(), queue.Queue()
         inbox.put(pickle.loads(pickle.dumps(command)))
         inbox.put(None)
@@ -53,6 +55,9 @@ class SpeechPipelineTests(unittest.TestCase):
         event = events[2]
         self.assertEqual(event.generation, 9)
         self.assertEqual(event.payload["text"], document.text)
+        plan = CaptionPlan.from_dict(event.payload["caption_plan"])
+        self.assertEqual(plan.text, document.text)
+        self.assertEqual(plan.words, command.caption_plan.words)
         self.assertIn("❤️", event.payload["text"])
         self.assertNotIn("❤️", event.payload["spoken_text"])
         self.assertEqual(event.payload["original_start"], 12)

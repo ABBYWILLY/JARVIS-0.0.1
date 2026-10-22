@@ -5,8 +5,10 @@ import time
 import tkinter as tk
 from dataclasses import asdict, dataclass, replace
 from tkinter import colorchooser, messagebox, ttk
+from tkinter import font as tkfont
 
-from .spectrum import CYAN, OPERATIONAL, Tone, ToneAnalyzer, caption_group, keyword_spans
+from .spectrum import CYAN, OPERATIONAL, FieldEvent, MoodTracker, Tone, ToneAnalyzer, analyze_passages
+from .captions import CaptionPlan, CaptionWindow, prepare_caption
 
 
 STATES = {"silent", "listening", "user_speaking", "thinking", "jarvis_speaking", "dormant"}
@@ -21,6 +23,11 @@ STATE_LABELS = {"silent": "SILENCE", "listening": "ÉCOUTE LOCALE",
                 "jarvis_speaking": "JARVIS PARLE", "dormant": "EN SOMMEIL"}
 POINT_COUNT = 97
 SIGNAL_LIFETIME = 0.18
+FLUIDITY_LABELS = {"reactive": "Réactive", "cinematic": "Cinématique", "calm": "Apaisée"}
+COLORING_LABELS = {"discreet": "Discrète", "normal": "Normale", "expressive": "Expressive"}
+MIC_LABELS = {"disabled": "MICRO DÉSACTIVÉ", "starting": "MICRO · INITIALISATION",
+              "open": "MICRO OUVERT", "voice": "MICRO · VOIX DÉTECTÉE", "stt": "MICRO · STT LOCAL",
+              "suspended": "MICRO SUSPENDU · LECTURE", "error": "MICRO · ERREUR"}
 _POSITIONS = tuple(i / (POINT_COUNT - 1) for i in range(POINT_COUNT))
 _ANGLES = tuple(-math.pi / 2 + math.tau * t for t in _POSITIONS)
 _WINDOW = tuple(math.sin(math.pi * t) ** 2 for t in _POSITIONS)
@@ -35,13 +42,18 @@ class PresenceSettings:
     subtitles: bool = True
     accent_mode: str = "adaptive"
     fixed_color: str = "#69edf5"
-    wave_expressivity: int = 65
+    wave_expressivity: int = 75
     timing_monitor: bool = True
-    spectrum_mode: str = "expression"
+    spectrum_mode: str = "thematic"
     spectrum_intensity: int = 65
     visualizer_thickness: int = 6
     halos: bool = True
     animations: bool = True
+    fluidity: str = "cinematic"
+    emotional_subtitles: bool = True
+    subtitle_coloring: str = "normal"
+    subtitle_size: int = 18
+    diagnostic_mode: bool = True
 
     @classmethod
     def from_dict(cls, values):
@@ -55,7 +67,8 @@ class PresenceSettings:
             valid["background"] = color.lower()
         if isinstance(values.get("profile"), str) and values["profile"] in PROFILES:
             valid["profile"] = values["profile"]
-        for key in ("reduced_motion", "subtitles", "timing_monitor", "halos", "animations"):
+        for key in ("reduced_motion", "subtitles", "timing_monitor", "halos", "animations",
+                    "emotional_subtitles", "diagnostic_mode"):
             if isinstance(values.get(key), bool):
                 valid[key] = values[key]
         if isinstance(values.get("accent_mode"), str) and values["accent_mode"] in ACCENT_LABELS:
@@ -74,6 +87,12 @@ class PresenceSettings:
         if (isinstance(value, (int, float)) and not isinstance(value, bool)
                 and math.isfinite(value) and 1 <= value <= 10):
             valid["visualizer_thickness"] = round(value)
+        for key, choices in (("fluidity", FLUIDITY_LABELS), ("subtitle_coloring", COLORING_LABELS)):
+            if isinstance(values.get(key), str) and values[key] in choices:
+                valid[key] = values[key]
+        value = values.get("subtitle_size")
+        if isinstance(value, int) and not isinstance(value, bool) and 12 <= value <= 32:
+            valid["subtitle_size"] = value
         return replace(defaults, **valid)
 
 
@@ -95,6 +114,8 @@ class AccentTransition:
         self.started = float("-inf")
 
     def color(self, now):
+        if self.source == self.target or now >= self.started + self.duration:
+            return self.target
         fraction = max(0.0, min(1.0, (now - self.started) / self.duration))
         return mix(self.source, self.target, fraction * fraction * (3 - 2 * fraction))
 
@@ -252,6 +273,7 @@ class PresenceModel:
         self._wave = self._wave_line = _ZERO_WAVE
         self._signal_version = 0
         self._geometry_key = self._geometry = None
+        self.emotional_inertia = self.emotional_curve = 1.0
 
     @property
     def motion_allowed(self):
@@ -315,7 +337,7 @@ class PresenceModel:
                     # Smooth, low-frequency deformations of this same closed mesh.
                     # This indicates active processing, never fictitious audio.
                     radius *= (1 + 0.035 * math.sin(phase * 0.7)
-                               + 0.10 * math.sin(2 * angle + phase)
+                               + 0.10 * self.emotional_curve * math.sin(2 * angle + phase)
                                + 0.045 * math.sin(3 * angle - phase * 0.65))
                     angle += 0.07 * math.sin(phase * 0.55)
                 elif self.state == "jarvis_speaking" and active:
@@ -346,7 +368,8 @@ class PresenceModel:
             self.points = target
         else:
             delta = max(0, min(0.1, now - self.last_frame))
-            duration = 0.065
+            duration = {"reactive": 0.045, "cinematic": 0.065, "calm": 0.11}[self.settings.fluidity]
+            duration *= self.emotional_inertia
             if self.state == "user_speaking":
                 extent = lambda points: max(y for _, y in points) - min(y for _, y in points)
                 duration = 0.022 if extent(target) >= extent(self.points) else 0.095
@@ -389,6 +412,19 @@ class PresenceView:
         self._segment_key = None
         self._segment_fraction = 0.0
         self._segment_events = []
+        self.dominant_tone = Tone()
+        self.mood_tracker = MoodTracker(mode=self.settings.spectrum_mode)
+        self._caption_plan = None
+        self._caption_window = CaptionWindow("", ())
+        self._caption_layout_key = None
+        self._caption_font = None
+        self._caption_fit_key = None
+        self._caption_top = None
+        self._caption_footer_visible = True
+        self._preview_id = None
+        self._scenario_index = None
+        self.microphone_state = "disabled"
+        self.microphone_detail = ""
         self._accent = AccentTransition(self._target_accent())
         self.operation = "inactive"
         self.operation_detail = ""
@@ -428,6 +464,7 @@ class PresenceView:
         window.protocol("WM_DELETE_WINDOW", self.close)
         window.bind("<F11>", self.toggle_fullscreen)
         window.bind("<Escape>", self.exit_fullscreen)
+        window.bind("<F9>", self.toggle_diagnostic)
         window.bind("<Control-space>", lambda _event: self.toggle_listening())
         window.bind("<Map>", self._on_map)
         window.bind("<Unmap>", self._on_unmap)
@@ -454,7 +491,7 @@ class PresenceView:
         self.header_controls = tk.Frame(window)
         self.header_controls.place(relx=0.955, rely=0.045, anchor="ne")
         self.buttons = []
-        for label, command in (("Fond", self.choose_background), ("Chrono", self.toggle_timing),
+        for label, command in (("F9 · Mode", self.toggle_diagnostic), ("Fond", self.choose_background), ("Chrono", self.toggle_timing),
                                ("Réglages", self.open_settings)):
             self._button(self.header_controls, label, command).pack(side="left", padx=4)
         self.controls = tk.Frame(window)
@@ -466,7 +503,8 @@ class PresenceView:
         self.sleep_button.pack(side="left", padx=4)
         self._button(self.controls, "COMMAND OS", self.return_to_command).pack(side="left", padx=4)
         # Overlays use place: their requested size never participates in core layout.
-        self.caption_label = tk.Text(window, font=(family, 13), wrap="word", height=2,
+        self._caption_font = tkfont.Font(root=window, family=family, size=self.settings.subtitle_size)
+        self.caption_label = tk.Text(window, font=self._caption_font, wrap="word", height=2,
                                      state="disabled", borderwidth=0, highlightthickness=0,
                                      padx=8, pady=0, takefocus=True)
         self.caption_label.tag_configure("center", justify="center")
@@ -502,6 +540,8 @@ class PresenceView:
     def update_event(self, state, signal=None, caption=None):
         if state not in STATES or self.state == "dormant" and state != "dormant":
             return
+        # Actual functional events cancel the offline scenario before any drawing.
+        self._cancel_scenario()
         # Real voice/state events always take priority over an optional local preview.
         if self._preview_text is not None:
             self._preview_text = None
@@ -516,13 +556,16 @@ class PresenceView:
             fraction = max(0.0, min(1.0, _finite(caption.get("fraction"))))
             if key != self._segment_key:
                 self._segment_key, self._segment_fraction = key, fraction
+                self._segment_events = self._events_for_caption(caption)
+                plan = caption.get("caption_plan")
+                self._caption_plan = (CaptionPlan.from_dict(plan) if isinstance(plan, dict)
+                                      else prepare_caption(text, mode=self.settings.spectrum_mode))
             else:
                 # Piper may restart its fraction at each PCM block. This is only a
                 # phrase/block estimate: never regress within the same segment.
                 self._segment_fraction = max(self._segment_fraction, fraction)
-            self._segment_events = self._events_for_caption(caption)
             self._update_playback_tone()
-            self.caption_text = caption_group(text, self._segment_fraction)
+            self._layout_caption()
         elif state != "jarvis_speaking":
             self._clear_playback()
             self._set_tone(Tone())
@@ -537,13 +580,82 @@ class PresenceView:
             self._last_text = text
         return self._last_estimate
 
-    def _set_tone(self, tone):
+    def begin_response(self):
+        self.mood_tracker = MoodTracker(mode=self.settings.spectrum_mode)
+        self._clear_playback()
+        self._set_tone(Tone())
+
+    def prepare_segment(self, original, display, start):
+        """Text-arrival work only; PCM and paint callbacks never classify text."""
+        mode = self.settings.spectrum_mode
+        if self.mood_tracker.mode != mode:
+            self.mood_tracker = MoodTracker(mode=mode)
+        # Visual work is bounded even for an unusually large indivisible Markdown
+        # block. Speech and SQLite retain the full original; an unanalysed tail
+        # is explicitly neutral rather than inventing a mood for unseen text.
+        passages = analyze_passages(original[:4000], mode=mode, start=start)[:64]
+        events = self.mood_tracker.feed(passages)
+        last = events[-1].end if events else start
+        if last < start + len(original):
+            events += (FieldEvent(last, start + len(original), "", Tone(), Tone()),)
+        return events, prepare_caption(display, mode=mode)
+
+    def _set_tone(self, tone, dominant=None):
         self.tone = tone
+        self.dominant_tone = tone if dominant is None else dominant
+        mood = self.dominant_tone.name
+        self.model.emotional_inertia = {"colère": .85, "peur": .9, "attachement": 1.1,
+                                        "apaisement": 1.2, "deuil": 1.15}.get(mood, 1.0)
+        self.model.emotional_curve = {"colère": 1.12, "peur": 1.05,
+                                     "attachement": .88, "apaisement": .8}.get(mood, 1.0)
+        self._accent.duration = {"reactive": .22, "cinematic": .45, "calm": .8}[self.settings.fluidity]
         self._accent.retarget(self._target_accent(), time.monotonic())
 
     def _clear_playback(self):
         self.caption_text, self.caption_data = "", None
         self._segment_key, self._segment_fraction, self._segment_events = None, 0.0, []
+        self._caption_plan = None
+        self._caption_window = CaptionWindow("", ())
+        self._caption_layout_key = None
+
+    def _layout_caption(self):
+        if self._caption_plan is None:
+            return
+        if self._visible():
+            width_px, height_px = self.canvas.winfo_width(), self.canvas.winfo_height()
+            fit_key = (width_px, height_px, self.settings.subtitle_size,
+                       float(self.canvas.tk.call("tk", "scaling")),
+                       self.caption_footer.winfo_reqheight(), self.controls.winfo_reqheight())
+            if fit_key != self._caption_fit_key:
+                self._caption_fit_key = fit_key
+                footer_top = min(height_px * .855 - self.caption_footer.winfo_reqheight() / 2,
+                                 height_px * .92 - self.controls.winfo_reqheight() / 2
+                                 - self.caption_footer.winfo_reqheight() - 8)
+                core_bottom = height_px / 2 + core_radius(width_px, height_px) * 1.4 + 8
+                room = max(24, footer_top - core_bottom - 8)
+                self._caption_font.configure(size=-12)
+                minimum_rows = self._caption_font.metrics("linespace") * 2
+                self._caption_footer_visible = room >= minimum_rows
+                if not self._caption_footer_visible:
+                    footer_top = height_px * .92 - self.controls.winfo_reqheight() / 2 - 8
+                    room = max(minimum_rows, footer_top - core_bottom - 8)
+                self._caption_font.configure(size=self.settings.subtitle_size)
+                if self._caption_font.metrics("linespace") * 2 > room:
+                    # Keep the saved preference. A tiny window has less physical
+                    # space: fit two readable rows rather than covering Stop.
+                    pixels = max(12, int(room / 2) - 2)
+                    self._caption_font.configure(size=-pixels)
+                    while self._caption_font.metrics("linespace") * 2 > room and pixels > 12:
+                        pixels -= 1
+                        self._caption_font.configure(size=-pixels)
+                self._caption_top = max(core_bottom, footer_top - self._caption_font.metrics("linespace") * 2 - 6)
+        width = max(40, self.canvas.winfo_width() * .82 - 20) if self._visible() else None
+        measure = self._caption_font.measure if width is not None else None
+        key = (id(self._caption_plan), self._segment_fraction, width, self.settings.subtitle_size)
+        if key != self._caption_layout_key:
+            self._caption_layout_key = key
+            self._caption_window = self._caption_plan.window(self._segment_fraction, measure=measure, width=width)
+            self.caption_text = self._caption_window.text
 
     def _events_for_caption(self, caption):
         events = caption.get("spectrum_events")
@@ -557,7 +669,7 @@ class PresenceView:
                     continue
                 text = str(event.get("text", ""))
                 raw = event.get("tone")
-                if (caption.get("spectrum_mode", "expression") == self.settings.spectrum_mode
+                if (caption.get("spectrum_mode", self.settings.spectrum_mode) == self.settings.spectrum_mode
                         and isinstance(raw, dict) and isinstance(raw.get("name"), str)
                         and isinstance(raw.get("color"), str)
                         and re.fullmatch(r"#[0-9a-fA-F]{6}", raw["color"])):
@@ -569,10 +681,20 @@ class PresenceView:
                 else:
                     tone = self.interpret_text(text, render=False)
                 # A stale or malformed event must never override an explicit neutral mode.
-                result.append((start, end, Tone() if self.settings.spectrum_mode == "neutral" else tone))
+                dominant = tone
+                raw_dominant = event.get("dominant")
+                if (caption.get("spectrum_mode", self.settings.spectrum_mode) == self.settings.spectrum_mode
+                        and isinstance(raw_dominant, dict) and isinstance(raw_dominant.get("name"), str)
+                        and isinstance(raw_dominant.get("color"), str)
+                        and re.fullmatch(r"#[0-9a-fA-F]{6}", raw_dominant["color"])):
+                    dominant = Tone(raw_dominant["name"], raw_dominant["color"])
+                if self.settings.spectrum_mode == "neutral":
+                    tone = dominant = Tone()
+                result.append((start, end, tone, dominant))
         if not result:
             text = str(caption.get("text", ""))
-            result = [(0, max(1, len(text)), self.interpret_text(text, render=False))]
+            tone = self.interpret_text(text, render=False)
+            result = [(0, max(1, len(text)), tone, tone)]
         return sorted(result, key=lambda event: event[0])
 
     def _update_playback_tone(self):
@@ -587,12 +709,13 @@ class PresenceView:
             if event[0] > position:
                 break
             chosen = event
-        self._set_tone(chosen[2])
+        self._set_tone(chosen[2], chosen[3])
 
     def preview_text(self, text):
         """Explicit visual-only preview; never starts capture, inference or speech."""
         if self.state not in {"silent", "dormant"} or self.app.voice.listening:
             return None
+        self._cancel_scenario()
         self._preview_text = str(text)
         tone = self.interpret_text(self._preview_text, render=False)
         self._set_tone(tone)
@@ -601,18 +724,62 @@ class PresenceView:
         return tone
 
     def clear_preview(self):
+        scenario = self._scenario_index is not None
+        self._cancel_scenario()
         if self._preview_text is not None:
             self._preview_text = None
+            if scenario:
+                self.model.update_event("silent")
             self._set_tone(Tone())
             if self._visible():
                 self._render()
+
+    def _cancel_scenario(self):
+        if self._preview_id is not None:
+            self.app.root.after_cancel(self._preview_id)
+            self._preview_id = None
+        self._scenario_index = None
+
+    def preview_scenario(self):
+        """Offline symbolic forms/colors only. It never invents an audio signal."""
+        if self.app.voice.listening or self.state not in {"silent", "dormant"}:
+            return False
+        self._cancel_scenario()
+        self._scenario_index = 0
+        self._scenario_step()
+        return True
+
+    def _scenario_step(self):
+        self._preview_id = None
+        index = self._scenario_index
+        if index is None:
+            return
+        phrases = ("J'ai confiance et espoir pour demain.",
+                   "Maintenant je ressens de la tendresse et de l'affection.",
+                   "Je suis inquiet face au danger.", "Désormais je suis calme et serein.")
+        if index >= len(phrases):
+            self._scenario_index = None
+            self._preview_text = None
+            self.model.update_event("silent")
+            self._set_tone(Tone())
+            self._render()
+            return
+        self._preview_text = phrases[index]
+        self.model.update_event("thinking")
+        self._set_tone(self.interpret_text(phrases[index], render=False))
+        self._scenario_index = index + 1
+        self._render()
+        self._preview_id = self.app.root.after(2500, self._scenario_step)
 
     def _target_accent(self):
         mode = self.settings.accent_mode
         if mode == "none":
             return palette(self.settings.background)["muted"]
+        dominant = getattr(self, "dominant_tone", self.tone)
+        field_color = (dominant.color if self.tone.name == "neutralité" else
+                       mix(dominant.color, self.tone.color, .22))
         color = (self.settings.fixed_color if mode == "fixed" else
-                 CYAN if mode == "cyan" else mix(CYAN, self.tone.color,
+                 CYAN if mode == "cyan" or self.settings.spectrum_mode == "neutral" else mix(CYAN, field_color,
                                                  self.settings.spectrum_intensity / 100))
         return readable_accent(color, self.settings.background)
 
@@ -626,6 +793,7 @@ class PresenceView:
         self.operation_detail = str(detail)
         self._operation_explicit = True
         if key in {"error", "inactive"}:
+            self._cancel_scenario()
             self._cancel_animation()
             self._preview_text = None
             self._clear_playback()
@@ -655,13 +823,36 @@ class PresenceView:
     def toggle_timing(self):
         self.set_options(timing_monitor=not self.settings.timing_monitor)
 
+    def toggle_diagnostic(self, _event=None):
+        self.set_options(diagnostic_mode=not self.settings.diagnostic_mode)
+        return "break"
+
+    def update_microphone(self, state, detail=""):
+        if state not in MIC_LABELS:
+            raise ValueError("État du microphone inconnu.")
+        self.microphone_state, self.microphone_detail = state, str(detail)[:256]
+        if state in {"disabled", "error"}:
+            self._cancel_scenario()
+            self._preview_text = None
+            self._clear_playback()
+            self._set_tone(Tone())
+            self._accent = AccentTransition(self._target_accent())
+            if self.state != "dormant":
+                self.model.update_event("silent")
+            self._cancel_animation()
+        if self._visible():
+            if state in {"disabled", "error"}:
+                self._render()
+            else:
+                self._update_overlays(self.canvas.winfo_width())
+
     def _render_timing(self, width, height):
         key = (width, height, self.settings, tuple(sorted(self.timings.items())),
                tuple(self.timing_history), self.state == "dormant")
         if key == self._timing_render_key:
             return
         self._timing_render_key = key
-        if not self.settings.timing_monitor or self.state == "dormant":
+        if not self.settings.timing_monitor or not self.settings.diagnostic_mode or self.state == "dormant":
             self.timing_panel.place_forget()
             return
         # An overlay in the side gutter: never changes the canvas or mesh centre.
@@ -717,6 +908,10 @@ class PresenceView:
         selected = ({3}, {2, 3}, {0, 2, 3}, {0, 1, 2, 3})[count - 1]
         widths = stroke_widths(self.settings.visualizer_thickness, scale)
         accent = self.mesh_accent(started)
+        # Local mood changes the halo/inertia and symbolic thinking curves only.
+        # Speech displacement and amplitude still come exclusively from PCM.
+        mood_halo = {"colère": 1.15, "peur": 1.08, "apaisement": .85,
+                     "attachement": 1.1}.get(self.dominant_tone.name, 1.0)
         strength = 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
         breath = 0.0
         if self.state == "thinking" and self.model.motion_allowed:
@@ -724,12 +919,14 @@ class PresenceView:
             strength = 0.9 + breath * 0.08
         # Every halo uses precisely the same coordinates, never another visualizer.
         for index, path in enumerate(self.paths):
-            opacity = (0.08, 0.13, 0.28, 0.90)[index] * strength
+            opacity = min(1, (0.08, 0.13, 0.28, 0.90)[index] * strength *
+                          (mood_halo if index != 3 else 1))
             self.canvas.coords(path, *coords)
             self.canvas.itemconfigure(path, state="normal" if index in selected else "hidden",
                                       width=widths[index],
                                       fill=mix(self.settings.background, accent, opacity))
         phase = (started - self.model.state_since) * 0.055 if self.model.motion_allowed else 0.0
+        highlight = mix(accent, self._colors["foreground"], .32)
         for index, (path, offset, length) in enumerate(zip(self.orbital_paths,
                                                          (0.03, 0.43, 0.72), (0.20, 0.12, 0.16))):
             visible = self.state == "thinking" and index < arc_count
@@ -737,7 +934,7 @@ class PresenceView:
                 self.canvas.coords(path, *_mesh_arc(points, offset + phase, length))
             self.canvas.itemconfigure(path, state="normal" if visible else "hidden",
                                       width=widths[3] * (0.72 + index * 0.09),
-                                      fill=mix(self.settings.background, accent, 0.98 - index * 0.07))
+                                      fill=mix(self.settings.background, highlight, 0.98 - index * 0.07))
         self._update_overlays(width)
         elapsed = time.monotonic() - started
         if elapsed > 0.012:
@@ -752,18 +949,30 @@ class PresenceView:
 
     def _update_overlays(self, width):
         listening = bool(self.app.voice.listening)
-        key = (width, self.state, listening, self.settings, self.tone.name,
-               self._preview_text, self.operation, self.operation_detail)
+        mic = getattr(self.app.voice, "microphone_state", self.microphone_state)
+        if not isinstance(mic, str) or mic not in MIC_LABELS:
+            mic = "open" if listening else "disabled"
+        if mic == "disabled" and listening and not hasattr(self.app.voice, "microphone_state"):
+            mic = "open"
+        key = (width, self.state, listening, mic, self.settings, self.tone.name,
+               self.dominant_tone.name, self._preview_text, self.operation, self.operation_detail)
         if key != self._overlay_key:
             self._overlay_key = key
-            self.state_label.configure(text=STATE_LABELS[self.state])
-            self.mic_label.configure(text="MICRO AUTORISÉ · LOCAL" if listening else "MICRO DÉSACTIVÉ · LOCAL")
+            self.state_label.configure(text=("APERÇU HORS LIGNE · " if self._preview_text is not None else "")
+                                       + STATE_LABELS[self.state] + (" · SOUS-TITRES ≈" if self.state == "jarvis_speaking" else ""))
+            self.mic_label.configure(text=MIC_LABELS[mic] + (" · écoute maintenue" if mic == "error" and listening else " · LOCAL"),
+                                     fg=readable_accent(OPERATIONAL["error"]["color"], self.settings.background)
+                                     if mic == "error" else palette(self.settings.background)["muted"])
             self.listen_button.configure(text="Désactiver l’écoute" if listening else "Activer l’écoute")
             self.sleep_button.configure(text="Réveiller" if self.state == "dormant" else "Sommeil")
             mode = self.settings.accent_mode
             self.tone_label.configure(text=(("Aperçu local : " if self._preview_text is not None else
                                             SPECTRUM_LABELS[self.settings.spectrum_mode] + " · estimation : ")
-                                           + self.tone.name if mode == "adaptive" else ACCENT_LABELS[mode]))
+                                           + self.dominant_tone.name if mode == "adaptive" else ACCENT_LABELS[mode]))
+            if self.settings.diagnostic_mode:
+                self.tone_label.place(relx=.045, rely=.195, anchor="nw")
+            else:
+                self.tone_label.place_forget()
             operational = OPERATIONAL[self.operation]
             symbol = {"allowed": "✓", "info": "●", "caution": "!", "confirm": "?", "error": "!", "inactive": "○"}[self.operation]
             detail = self.operation_detail.strip()
@@ -775,25 +984,44 @@ class PresenceView:
         self._render_caption()
         self._render_timing(width, self.canvas.winfo_height())
         if self.settings.subtitles and self.caption_text and self.state == "jarvis_speaking":
-            self.caption_label.place(relx=0.5, rely=0.74, relwidth=0.82, anchor="n")
-            self.caption_footer.place(relx=0.5, rely=0.855, anchor="center")
+            self.caption_label.place(relx=0.5, y=self._caption_top or self.canvas.winfo_height() * .70,
+                                     relwidth=0.82, anchor="n")
+            if self._caption_footer_visible:
+                self.caption_footer.place(relx=0.5, rely=0.855, anchor="center")
+            else:
+                self.caption_footer.place_forget()
         else:
             self.caption_label.place_forget()
             self.caption_footer.place_forget()
 
     def _render_caption(self):
-        key = (self.caption_text, self.tone.words, self.mesh_accent(), self.settings.accent_mode)
-        if key == self._rendered_caption:
+        # This is paint only: all classification/tokenization/positions were
+        # prepared at text arrival; PCM selected the already prepared window.
+        enabled = (self.settings.emotional_subtitles and self.settings.accent_mode != "none"
+                   and self.settings.spectrum_mode != "neutral")
+        marks = tuple(mark for mark in self._caption_window.marks
+                      if enabled and mark.tone in {self.tone.name, self.dominant_tone.name})
+        key = (self.caption_text, marks, self.settings.emotional_subtitles, self.settings.accent_mode)
+        if key != self._rendered_caption:
+            self._rendered_caption = key
+            self.caption_label.configure(state="normal")
+            self.caption_label.delete("1.0", "end")
+            self.caption_label.insert("1.0", self.caption_text, "center")
+            for mark in marks:
+                self.caption_label.tag_add("keyword", f"1.0+{mark.start}c", f"1.0+{mark.end}c")
+            self.caption_label.configure(state="disabled")
+        if not marks:
             return
-        self._rendered_caption = key
-        self.caption_label.configure(state="normal")
-        self.caption_label.delete("1.0", "end")
-        self.caption_label.insert("1.0", self.caption_text, "center")
-        self.caption_label.tag_configure("keyword", foreground=self.mesh_accent())
-        if self.settings.accent_mode != "none":
-            for start, end in keyword_spans(self.caption_text, self.tone.words):
-                self.caption_label.tag_add("keyword", f"1.0+{start}c", f"1.0+{end}c")
-        self.caption_label.configure(state="disabled")
+        color_key = (self.mesh_accent(), self.settings.subtitle_coloring, self.settings.background)
+        if color_key == getattr(self, "_caption_color_key", None):
+            return
+        self._caption_color_key = color_key
+        colors = self._colors
+        amount = {"discreet": .45, "normal": .75, "expressive": 1}[self.settings.subtitle_coloring]
+        color = readable_accent(mix(colors["foreground"], self.mesh_accent(), amount), self.settings.background)
+        if color != getattr(self, "_caption_color", None):
+            self._caption_color = color
+            self.caption_label.tag_configure("keyword", foreground=color)
 
     def copy_caption(self):
         if self.caption_text:
@@ -804,6 +1032,10 @@ class PresenceView:
         if self.window is None:
             return
         colors = palette(self.settings.background)
+        self._colors = colors
+        self._overlay_key = None
+        self._caption_color = None
+        self._caption_color_key = None
         bg, fg = colors["background"], colors["foreground"]
         self.window.configure(bg=bg)
         self.canvas.configure(bg=bg)
@@ -821,6 +1053,9 @@ class PresenceView:
         self.mic_label.configure(fg=colors["muted"])
         self.tone_label.configure(fg=colors["muted"])
         self.caption_note.configure(fg=colors["muted"])
+        caption_foreground = mix(bg, fg, .86)
+        self.caption_label.configure(fg=caption_foreground if contrast(bg, caption_foreground) >= 4.5 else fg)
+        self._caption_fit_key = None
         for button in self.buttons:
             button.configure(bg=colors["button"], fg=fg,
                              activebackground=mix(bg, fg, 0.15), activeforeground=fg,
@@ -839,14 +1074,20 @@ class PresenceView:
         self.settings = self.model.settings = candidate
         if candidate.spectrum_mode != old_mode:
             self.analyzer = ToneAnalyzer(mode=candidate.spectrum_mode, hold_seconds=0)
+            self.mood_tracker = MoodTracker(mode=candidate.spectrum_mode)
             self._last_text = None
             if self.caption_data is not None and self.state == "jarvis_speaking":
                 self._segment_events = self._events_for_caption(self.caption_data)
+                self._caption_plan = prepare_caption(str(self.caption_data.get("text", "")), mode=candidate.spectrum_mode)
+                self._caption_layout_key = None
                 self._update_playback_tone()
             elif self._preview_text is not None:
                 self._set_tone(self.interpret_text(self._preview_text, render=False))
+            if candidate.spectrum_mode == "neutral":
+                self._set_tone(Tone())
         self._accent.retarget(self._target_accent(), time.monotonic())
         self._apply_colors()
+        self._layout_caption()
         self._render()
         return True
 
@@ -873,18 +1114,54 @@ class PresenceView:
         dialog.transient(self.window)
         colors = palette(self.settings.background)
         dialog.configure(bg=colors["background"], padx=20, pady=18)
+        screen_w, screen_h = dialog.winfo_screenwidth(), dialog.winfo_screenheight()
+        dialog.maxsize(max(320, screen_w - 40), max(300, screen_h - 60))
+        # Reserve the close control before the expandable notebook. Each page
+        # scrolls independently when large Windows fonts need more height.
+        ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(side="bottom", fill="x", pady=(12, 0))
         notebook = ttk.Notebook(dialog)
         notebook.pack(fill="both", expand=True)
-        visual = tk.Frame(notebook, bg=colors["background"], padx=12, pady=10)
-        spectrum_page = tk.Frame(notebook, bg=colors["background"], padx=12, pady=10)
-        notebook.add(visual, text="Visualiseur")
-        notebook.add(spectrum_page, text="Spectre et aperçu")
+        def page(title):
+            outer = tk.Frame(notebook, bg=colors["background"])
+            notebook.add(outer, text=title)
+            canvas = tk.Canvas(outer, bg=colors["background"], highlightthickness=0,
+                               width=min(600, screen_w - 120), height=min(660, screen_h - 240))
+            scroll = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+            scroll.pack(side="right", fill="y")
+            canvas.pack(side="left", fill="both", expand=True)
+            canvas.configure(yscrollcommand=scroll.set)
+            inner = tk.Frame(canvas, bg=colors["background"], padx=12, pady=10)
+            item = canvas.create_window(0, 0, anchor="nw", window=inner)
+            inner.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+            canvas.bind("<Configure>", lambda event: canvas.itemconfigure(item, width=event.width))
+            def reveal(event):
+                if event.widget is inner:
+                    return
+                y = event.widget.winfo_rooty() - inner.winfo_rooty()
+                bottom = y + event.widget.winfo_height()
+                top = canvas.canvasy(0)
+                if y < top or bottom > top + canvas.winfo_height():
+                    canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, inner.winfo_height()))
+            inner.bind("<FocusIn>", reveal)
+            # FocusIn propagates through the toplevel bindtag; only reveal
+            # descendants of this page, without changing global mouse bindings.
+            dialog.bind("<FocusIn>", lambda event: reveal(event) if str(event.widget).startswith(str(inner) + ".") else None, add="+")
+            return inner
+        visual = page("Visualiseur")
+        spectrum_page = page("Spectre et aperçu")
+        captions_page = page("Sous-titres")
         tk.Label(visual, text="Profil graphique", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
         profile = tk.StringVar(value=PROFILE_LABELS[self.settings.profile])
         choice = ttk.Combobox(visual, state="readonly", values=list(PROFILE_LABELS.values()), textvariable=profile)
         choice.pack(fill="x", pady=(6, 12))
         choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
             profile=next(key for key, label in PROFILE_LABELS.items() if label == profile.get())))
+        tk.Label(visual, text="Fluidité", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
+        fluidity = tk.StringVar(value=FLUIDITY_LABELS[self.settings.fluidity])
+        flow = ttk.Combobox(visual, state="readonly", values=list(FLUIDITY_LABELS.values()), textvariable=fluidity)
+        flow.pack(fill="x", pady=(4, 8))
+        flow.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
+            fluidity=next(key for key, label in FLUIDITY_LABELS.items() if label == fluidity.get())))
         tk.Label(visual, text="Expressivité de l’onde (%)", bg=colors["background"],
                  fg=colors["foreground"]).pack(anchor="w")
         expressivity = tk.IntVar(value=self.settings.wave_expressivity)
@@ -952,6 +1229,27 @@ class PresenceView:
                                      fg=self._target_accent() if tone is not None else colors["muted"])
 
         ttk.Button(spectrum_page, text="Prévisualiser la phrase", command=preview).pack(fill="x", pady=4)
+        ttk.Button(spectrum_page, text="Scénario hors ligne · espoir → affection → tension → apaisement",
+                   command=self.preview_scenario).pack(fill="x", pady=4)
+        ttk.Button(spectrum_page, text="Arrêter l’aperçu", command=self.clear_preview).pack(fill="x", pady=4)
+        emotion_caps = tk.BooleanVar(value=self.settings.emotional_subtitles)
+        ttk.Checkbutton(captions_page, text="Sous-titres émotionnels", variable=emotion_caps,
+                        command=lambda: self.set_options(emotional_subtitles=emotion_caps.get())).pack(anchor="w", pady=8)
+        tk.Label(captions_page, text="Colorisation", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
+        coloring = tk.StringVar(value=COLORING_LABELS[self.settings.subtitle_coloring])
+        color_choice = ttk.Combobox(captions_page, textvariable=coloring,
+                                    values=list(COLORING_LABELS.values()), state="readonly")
+        color_choice.pack(fill="x", pady=8)
+        color_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
+            subtitle_coloring=next(key for key, label in COLORING_LABELS.items() if label == coloring.get())))
+        tk.Label(captions_page, text="Taille préférée · ajustée dans les petites fenêtres", bg=colors["background"], fg=colors["foreground"], wraplength=360).pack(anchor="w")
+        size = tk.IntVar(value=self.settings.subtitle_size)
+        tk.Scale(captions_page, from_=12, to=32, variable=size, orient="horizontal", resolution=1,
+                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
+                 command=lambda value: self.set_options(subtitle_size=round(float(value)))).pack(fill="x")
+        ttk.Button(captions_page, text="Immersion / Diagnostic (F9)", command=self.toggle_diagnostic).pack(fill="x", pady=12)
+        tk.Label(captions_page, text="Deux lignes maximum. Synchronisation estimée par groupes de mots / bloc PCM.\nLes indicateurs micro, arrêt et sécurité restent visibles en Immersion.",
+                 wraplength=360, justify="left", bg=colors["background"], fg=colors["muted"]).pack(fill="x", pady=8)
 
         def closed(event):
             if event.widget is dialog:
@@ -970,7 +1268,6 @@ class PresenceView:
         ttk.Button(spectrum_page, text="Choisir la couleur d’accent…", command=choose_accent).pack(fill="x", pady=4)
         ttk.Button(visual, text="Choisir le fond…", command=self.choose_background).pack(fill="x", pady=(12, 4))
         ttk.Button(visual, text="Rétablir le noir", command=self.reset_background).pack(fill="x", pady=4)
-        ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(fill="x", pady=(12, 0))
 
     def toggle_listening(self):
         if self.state == "dormant":
@@ -1016,6 +1313,7 @@ class PresenceView:
         return "break"
 
     def return_to_command(self):
+        self.clear_preview()
         if self.window is not None:
             self.window.withdraw()
         self._cancel_animation()
@@ -1025,6 +1323,7 @@ class PresenceView:
 
     def _on_resize(self, _event=None):
         if self._visible():
+            self._layout_caption()
             self._render()
 
     def _on_map(self, event):
@@ -1033,17 +1332,23 @@ class PresenceView:
 
     def _on_unmap(self, event):
         if event.widget is self.window:
+            self.clear_preview()
             self._cancel_animation()
 
     def _on_destroy(self, event):
         if event.widget is self.window:
+            self._cancel_scenario()
+            self._caption_font = None
             self._cancel_animation()
             self.window = self.canvas = None
             self.settings_dialog = None
 
     def close(self):
+        self.clear_preview()
+        self._cancel_scenario()
         self._cancel_animation()
         window = self.window
+        self._caption_font = None
         self.window = self.canvas = None
         self.settings_dialog = None
         if window is not None and window.winfo_exists():

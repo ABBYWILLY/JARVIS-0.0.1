@@ -30,12 +30,13 @@ TONES = {
     "attachement": ("#f6a0d7", {"amour", "affection", "tendresse", "attachement", "aime", "adore"}),
     "renouveau": ("#f3f8ff", {"renaissance", "renouveau", "vitalite", "vie", "renais"}),
     "deuil": ("#526a74", {"mort", "deuil", "deces", "funerailles", "endeuille", "endeuillee", "chagrin", "triste", "tristesse"}),
+    "apaisement": ("#8fd9ca", {"calme", "serein", "sereine", "serenite", "apaisement", "apaise", "apaisee", "tranquille", "soulage", "soulagee", "soulagement"}),
 }
 
 
 def normalized(word):
     return ''.join(c for c in unicodedata.normalize("NFD", word.casefold())
-                   if unicodedata.category(c) != "Mn")
+                   if unicodedata.category(c) != "Mn").replace("œ", "oe").replace("æ", "ae")
 
 
 @dataclass(frozen=True)
@@ -55,13 +56,24 @@ class ToneEvent:
     tone: Tone
 
 
+@dataclass(frozen=True)
+class FieldEvent:
+    """A passage's local estimate and the stable response mood at its arrival."""
+    start: int
+    end: int
+    text: str
+    tone: Tone
+    dominant: Tone
+
+
 _MODES = {"thematic", "expression", "neutral"}
-_WORD = re.compile(r"[^\W\d_]+", re.UNICODE)
+_WORD = re.compile(r"[^\W\d_](?:[^\W\d_]|[\u0300-\u036f])*", re.UNICODE)
 _NEGATIONS = {"ne", "n", "pas", "sans", "aucun", "aucune", "ni", "jamais", "rien", "nullement", "guere"}
 _MODIFIERS = (
     "vraiment tres tellement si profondement sincerement actuellement encore deja "
     "completement absolument totalement assez un une de du des la le les l en "
-    "plein pleine rempli remplie beaucoup immense grande grand forte fort mon ma mes"
+    "plein pleine rempli remplie beaucoup immense grande grand forte fort mon ma mes "
+    "desormais maintenant enfin"
 ).split()
 _CUES = set().union(*(words for _, words in TONES.values()))
 _CONTINUATION = set(_MODIFIERS) | _CUES | {"et", "ou", "aussi"}
@@ -73,7 +85,17 @@ _FRAME = re.compile(
 _POSSESSIVE = re.compile(r"\b(?:ma|mon|notre) (?:(?:vraie|vrai|profonde|profond|grande|grand) ){0,2}$")
 _DIRECT = {"rage", "desire", "crains", "espere", "compatis", "aime", "adore", "renais", "angoisse"}
 _UNCERTAIN = re.compile(r"\b(?:si (?=je\b|j['’]|nous\b|tu\b|vous\b|il\b|elle\b|on\b)|peut[- ‐‑]etre|peutetre|probablement|pas seulement|pourrais|pourrions|serais|serions|aurais|aurions|hypothese|supposons)\b")
-_CLAUSE = re.compile(r"[,;:]|\b(?:mais|cependant|pourtant|toutefois)\b|\bet (?=(?:je|j|nous)\b)")
+_CLAUSE = re.compile(r"[,;:]|\b(?:mais|cependant|pourtant|toutefois)\b|\bet (?=(?:je|j|nous)\b)", re.I)
+_PHRASES = {
+    "apaisement": (("tout", "va", "bien"), ("ca", "va", "aller")),
+    "compassion": (("de", "tout", "coeur"),),
+}
+_INTENSIFIERS = {"vraiment", "tres", "tellement", "profondement", "sincerement",
+                 "completement", "absolument", "totalement", "immense"}
+_PIVOT = re.compile(
+    r"(?:^|[.!?;:]\s*)(?:mais\s+)?(?:desormais|maintenant|enfin)\b|"
+    r"\b(?:je suis|je me sens|nous sommes|nous nous sentons)\s+(?:desormais|maintenant|enfin)\b"
+)
 
 
 def _mask(source, start, end):
@@ -148,14 +170,28 @@ def _expressed(words, index):
         re.search(r"\b(?:cela|ca) m $", prefix))
 
 
-def _classify(visible, mode):
-    if mode == "neutral" or mode == "expression" and ("?" in visible or _UNCERTAIN.search(normalized(visible))):
-        return Tone()
-    hits = {name: set() for name in TONES}
-    normalized_text = normalized(visible)
+def _intensified(words, index):
+    modifiers = []
+    for word in reversed(words[max(0, index - 3):index]):
+        if word not in _MODIFIERS:
+            break
+        modifiers.append(word)
+    return bool(_INTENSIFIERS.intersection(modifiers))
+
+
+def _evidence(visible, mode):
+    """Reuse the lexical estimator's scopes, retaining source offsets for words."""
+    if mode == "neutral" or _UNCERTAIN.search(normalized(visible)) or mode == "expression" and "?" in visible:
+        return ()
+    evidence = []
     prior_expression = False
-    for clause in _CLAUSE.split(normalized_text):
-        words = _WORD.findall(clause)
+    previous = 0
+    boundaries = [(match.start(), match.end()) for match in _CLAUSE.finditer(visible)]
+    boundaries.append((len(visible), len(visible)))
+    for end, following in boundaries:
+        clause = visible[previous:end]
+        tokens = tuple(_WORD.finditer(clause))
+        words = [normalized(token.group()) for token in tokens]
         continuation = prior_expression and bool(words) and set(words) <= _CONTINUATION
         for index, word in enumerate(words):
             if word not in _CUES or _negated(words, index):
@@ -164,14 +200,49 @@ def _classify(visible, mode):
                 continue
             for name, (_, lexicon) in TONES.items():
                 if word in lexicon:
-                    hits[name].add(word)
+                    token = tokens[index]
+                    strong = _intensified(words, index)
+                    evidence.append((name, word, previous + token.start(), previous + token.end(), strong))
                     prior_expression = True
+        # A small set of common reassuring/supportive expressions supplements
+        # the same conservative word estimator; quoted/negated mentions remain
+        # masked. Tokens preserve accents, Markdown gaps and Python offsets.
+        for name, phrases in _PHRASES.items():
+            for phrase in phrases:
+                for index in range(len(words) - len(phrase) + 1):
+                    if tuple(words[index:index + len(phrase)]) != phrase or _negated(words, index):
+                        continue
+                    if any(not clause[tokens[i].end():tokens[i + 1].start()].isspace()
+                           for i in range(index, index + len(phrase) - 1)):
+                        continue
+                    if {"expression", "phrase", "mot", "signifie", "exemple"}.intersection(words):
+                        continue
+                    if "?" in visible or _UNCERTAIN.search(normalized(visible)):
+                        continue
+                    if name == "compassion":
+                        context = " ".join(words[max(0, index - 7):index + len(phrase) + 4])
+                        if not re.search(r"\b(?:avec|pour) (?:toi|vous)\b|\b(?:compatis|soutiens|soutenons|accompagne|accompagnons)\b", context):
+                            continue
+                    left, right = tokens[index].start(), tokens[index + len(phrase) - 1].end()
+                    strong = _intensified(words, index)
+                    evidence.append((name, " ".join(phrase), previous + left, previous + right, strong))
+                    prior_expression = True
+        previous = following
+    return tuple(evidence)
+
+
+def _classify(visible, mode):
+    evidence = _evidence(visible, mode)
+    hits = {name: set() for name in TONES}
+    for name, word, *_ in evidence:
+        hits[name].add(word)
     active = [(name, words) for name, words in hits.items() if words]
     # Conflicting affirmed categories stay cyan, even with repeated synonyms.
     if len(active) != 1:
         return Tone()
     name, words = active[0]
-    return Tone(name, TONES[name][0], tuple(sorted(words)), 1.0)
+    confidence = 1.0 if any(hit[4] for hit in evidence) else 0.85
+    return Tone(name, TONES[name][0], tuple(sorted(words)), confidence)
 
 
 def analyze_passages(text, mode="expression", start=0):
@@ -231,9 +302,78 @@ class ToneAnalyzer:
         return chosen
 
 
+class MoodTracker:
+    """Keep a response mood stable while retaining each passage's own nuance.
+
+    Feed each newly classified source passage once, before audio/rendering.
+    Reset at a response boundary or interruption. State is constant in size:
+    no response text, audio samples or event history is retained. This is a
+    lexical presentation estimate, not a measurement of anyone's emotions.
+    """
+
+    def __init__(self, mode="thematic"):
+        if mode not in _MODES:
+            raise ValueError("unknown spectrum mode: " + str(mode))
+        self.mode = mode
+        self.reset()
+
+    def reset(self):
+        self.dominant = Tone()
+        self._candidate = None
+        self._candidate_count = 0
+
+    def feed(self, events):
+        result = []
+        for event in events:
+            tone = Tone() if self.mode == "neutral" else event.tone
+            reliable = tone.name in TONES and tone.confidence >= 0.65
+            if not reliable:
+                self._candidate = None
+                self._candidate_count = 0
+            elif self.dominant.name == "neutralité" or tone.name == self.dominant.name:
+                self.dominant = tone
+                self._candidate = None
+                self._candidate_count = 0
+            else:
+                visible, _ = _analysis_source(event.text)
+                folded = normalized(visible).strip()
+                explicit = bool(_PIVOT.search(folded)) and "?" not in visible and not _UNCERTAIN.search(folded)
+                if self._candidate == tone.name:
+                    self._candidate_count += 1
+                else:
+                    self._candidate, self._candidate_count = tone.name, 1
+                if explicit or self._candidate_count >= 2:
+                    self.dominant = tone
+                    self._candidate = None
+                    self._candidate_count = 0
+            if self.mode == "neutral":
+                self.dominant = Tone()
+            result.append(FieldEvent(event.start, event.end, event.text, tone, self.dominant))
+        return tuple(result)
+
+
+def emotional_spans(text, tone, mode="thematic"):
+    """Return contextually affirmed words/phrases in this local tone only.
+
+    Source Python offsets include combining accents. Opaque syntax, quotes,
+    negations and ambiguous competing categories never supply highlights.
+    No passage reclassification, model or timing calculation is performed.
+    """
+    if mode not in _MODES:
+        raise ValueError("unknown spectrum mode: " + str(mode))
+    if mode == "neutral" or tone.name not in TONES:
+        return ()
+    visible, _ = _analysis_source(text)
+    evidence = _evidence(visible, mode)
+    if {hit[0] for hit in evidence} != {tone.name}:
+        return ()
+    spans = sorted({(hit[2], hit[3]) for hit in evidence if hit[0] == tone.name})
+    return tuple(spans)
+
+
 def keyword_spans(text, words):
     wanted = set(words)
-    return [(match.start(), match.end()) for match in re.finditer(r"[^\W\d_]+", text, flags=re.UNICODE)
+    return [(match.start(), match.end()) for match in _WORD.finditer(text)
             if normalized(match.group()) in wanted]
 
 

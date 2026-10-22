@@ -40,13 +40,13 @@ class PlaybackSpectrumTests(unittest.TestCase):
                 "tone": {"name": name, "color": color, "words": [], "confidence": 1}}
 
     def test_new_spectrum_preferences_are_validated(self):
-        self.assertEqual(PresenceSettings().spectrum_mode, "expression")
+        self.assertEqual(PresenceSettings().spectrum_mode, "thematic")
         self.assertEqual(PresenceSettings().spectrum_intensity, 65)
         for mode in ("expression", "thematic", "neutral"):
             self.assertEqual(PresenceSettings.from_dict({"spectrum_mode": mode}).spectrum_mode, mode)
         for value in (-1, 101, True, "90", float("nan"), float("inf"), None):
             self.assertEqual(PresenceSettings.from_dict({"spectrum_intensity": value}).spectrum_intensity, 65)
-        self.assertEqual(PresenceSettings.from_dict({"spectrum_mode": []}).spectrum_mode, "expression")
+        self.assertEqual(PresenceSettings.from_dict({"spectrum_mode": []}).spectrum_mode, "thematic")
 
     def test_color_transition_is_smooth_and_retargets_without_a_flash(self):
         transition = AccentTransition()
@@ -264,9 +264,9 @@ class GeometryTests(unittest.TestCase):
         self.assertFalse(model.needs_animation(now=2))
 
     def test_expressivity_defaults_and_invalid_preferences(self):
-        self.assertEqual(PresenceSettings().wave_expressivity, 65)
+        self.assertEqual(PresenceSettings().wave_expressivity, 75)
         for value in (-1, 101, float("nan"), float("inf"), True, "high", None):
-            self.assertEqual(PresenceSettings.from_dict({"wave_expressivity": value}).wave_expressivity, 65)
+            self.assertEqual(PresenceSettings.from_dict({"wave_expressivity": value}).wave_expressivity, 75)
         for value in (0, 65, 100):
             self.assertEqual(PresenceSettings.from_dict({"wave_expressivity": value}).wave_expressivity, value)
 
@@ -553,7 +553,7 @@ class PresenceTkTests(unittest.TestCase):
         self.view.show()
         self.view.open_settings()
         slider = next(child for child in widgets(self.view.settings_dialog) if isinstance(child, tk.Scale))
-        self.assertEqual(slider.get(), 65)
+        self.assertEqual(slider.get(), 75)
         self.root.update()
         slider.set(90)
         self.root.update()
@@ -573,8 +573,9 @@ class PresenceTkTests(unittest.TestCase):
              if isinstance(widget, ttk.Notebook)).select(1)
         self.root.update()
         children = widgets(self.view.settings_dialog)
-        mode = [widget for widget in children if isinstance(widget, ttk.Combobox)][2]
-        self.assertEqual(mode.get(), "Émotion exprimée")
+        mode = next(widget for widget in children if isinstance(widget, ttk.Combobox)
+                    and "Ambiance du sujet" in widget.cget("values"))
+        self.assertEqual(mode.get(), "Ambiance du sujet")
         mode.set("Ambiance du sujet")
         mode.event_generate("<<ComboboxSelected>>")
         slider = [widget for widget in children if isinstance(widget, tk.Scale) and float(widget.cget("from")) == 0][1]
@@ -722,7 +723,7 @@ class PresenceTkTests(unittest.TestCase):
 
     def test_captions_follow_played_fraction_and_only_keywords_receive_accents(self):
         self.view.show()
-        self.view.set_options(spectrum_mode="thematic")
+        self.view.set_options(spectrum_mode="thematic", subtitle_coloring="expressive")
         text = "La colère et la rage, le reste demeure une simple phrase ordinaire."
         self.view.interpret_text(text)
         self.assertEqual(self.view.caption_label.winfo_manager(), "")
@@ -736,7 +737,8 @@ class PresenceTkTests(unittest.TestCase):
         ranges = self.view.caption_label.tag_ranges("keyword")
         emphasized = [self.view.caption_label.get(start, end) for start, end in zip(ranges[::2], ranges[1::2])]
         self.assertEqual(emphasized, ["colère", "rage"])
-        self.assertEqual(self.view.caption_label.cget("foreground"), palette("#000000")["foreground"])
+        self.assertEqual(self.view.caption_label.cget("foreground"), mix("#000000", palette("#000000")["foreground"], .86))
+        self.assertGreaterEqual(contrast(self.view.caption_label.cget("foreground"), "#000000"), 4.5)
         with patch("jarvis.presence.time.monotonic", return_value=time.monotonic() + 1):
             self.view._render_caption()
         self.assertEqual(self.view.caption_label.tag_cget("keyword", "foreground"),

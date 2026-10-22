@@ -522,3 +522,39 @@ sous-arcs fluides, puis passage à la voix au premier PCM. Tester épaisseur1/10
 DPI100/150/200%, fenêtre redimensionnée, Réduire mouvements, masque et sommeil,
 arrêt/interruption. Capture source Linux horsligne inspectée ; rendu Windows réel
 et périphériques à vérifier sur le PC, sans prétendre que la CI remplace cette recette.
+
+
+## PRESENCE3 — sous-lot2 : Emotional Field et UX
+
+Dominante par réponse et nuances locales via MoodTracker à état borné ; pivots
+après cohérence répétée ou marqueur narratif affirmé. Français : négations, citations,
+contextes, intensificateurs et hypothèses ; analyse lexicale conservatrice, pas IA
+émotionnelle ni lecture de la pensée. Nouvel apaisement et expressions composées.
+Timeline source préparée une fois puis envoyée dans IPC : PCM déclenche couleur et
+surlignages, pas arrivée anticipée des tokens. Rendu sans tokenisation/classification,
+plancher et groupes approximatifs explicités. Plans capturent ponctuation, français,
+Markdown et emojis ; 2lignes/12mots auplus, mots neutres et non encore estimés prononcés
+sans coloration. Cache courant seulement, 64événements/4000caractères analysés par
+segment ; queue visuelle inconnue neutre, audio/texteSQLite conservés intacts.
+Mood pilote couleur/halo/inertie et courbes symboliques, pas amplitudeaudio inventée.
+
+Réglages et interfaces : nouveaux défauts ambiance/expressivité75/Cinématique,
+anciennes préférences explicites préservées ; intensité3modes, sous-titresémotionnels,
+taille12–32, F9Immersion/Diagnostic. Étatsmicro structurés par vrais événements,
+suspension jusqu’à démutage confirmé et repriseSTT après erreur. Moteurs et garde350ms
+inchangés. Scénario4moods horsligne sans micro/modèle/son simulé. Annulation prioritaire
+par écoute/arrêt/erreur/masque/fermeture. Contrôles de sécurité toujoursvisibles.
+Réglages à onglets défilants au clavier, boutonFermer réservé ; tests Tk8.6/9 auxDPI
+100/200/250%, sous-titresadaptatifs sans recouvrement des boutons. Danspetites fenêtres,
+policeeffectiveajustée (préférenceconservée) et footeroptionnel masqué pour lisibilité.
+
+Mesure finale sous-lot2 (même sondeLinux960×640, médiane3, unpassage, hors sous-titres) :
+CPU Tk/frame THINKING équilibré520µs contre599–659µs initial ; silence309µs,
+sommeil218µs, utilisateur625µs, JARVIS534µs. PicPython THINKING92,1Kio/24frames.
+Pas de gain matériel global annoncé : pas Windows/GPU/RAMtotale/énergie/latencevocale.
+Tests ciblés157 sans ignoré sousTk8.6, complémentsunitaires et parcoursTk9 réussis.
+CaptureThinkingHalo réellement rendue par Tk8.6 sousLinux ; aperçu étiqueté horsligne.
+Recette Windows11 toujours nécessaire (Tom/Siwis/micro/Bluetooth/DPI/accessibilité).
+Validation finale complète :377 tests exécutés,368 réussis,9 ignorés (dépendances
+vocales natives ou modèles réels absents), aucun échec. Démarrages source isolés
+`--smoke-test` réussis sous Tk9 et Tk8.6 ; aucun profil utilisateur réel utilisé.

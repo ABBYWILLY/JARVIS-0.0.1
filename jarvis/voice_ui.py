@@ -7,6 +7,7 @@ from dataclasses import replace
 from tkinter import filedialog, messagebox, ttk
 
 from .richtext import SpeechBuffer, parse_text
+from .captions import prepare_caption
 from .spectrum import analyze_passages
 from .tts import SpeechText
 from .voice_config import PERSONALITY_PROMPTS, VOICES, VoiceSettings
@@ -14,8 +15,12 @@ from .voice_runtime import AudioProcess, audio_error
 
 
 class VoiceControls:
+    MICROPHONE_STATES = frozenset({"disabled", "starting", "open", "voice", "stt", "suspended", "error"})
+
     def __init__(self, app, parent):
         self.app = app
+        self.microphone_state = "disabled"
+        self.microphone_detail = ""
         initial_status = "Microphone désactivé"
         try:
             self.settings = VoiceSettings(**app.store.get_preference("voice", {})).validate()
@@ -57,6 +62,17 @@ class VoiceControls:
         if hasattr(self.app, "presence"):
             self.app.presence.update_event(state, signal=signal, caption=caption)
 
+    def set_mic_state(self, state, detail=""):
+        """Publish capture status separately from the emotional/audio visual."""
+        if state not in self.MICROPHONE_STATES:
+            raise ValueError(f"Unknown microphone state: {state}")
+        detail = str(detail or "")[:256]
+        changed = (state, detail) != (self.microphone_state, self.microphone_detail)
+        self.microphone_state, self.microphone_detail = state, detail
+        update = getattr(getattr(self.app, "presence", None), "update_microphone", None)
+        if changed and callable(update):
+            update(state, detail=detail)
+
     def toggle(self):
         if self.listening:
             self.stop_listening()
@@ -64,6 +80,7 @@ class VoiceControls:
         if hasattr(self.app, "presence") and self.app.presence.state == "dormant":
             self.app.presence.wake()
         if not messagebox.askyesno("Activer le microphone local", "Autoriser JARVIS à écouter ce microphone et à envoyer les transcriptions au modèle Ollama local ?\n\nL’écoute reste active jusqu’à désactivation. Aucun fichier audio n’est conservé.\nMode casque : interruption vocale. Mode haut-parleurs : écoute suspendue pendant la lecture.", parent=self.app.root):
+            self.set_mic_state("disabled", "Autorisation refusée")
             return
         self.capture.start("capture", self.settings)
         self.listening = True
@@ -75,6 +92,7 @@ class VoiceControls:
         self.listen_button.configure(text="Désactiver l’écoute")
         self.status.set("Chargement STT/VAD local…")
         self.last_capture = time.monotonic()
+        self.set_mic_state("starting", "Chargement STT/VAD local")
         self.notify_presence("thinking")
 
     def stop_listening(self):
@@ -84,6 +102,7 @@ class VoiceControls:
         self.listen_button.configure(text="Activer l’écoute")
         self.status.set("Microphone désactivé")
         self.cancel_speech()
+        self.set_mic_state("disabled")
         self.notify_presence("silent")
 
     def emergency(self):
@@ -97,6 +116,7 @@ class VoiceControls:
         if self.app.operation:
             self.app.cancel()
         self.status.set("ARRÊT — microphone, génération et lecture arrêtés")
+        self.set_mic_state("disabled", "Arrêt d’urgence")
         self.notify_presence("silent")
 
     def halt_without_persistence(self):
@@ -116,10 +136,15 @@ class VoiceControls:
             self.app.root.after_cancel(self.resume_id)
             self.resume_id = None
         self.listen_button.configure(text="Activer l’écoute")
+        self.set_mic_state("disabled", "Arrêt de sécurité")
         self.notify_presence("silent")
 
     def begin_turn(self, mid, source):
         self.cancel_speech()
+        presence = getattr(self.app, "presence", None)
+        reset_field = getattr(type(presence), "begin_response", None)
+        if callable(reset_field):
+            reset_field(presence)
         if source != "voice":
             self.reset_turn_latency()
         self.llm_started_at = time.monotonic()
@@ -158,8 +183,10 @@ class VoiceControls:
                 if not self.capture.send({"kind": "mute", "value": True}):
                     self.cancel_speech(status="error")
                     self.status.set("Lecture annulée : suspension du microphone impossible.")
+                    self.set_mic_state("error", "Suspension du microphone impossible")
                     return
                 self.status.set("Lecture haut-parleurs : microphone suspendu")
+                self.set_mic_state("suspended", "Lecture haut-parleurs")
         if len(self.pending_phrases) == self.pending_phrases.maxlen:
             self.cancel_speech(status="error")
             self.status.set("Lecture arrêtée : trop de phrases audio en attente (64). Le texte reste enregistré.")
@@ -185,16 +212,27 @@ class VoiceControls:
             self.segment_id += 1
             # Keep display/emoji text out of the engine; retain source positions
             # for captions and later PCM-triggered visual events.
-            display = parse_text(segment.original).text
+            document = parse_text(segment.original)
+            display = "".join("Bloc de code non lu. " if "codeblock" in span.tags
+                              and not self.settings.speak_code else span.text for span in document.spans)
+            if len(display) > 4000:
+                stop = max(display.rfind(" ", 0, 3999), display.rfind("\n", 0, 3999), 0)
+                display = display[:stop] + "…"
             mode = getattr(getattr(getattr(self.app, "presence", None), "settings", None),
                            "spectrum_mode", "expression")
             if mode not in {"expression", "thematic", "neutral"}:
                 mode = "expression"
+            presence = getattr(self.app, "presence", None)
+            prepare_field = getattr(type(presence), "prepare_segment", None)
+            if callable(prepare_field):
+                events, plan = prepare_field(presence, segment.original, display, segment.start)
+            else:
+                events = analyze_passages(segment.original, mode=mode, start=segment.start)
+                plan = prepare_caption(display, mode=mode)
             self.submit_phrase(SpeechText(segment.text, original=segment.original,
-                display_text=display[:4000], start=segment.start, end=segment.end,
+                display_text=display, start=segment.start, end=segment.end,
                 events=segment.events, segment_id=self.segment_id,
-                spectrum_events=analyze_passages(segment.original, mode=mode, start=segment.start),
-                spectrum_mode=mode))
+                spectrum_events=events, spectrum_mode=mode, caption_plan=plan))
 
     def finish_turn(self, status):
         if status != "complete":
@@ -236,15 +274,22 @@ class VoiceControls:
             if had_audio and self.settings.acoustic_mode == "speakers":
                 self.schedule_resume()
             else:
-                self.capture.send({"kind": "mute", "value": False})
+                if not self.capture.send({"kind": "mute", "value": False}):
+                    self.set_mic_state("error", "Reprise du microphone impossible")
+                elif self.microphone_state == "suspended":
+                    self.set_mic_state("open")
         state = "thinking" if self.app.operation == "chat" else "listening" if self.listening else "silent"
         self.notify_presence(state, signal={"rms": 0.0, "wave": []})
 
     def _resume_microphone(self, epoch):
         self.resume_id = None
         if self.listening and epoch == self.epoch and not self.tts_active:
-            self.capture.send({"kind": "mute", "value": False})
-            self.status.set("Écoute locale active")
+            if self.capture.send({"kind": "mute", "value": False}):
+                self.set_mic_state("open")
+                self.status.set("Écoute locale active")
+            else:
+                self.set_mic_state("error", "Reprise du microphone impossible")
+                self.status.set("Reprise du microphone impossible ; vérifiez le diagnostic audio.")
             if not self.app.operation:
                 self.notify_presence("listening")
 
@@ -269,6 +314,8 @@ class VoiceControls:
                     self.status.set("Échantillon non enregistré : " + str(event.payload))
             elif event.kind in {"turn_end", "stt_complete", "capture_error", "stt_superseded"}:
                 self.record_diagnostic(event.kind, event.payload)
+                if event.kind == "capture_error":
+                    self.set_mic_state("error", event.payload.get("error", "Capture indisponible"))
                 if event.generation == self.heard:
                     if event.kind == "turn_end":
                         self.turn_ended_at = event.payload.get("ended_at")
@@ -276,16 +323,22 @@ class VoiceControls:
                             self.set_latency("Silence de fin de tour (PCM)", event.payload["silence_ms"])
                     elif event.kind == "stt_complete":
                         self.transcribing = False
+                        if self.listening and self.microphone_state != "suspended":
+                            self.set_mic_state("open")
                         self.stt_details = event.payload
                         self.stt_latency(event.payload)
                     elif event.kind == "stt_superseded":
                         self.transcribing = False
+                        if self.listening and self.microphone_state != "suspended":
+                            self.set_mic_state("open")
             elif event.kind == "stt_error":
                 self.record_diagnostic(event.kind, event.payload)
                 if event.generation == self.heard:
                     self.transcribing = False
                     self.stt_latency(event.payload)
                     self.status.set("Échec STT ; écoute maintenue. Détails dans Diagnostic micro / STT.")
+                    if self.listening:
+                        self.set_mic_state("error", "STT ; écoute maintenue : " + str(event.payload.get("error", "")))
                     if not self.app.operation:
                         self.notify_presence("listening")
             elif event.kind == "speech_start":
@@ -299,6 +352,8 @@ class VoiceControls:
                 if self.app.operation == "chat":
                     self.app.cancel()
                 self.status.set("Voix détectée")
+                if self.listening:
+                    self.set_mic_state("voice")
                 self.notify_presence("user_speaking")
             elif event.kind in {"transcribing", "stt_queued"}:
                 self.record_diagnostic(event.kind, {"tour": event.generation})
@@ -306,9 +361,13 @@ class VoiceControls:
                     self.transcribing = True
                     self.status.set("Transcription française locale…" if event.kind == "transcribing"
                                     else "Tour vocal conservé ; attente du STT local…")
+                    if self.listening:
+                        self.set_mic_state("stt", "Transcription locale" if event.kind == "transcribing" else "Attente du STT local")
                     self.notify_presence("thinking")
             elif event.kind == "transcript" and event.generation == self.heard:
                 self.transcribing = False
+                if self.listening and self.microphone_state != "suspended":
+                    self.set_mic_state("open")
                 if event.payload.strip() and not self.app.operation:
                     self.app.send(source="voice", text=event.payload.strip())
                     if self.app.operation != "chat":
@@ -321,6 +380,8 @@ class VoiceControls:
                     self.status.set("Aucune parole transcrite ; écoute active")
                     self.notify_presence("listening")
             elif event.kind == "mic_level":
+                if self.listening and not self.transcribing and self.microphone_state != "suspended":
+                    self.set_mic_state("voice" if event.payload.get("speaking") else "open")
                 if event.payload.get("speaking"):
                     self.notify_presence("user_speaking", signal=event.payload)
                 elif self.listening and not self.transcribing and not self.app.operation and not self.tts_active:
@@ -329,15 +390,19 @@ class VoiceControls:
                 if event.payload:
                     self.record_diagnostic("capture_ready", event.payload)
                 self.status.set("Écoute locale active")
+                if self.listening and self.microphone_state != "suspended":
+                    self.set_mic_state("open")
                 self.notify_presence("listening")
             elif event.kind == "error":
                 self.stop_listening()
                 self.status.set(str(event.payload))
+                self.set_mic_state("error", event.payload)
             elif event.kind == "warning":
                 self.status.set(str(event.payload))
         if self.listening and not self.capture.alive() and now - self.last_capture > 0.5:
             self.stop_listening()
             self.status.set("Processus micro arrêté. Réactivez l’écoute après vérification audio.")
+            self.set_mic_state("error", "Processus micro arrêté")
         for event in self.speech.poll():
             self.last_speech = now
             if event.kind == "tts_ready":
@@ -510,7 +575,10 @@ class VoiceControls:
         if self.listening and not self.capture.send({"kind": "mute", "value": True}):
             self.cancel_speech(status="error")
             self.status.set("Réécoute annulée : suspension du microphone impossible.")
+            self.set_mic_state("error", "Suspension du microphone impossible")
             return
+        if self.listening:
+            self.set_mic_state("suspended", "Réécoute du PCM demandé")
         self.speech.start("sample", self.settings, self.epoch)
         self.last_speech = time.monotonic()
         if not self.speech.send(self.last_sample["path"]):
@@ -545,7 +613,10 @@ class VoiceControls:
         self.speech.send("Bonjour. Je suis JARVIS. Voici un aperçu de ma voix française.")
         self.end_pending = True
         if self.listening and self.settings.acoustic_mode == "speakers":
-            self.capture.send({"kind": "mute", "value": True})
+            if self.capture.send({"kind": "mute", "value": True}):
+                self.set_mic_state("suspended", "Aperçu vocal haut-parleurs")
+            else:
+                self.set_mic_state("error", "Suspension du microphone impossible")
 
     def open_settings(self):
         if self.listening or self.app.operation:

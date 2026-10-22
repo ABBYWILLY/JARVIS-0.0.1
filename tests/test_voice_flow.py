@@ -101,6 +101,7 @@ class VoiceFlowTests(unittest.TestCase):
 
     def test_microphone_closed_until_explicit_acceptance_and_toggle_stops_it(self):
         self.assertFalse(self.voice.listening)
+        self.assertEqual(self.voice.microphone_state, "disabled")
 
         self.assertEqual(self.voice.capture.starts, [])
         self.assertEqual(self.voice.speech.starts, [])
@@ -109,13 +110,93 @@ class VoiceFlowTests(unittest.TestCase):
         permission.assert_called_once()
         self.assertFalse(self.voice.listening)
         self.assertEqual(self.voice.capture.starts, [])
+        self.assertEqual(self.voice.microphone_state, "disabled")
+        self.assertEqual(self.voice.microphone_detail, "Autorisation refusée")
+        self.app.presence.update_microphone.assert_called_with("disabled", detail="Autorisation refusée")
         self.activate()
         self.assertEqual(len(self.voice.capture.starts), 1)
+        self.assertEqual(self.voice.microphone_state, "starting")
         with patch("jarvis.voice_ui.messagebox.askyesno") as permission:
             self.voice.toggle()
         permission.assert_not_called()
         self.assertFalse(self.voice.capture.alive())
         self.assertFalse(self.voice.listening)
+        self.assertEqual(self.voice.microphone_state, "disabled")
+
+    def test_microphone_state_is_separate_bounded_and_optional(self):
+        self.voice.set_mic_state("error", "Échec STT " + "é" * 400)
+        self.assertEqual(self.voice.microphone_state, "error")
+        self.assertEqual(len(self.voice.microphone_detail), 256)
+        self.app.presence.update_microphone.assert_called_once_with("error", detail=self.voice.microphone_detail)
+        self.app.presence.update_event.assert_not_called()
+        self.assertEqual(self.voice.capture.starts, [])
+        self.assertEqual(self.voice.capture.commands, [])
+        self.voice.set_mic_state("error", self.voice.microphone_detail)
+        self.app.presence.update_microphone.assert_called_once()
+        with patch.object(self.app, "presence", object()):
+            self.voice.set_mic_state("disabled")
+        self.assertEqual(self.voice.microphone_state, "disabled")
+        with self.assertRaises(ValueError):
+            self.voice.set_mic_state("emotion")
+
+    def test_microphone_states_follow_capture_events_and_stale_stt_is_ignored(self):
+        self.activate("headphones")
+        for event, expected in (
+                (AudioEvent("listening"), "open"),
+                (AudioEvent("speech_start", generation=2), "voice"),
+                (AudioEvent("stt_queued", generation=2), "stt"),
+                (AudioEvent("transcribing", generation=1), "stt"),
+                (AudioEvent("stt_error", {"error": "ancien", "elapsed_ms": 2}, 1), "stt"),
+                (AudioEvent("transcribing", generation=2), "stt"),
+                (AudioEvent("mic_level", {"speaking": False, "rms": 0}, 2), "stt"),
+                (AudioEvent("stt_complete", {"result": "", "elapsed_ms": 2}, 2), "open")):
+            with self.subTest(event=event.kind, generation=event.generation):
+                self.voice.capture.events.append(event)
+                self.voice.poll()
+                self.assertEqual(self.voice.microphone_state, expected)
+                self.assertTrue(self.voice.capture.alive())
+
+    def test_speaker_microphone_stays_suspended_until_successful_resume(self):
+        self.activate()
+        self.voice.capture.events.append(AudioEvent("listening"))
+        self.voice.poll()
+        self.begin_simulated_audio_turn()
+        self.assertEqual(self.voice.microphone_state, "suspended")
+        self.voice.capture.events.append(AudioEvent("mic_level", {"speaking": False, "rms": 0}))
+        self.voice.poll()
+        self.assertEqual(self.voice.microphone_state, "suspended")
+        self.voice.speech.events.append(AudioEvent("speech_done", generation=self.voice.epoch))
+        self.voice.poll()
+        self.assertEqual(self.voice.microphone_state, "suspended")
+        self.voice.capture.accept_commands = False
+        self.pump_until(lambda: self.voice.resume_id is None)
+        self.assertEqual(self.voice.microphone_state, "error")
+        self.assertIn("Reprise", self.voice.microphone_detail)
+        self.assertTrue(self.voice.listening)
+        self.voice.capture.accept_commands = True
+        self.voice.schedule_resume()
+        self.pump_until(lambda: self.voice.resume_id is None)
+        self.assertEqual(self.voice.microphone_state, "open")
+
+    def test_capture_failure_then_explicit_stop_and_emergency_have_distinct_states(self):
+        self.activate()
+        self.voice.capture.events.extend([
+            AudioEvent("capture_error", {"stage": "ouverture microphone", "error": "Périphérique absent"}),
+            AudioEvent("error", "Capture indisponible"),
+        ])
+        self.voice.poll()
+        self.assertFalse(self.voice.capture.alive())
+        self.assertFalse(self.voice.listening)
+        self.assertEqual(self.voice.microphone_state, "error")
+        self.assertEqual(self.voice.microphone_detail, "Capture indisponible")
+        self.voice.stop_listening()
+        self.assertEqual(self.voice.microphone_state, "disabled")
+        self.activate("headphones")
+        self.voice.emergency()
+        self.assertEqual(self.voice.microphone_state, "disabled")
+        self.assertIn("urgence", self.voice.microphone_detail)
+        self.assertFalse(self.voice.capture.alive())
+        self.assertFalse(self.voice.speech.alive())
 
     def test_markdown_stream_reaches_tts_clean_only_after_construct_closes(self):
         self.activate("headphones")
@@ -184,11 +265,16 @@ class VoiceFlowTests(unittest.TestCase):
         self.voice.poll()
         self.assertFalse(self.voice.transcribing)
         self.assertTrue(self.voice.capture.alive())
+        self.assertEqual(self.voice.microphone_state, "error")
+        self.assertIn("STT ; écoute maintenue", self.voice.microphone_detail)
         self.assertIn("STT failure", self.voice.diagnostic_text.get("1.0", "end"))
         button = next(child for child in self.voice.diagnostic_window.winfo_children()
                       if child.winfo_class() == "TButton")
         button.invoke()
         self.assertEqual(self.voice.capture.commands[-1], {"kind": "finish_turn"})
+        self.voice.capture.events.append(AudioEvent("mic_level", {"speaking": False, "rms": 0}, 1))
+        self.voice.poll()
+        self.assertEqual(self.voice.microphone_state, "open")
         self.voice.capture.events.extend([
             AudioEvent("speech_start", generation=2),
             AudioEvent("transcribing", generation=2),
@@ -548,6 +634,7 @@ class VoiceFlowTests(unittest.TestCase):
         self.assertEqual(self.voice.speech.commands, [])
         self.assertEqual(json.loads(self.store.messages(self.app.session_id)[1]["metadata"])["audio_status"], "error")
         self.assertIn("suspension du microphone impossible", self.voice.status.get())
+        self.assertEqual(self.voice.microphone_state, "error")
 
     def bounded_speech_queue(self):
         """Real bounded transport; synthesis/playback remain explicitly simulated."""

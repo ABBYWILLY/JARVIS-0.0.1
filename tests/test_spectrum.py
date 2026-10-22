@@ -2,8 +2,8 @@ from dataclasses import FrozenInstanceError
 import unittest
 
 from jarvis.spectrum import (
-    CYAN, OPERATIONAL, TONES, Tone, ToneAnalyzer, ToneEvent,
-    analyze_passages, caption_group, keyword_spans,
+    CYAN, OPERATIONAL, TONES, FieldEvent, MoodTracker, Tone, ToneAnalyzer, ToneEvent,
+    analyze_passages, caption_group, emotional_spans, keyword_spans,
 )
 
 
@@ -81,6 +81,7 @@ class SpectrumTests(unittest.TestCase):
                      "Je suis peut-être furieux.", "Je suis furieux, peut-être.", "Je pourrais ressentir de la colère."):
             with self.subTest(text=text):
                 self.assertEqual(ToneAnalyzer().update(text), Tone())
+                self.assertEqual(ToneAnalyzer(mode="thematic").update(text), Tone())
 
     def test_explicit_and_coordinated_negations_stay_neutral(self):
         for text in ("aucune colère et pas de rage", "Je ne suis pas furieux.",
@@ -205,3 +206,132 @@ class SpectrumTests(unittest.TestCase):
         self.assertEqual(len(final.split()), 12)
         self.assertTrue(final.endswith("mot59"))
         self.assertEqual(caption_group(text, float('nan')), "")
+
+    def test_apaisement_and_contextual_reassurance(self):
+        for text in ("Je suis calme.", "Je me sens sereine.", "Je suis apaisé.",
+                     "Tout va bien.", "Ça va aller."):
+            with self.subTest(text=text):
+                tone = ToneAnalyzer().update(text)
+                self.assertEqual(tone.name, "apaisement")
+                self.assertTrue(emotional_spans(text, tone, mode="expression"))
+        self.assertEqual(ToneAnalyzer().update("Je suis avec vous de tout cœur.").name, "compassion")
+        self.assertEqual(ToneAnalyzer().update("Je t'aime de tout cœur.").name, "attachement")
+        for text in ("De tout cœur.", "La phrase tout va bien est citée.", "Ça va aller ?",
+                     "Ça ne va pas aller.", "Peut-être que tout va bien.",
+                     "Je ne suis pas calme.", "Je suis heureux et calme."):
+            with self.subTest(text=text):
+                self.assertEqual(ToneAnalyzer().update(text), Tone())
+
+    def test_intensifier_strengthens_only_affirmed_evidence(self):
+        plain = ToneAnalyzer().update("Je suis serein.")
+        strong = ToneAnalyzer().update("Je suis vraiment très serein.")
+        self.assertGreater(strong.confidence, plain.confidence)
+        self.assertEqual(strong.name, plain.name)
+        self.assertLessEqual(strong.confidence, 1)
+        self.assertEqual(ToneAnalyzer().update("Je ne suis vraiment pas serein."), Tone())
+        self.assertEqual(ToneAnalyzer(mode="thematic").update("Une très belle étude sur le calme.").confidence,
+                         plain.confidence)
+
+    def test_contextual_spans_exclude_same_word_in_negations_quotes_and_code(self):
+        source = 'Je suis furieux, mais pas furieux ni en rage. « furieux » `furieux`'
+        tone = analyze_passages(source)[0].tone
+        spans = emotional_spans(source, tone, mode="expression")
+        self.assertEqual([source[a:b] for a, b in spans], ["furieux"])
+        self.assertEqual(emotional_spans(source, Tone()), ())
+        self.assertEqual(emotional_spans(source, tone, mode="neutral"), ())
+        self.assertEqual(emotional_spans("Je suis furieux et inquiet.", tone), ())
+        with self.assertRaises(ValueError):
+            emotional_spans(source, tone, mode="unknown")
+
+    def test_compound_spans_and_decomposed_accents_keep_python_offsets(self):
+        source = "👩🏽‍💻 **Ça va aller**, tout va bien."
+        tone = ToneAnalyzer().update(source)
+        self.assertEqual([source[a:b] for a, b in emotional_spans(source, tone)],
+                         ["Ça va aller", "tout va bien"])
+        source = "👩🏽‍💻 Je suis en cole\u0300re, mais sans colère."
+        tone = ToneAnalyzer().update(source)
+        self.assertEqual(tone.name, "colère")
+        self.assertEqual([source[a:b] for a, b in emotional_spans(source, tone)], ["cole\u0300re"])
+        self.assertEqual([source[a:b] for a, b in keyword_spans(source, tone.words)],
+                         ["cole\u0300re", "colère"])
+        source = "Je suis avec vous de tout cœur."
+        tone = ToneAnalyzer().update(source)
+        self.assertEqual([source[a:b] for a, b in emotional_spans(source, tone)], ["de tout cœur"])
+
+
+class MoodTrackerTests(unittest.TestCase):
+    def test_first_reliable_mood_survives_isolated_nuance_and_factual_passages(self):
+        source = "J'ai confiance. Je suis furieux. Voici le résultat. J'ai confiance."
+        raw = analyze_passages(source, mode="thematic", start=17)
+        events = MoodTracker().feed(raw)
+        self.assertEqual([event.dominant.name for event in events], ["espoir"] * 4)
+        self.assertEqual([event.tone for event in events], [event.tone for event in raw])
+        self.assertEqual(''.join(event.text for event in events), source)
+        self.assertEqual(events[0].start, 17)
+        self.assertEqual(events[-1].end, 17 + len(source))
+        self.assertIsInstance(events[0], FieldEvent)
+        with self.assertRaises(FrozenInstanceError):
+            events[0].dominant = Tone()
+
+    def test_two_consecutive_new_passages_allow_a_coherent_pivot(self):
+        raw = analyze_passages("J'ai confiance. Je suis furieux. Je suis vraiment en colère.", mode="thematic")
+        tracker = MoodTracker()
+        events = tuple(event for passage in raw for event in tracker.feed((passage,)))
+        self.assertEqual([event.dominant.name for event in events], ["espoir", "espoir", "colère"])
+        self.assertEqual(MoodTracker().feed(raw), events)
+        self.assertEqual(tracker.dominant.name, "colère")
+
+    def test_explicit_affirmed_narrative_pivot_does_not_wait_for_second_passage(self):
+        for passage in ("Désormais, je suis apaisé.", "Maintenant, tout va bien.",
+                        "Enfin, je suis calme.", "Je suis enfin serein."):
+            with self.subTest(passage=passage):
+                raw = analyze_passages("Je suis furieux. " + passage, mode="thematic")
+                events = MoodTracker().feed(raw)
+                self.assertEqual(events[-1].dominant.name, "apaisement")
+                self.assertEqual(events[-1].tone.name, "apaisement")
+
+    def test_quoted_pivot_markers_and_unreliable_evidence_do_not_force_pivot(self):
+        tracker = MoodTracker()
+        tracker.feed(analyze_passages("J'ai confiance.", mode="thematic"))
+        event = tracker.feed(analyze_passages("Je suis calme « désormais ».", mode="thematic"))[-1]
+        self.assertEqual(event.dominant.name, "espoir")
+        weak = Tone("apaisement", TONES["apaisement"][0], ("calme",), 0.3)
+        events = tracker.feed((ToneEvent(0, 5, "calme", weak),) * 3)
+        self.assertTrue(all(event.dominant.name == "espoir" for event in events))
+        tracker.feed(analyze_passages("Voici le résultat.", mode="thematic"))
+        event = tracker.feed(analyze_passages("Je suis calme.", mode="thematic"))[-1]
+        self.assertEqual(event.dominant.name, "espoir")
+
+    def test_ambiguous_initial_passages_stay_cyan_and_reset_clears_response(self):
+        tracker = MoodTracker()
+        events = tracker.feed(analyze_passages('« Je suis furieux ». Je ne suis pas calme. Peur et espoir.', mode="thematic"))
+        self.assertTrue(all(event.dominant == Tone() for event in events))
+        tracker.feed(analyze_passages("J'ai confiance.", mode="thematic"))
+        tracker.reset()
+        self.assertEqual(tracker.dominant, Tone())
+        self.assertEqual(tracker.feed(()), ())
+        event = tracker.feed(analyze_passages("Je suis furieux.", mode="thematic"))[0]
+        self.assertEqual(event.dominant.name, "colère")
+
+    def test_neutral_mode_and_mode_validation(self):
+        raw = analyze_passages("Je suis furieux. Maintenant je suis calme.", mode="thematic")
+        events = MoodTracker(mode="neutral").feed(raw)
+        self.assertTrue(all(event.tone == Tone() and event.dominant == Tone() for event in events))
+        with self.assertRaises(ValueError):
+            MoodTracker(mode="unknown")
+
+    def test_long_response_keeps_no_event_or_source_history(self):
+        import gc
+        import weakref
+
+        tracker = MoodTracker()
+        event = analyze_passages("J'ai confiance.", mode="thematic")[0]
+        reference = weakref.ref(event)
+        tracker.feed((event,))
+        del event
+        gc.collect()
+        self.assertIsNone(reference())
+        for _ in range(1000):
+            tracker.feed(analyze_passages("Je suis furieux. J'ai confiance.", mode="thematic"))
+        self.assertEqual(tracker.dominant.name, "espoir")
+        self.assertLessEqual(tracker._candidate_count, 1)

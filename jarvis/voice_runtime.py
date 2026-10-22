@@ -229,6 +229,8 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
                     "spectrum_events": [dict(asdict(event), text=event.text[:512]) for event in text.spectrum_events],
                     "spectrum_mode": text.spectrum_mode,
                     "alignment": "phrase / bloc PCM approximatif"}
+                if text.caption_plan is not None:
+                    caption_metadata["caption_plan"] = asdict(text.caption_plan)
 
                 def playback_emit(event):
                     if event.kind == "played":

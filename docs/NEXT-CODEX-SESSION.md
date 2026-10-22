@@ -1,23 +1,33 @@
-# Reprise PRESENCE 3 — 22 octobre 2026
+# Reprise PRESENCE3 — 22 octobre 2026
 
-Demande complète conservée dans `docs/PRESENCE-3-SPEC.md` ; elle remplace les
-priorités PRESENCE précédentes, sans retirer les exigences DOCX/J2.8.
-
-Sous-lot1 livré : épaisseur1–10 (défaut6), trait3,44px/halo11px à100%DPI,
-réglages halos/animations, THINKING orbital29% du petit côté avec sous-arcs issus
-du même mesh. Aucun second visualiseur. Arrivée PCM→forme parlante ; PCM nul ou
-expiré→plat ; sommeilcompactimmobile ; fenêtre masquée→aucun timer d’animation.
-Caches bornés (dernier signal/géométrie), profils+DPI+charge ; onglets de réglages.
-106 tests ciblés sous Tk9 et48 sous Tk8.6 réussis. Capture Linux inspectée, pas Windows.
-
-Reste à implémenter dans les sous-lots suivants : dominante émotionnelle stable
-par réponse et nuances/pivots, défaut ambiance, expressivité75, fluidité3modes,
-effets mood sur halo/inertie/courbes, timeline/caches sans analyse dans le rendu,
-sous-titres2lignes contextuels (expressions/mots pertinents prononcés seulement),
-réglages couleur/taille, Immersion/Diagnostic clavier, états micro structurés et
-scénario horsligne espoir→affection→tension→apaisement. Préserver prefs déjà sauvées.
-Ne pas annoncer ces éléments terminés avant tests/commit/push. CI du nouveau SHA
-à vérifier ; recette matérielle Windows/DPI/micro/Bluetooth toujours ouverte.
+Demande complète : `docs/PRESENCE-3-SPEC.md`. Préserver les exigences DOCX/J2.8.
+Sous-lot1 publié9c4d719 : épaisseur1–10/défaut6, halo multicouche, noyau orbital
+THINKING centré, profils/DPI/charge, cache signal et canvasréutilisés.106tests ciblés.
+Sous-lot2 livré : dominante stable par réponse, nuances locales/pivots conservateurs,
+apaisement et expressions contextuelles. Ambiance thématique par défaut, cyan
+neutre ou expression sélectionnables. Une heuristique locale, aucun second LLM.
+Plans immuables source→IPC→PCM→sous-titres ; classification à l’arrivée du texte,
+aucune analyse dans le rendu. Timeline64 passages/4000caractères par segment puis
+queue neutre explicite, sans modifier le texte prononcé ni l’archive SQLite.
+Sous-titres2lignes max, seulement mots/expressions pertinents estimés prononcés,
+ponctuation/Unicode/emojis préservés. Couleurs interpolées, interruption prioritaire.
+Réglages persistants : expressivité75, fluiditéRéactive/Cinématique/Apaisée (défaut
+Cinématique), colorisationDiscrète/Normale/Expressive, taille12–32, sous-titres
+émotionnels, halos/animations ; anciennes valeurs65/expression et clés inconnues
+préservées. F9Immersion/Diagnostic masque les données auxiliaires, jamais la sécurité.
+Microphone structuré : désactivé/initialisation/ouvert/voix/STT/suspendu/erreur,
+sans changer permissions, moteurs, garde350ms ou filesaudio. Scénario horsligne
+espoir→affection→tension→apaisement, annulé par voix/arrêt/erreur/masque/fermeture.
+Réglages défilants/clavier, tests DPI100/200/250%. Petitefenêtre : tailleeffective
+adaptée sans changer préférence, copie/notice auxiliaires masquées si nécessaire ;
+indication≈toujoursprésente. Pleinécran recommandé pourgrande police.
+157tests ciblés réussis sous Tk8.6 ; suite complète377 exécutés/368réussis/9ignorés.
+Démarrages source Tk8.6/9 réussis ; capture réelle source Tk8.6/Linux inspectée.
+Recette PCWindows11 et vraie latencevoix/Bluetooth restent à effectuer. Synchronisation
+estimée phrase/bloc PCM/groupes de mots, aucun timestampmotàmot ni émotion réelle
+mesurée. Vérifier CI du dernierSHA avant d’annoncer compilationWindows verte.
+Pas de travaux restants connus dans ce périmètre hors recette matérielle/mesures
+Windows. Ne pas lancer voixpremium/bibliothèque100emojis/stockage sans nouvelle mission.
 
 ---
 
