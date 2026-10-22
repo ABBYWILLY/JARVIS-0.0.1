@@ -723,6 +723,9 @@ class PresenceTkTests(unittest.TestCase):
 
     def test_captions_follow_played_fraction_and_only_keywords_receive_accents(self):
         self.view.show()
+        # Windows applies the native toplevel geometry asynchronously. Exercise
+        # playback after layout, as in the UI, rather than its temporary width.
+        self.root.update()
         self.view.set_options(spectrum_mode="thematic", subtitle_coloring="expressive")
         text = "La colère et la rage, le reste demeure une simple phrase ordinaire."
         self.view.interpret_text(text)
@@ -730,7 +733,14 @@ class PresenceTkTests(unittest.TestCase):
         self.view.update_event("jarvis_speaking", SIGNAL, {"text": text, "fraction": 0})
         self.assertEqual(self.view.caption_label.winfo_manager(), "")
         self.view.update_event("jarvis_speaking", SIGNAL, {"text": text, "fraction": 0.4})
-        self.assertEqual(self.view.caption_label.get("1.0", "end-1c"), caption_group(text, 0.4))
+        visible = self.view.caption_label.get("1.0", "end-1c")
+        # Responsive captions may wrap, while retaining the same complete words
+        # and pronunciation position. Their layout has separate DPI coverage.
+        self.assertEqual(" ".join(visible.split()), caption_group(text, 0.4))
+        self.assertLessEqual(len(visible.splitlines()), 2)
+        available = self.view.canvas.winfo_width() * .82 - 20
+        self.assertTrue(all(self.view._caption_font.measure(line) <= available
+                            for line in visible.splitlines()))
         self.assertEqual(self.view.caption_label.winfo_manager(), "place")
         self.assertIn("estimée", self.view.caption_note.cget("text"))
         self.assertEqual(self.view.caption_footer.winfo_manager(), "place")
@@ -744,9 +754,10 @@ class PresenceTkTests(unittest.TestCase):
         self.assertEqual(self.view.caption_label.tag_cget("keyword", "foreground"),
                          mix(CYAN, self.view.tone.color, 0.65))
         self.view.copy_caption()
-        self.assertEqual(self.root.clipboard_get(), caption_group(text, 0.4))
+        self.assertEqual(self.root.clipboard_get(), visible)
         self.view.update_event("jarvis_speaking", SIGNAL, {"text": text, "fraction": 1})
-        self.assertEqual(self.view.caption_text, caption_group(text, 1))
+        self.assertEqual(" ".join(self.view.caption_text.split()), caption_group(text, 1))
+        self.assertLessEqual(len(self.view.caption_text.splitlines()), 2)
         self.assertLessEqual(len(self.view.caption_text.split()), 12)
         self.view.update_event("thinking")
         self.assertEqual(self.view.caption_text, "")

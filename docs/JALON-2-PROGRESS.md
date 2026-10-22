@@ -558,3 +558,11 @@ Recette Windows11 toujours nécessaire (Tom/Siwis/micro/Bluetooth/DPI/accessibil
 Validation finale complète :377 tests exécutés,368 réussis,9 ignorés (dépendances
 vocales natives ou modèles réels absents), aucun échec. Démarrages source isolés
 `--smoke-test` réussis sous Tk9 et Tk8.6 ; aucun profil utilisateur réel utilisé.
+
+CI Windows : sous-lot 1 compilé et démarré avec succès (run 39804343514).
+Le run 39810312573 identifie un seul échec : ancien test de sous-titres appelé
+avant le layout natif, avec comparaison à une chaîne sans reflow. La fixture
+attend désormais le layout et vérifie les mots exacts, les tags, la copie et les
+deux lignes mesurées. 21 tests ciblés Tk8.6 et le test concerné Tk9 réussis.
+Annotations d'échec ajoutées au runner CI ; aucune validation désactivée.
+Compilation du dernier correctif à confirmer avant livraison.

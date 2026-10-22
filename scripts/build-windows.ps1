@@ -56,9 +56,9 @@ suite = unittest.defaultTestLoader.discover('tests')
 result = unittest.TextTestRunner(verbosity=2).run(suite)
 for test, traceback in result.errors + result.failures:
     # Workflow-command escaping, independent of the Windows console code page.
-    detail = traceback.encode('ascii', 'backslashreplace').decode('ascii')[:12000]
+    detail = f'{test.id()}\n{traceback}'.encode('ascii', 'backslashreplace').decode('ascii')[:12000]
     detail = detail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-    print(f'::error title=Windows test {test.id()}::{detail}', flush=True)
+    print(f'::error title=Windows regression::{detail}', flush=True)
 sys.exit(not result.wasSuccessful())
 '@
 & $Python -c $TestRunner

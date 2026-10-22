@@ -25,7 +25,13 @@ indication≈toujoursprésente. Pleinécran recommandé pourgrande police.
 Démarrages source Tk8.6/9 réussis ; capture réelle source Tk8.6/Linux inspectée.
 Recette PCWindows11 et vraie latencevoix/Bluetooth restent à effectuer. Synchronisation
 estimée phrase/bloc PCM/groupes de mots, aucun timestampmotàmot ni émotion réelle
-mesurée. Vérifier CI du dernierSHA avant d’annoncer compilationWindows verte.
+mesurée. CI Windows du sous-lot 1 verte (run 39804343514). Sous-lot 2 :
+un ancien test comparait le sous-titre responsive à une chaîne sans reflow,
+avant stabilisation de la géométrie Windows (trace run 39810312573).
+Fixture corrigée : attendre le layout ; conserver mots, positions, tags exacts,
+copie et limite de deux lignes mesurées. 21 tests ciblés Tk8.6 + le test Tk9 réussis.
+Les erreurs unittest sont aussi exposées en annotations CI, sans test désactivé.
+Vérifier le nouveau run du dernier SHA avant d’annoncer compilation Windows verte.
 Pas de travaux restants connus dans ce périmètre hors recette matérielle/mesures
 Windows. Ne pas lancer voixpremium/bibliothèque100emojis/stockage sans nouvelle mission.
 
