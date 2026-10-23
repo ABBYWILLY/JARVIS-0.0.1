@@ -242,6 +242,8 @@ class VoiceFlowTests(unittest.TestCase):
                              ("C'est drôle 😂", "laughter")):
             with self.subTest(text=text):
                 phrase, payload = self.real_semantic_phrase(text)
+                region = self.app.markdown.append(text)
+                self.assertEqual(self.app.chat.get(region.start, region.end), text)
                 self.assertTrue(any(event.kind == "expression" for event in phrase.events))
                 self.assertFalse(any(symbol in str(phrase) for symbol in ("😊", "❤", "😂")))
                 self.finish_semantic_pcm(payload)

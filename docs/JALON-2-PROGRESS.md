@@ -1,5 +1,14 @@
 # Jalon 2 — progression vérifiable
 
+## PRESENCE GPU — phase0 préalable
+
+Audit LOTS3/6 sura93a70f, rapport `AUDIT-LOTS-3-6.md`. Corrections démontrées :
+heuristiques auto sur citations/négations, OverflowError sur numériques malformés,
+cyan neutre des palettes. Raccourci F10 réel et restauration géométrie/DPI testés.
+528tests exécutés,519réussis,9ignorés,71,107s Linux/Tk9 ; ciblés Tk8.6/9 verts.
+SQLite/Canvas réels, PCM/LLM contrôlés ; matériel Windows et Qwen réel en attente.
+Prototype GPU ensuite, intégré seulement si ses mesures respectent la mission.
+
 ## Finition reprise — aperçu RichText
 
 Menu Lecture et typographie : vrai MarkdownView local, polices/styles et titres

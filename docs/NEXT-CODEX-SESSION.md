@@ -1,3 +1,16 @@
+# PRESENCE GPU — phase0 audit, 23 octobre 2026
+
+Nouvelle demande : `PRESENCE-GPU-SPEC.md`. Audit complet ciblé LOTS3/6 dans
+`AUDIT-LOTS-3-6.md`, code existant réutilisé. Défauts reproduits corrigés : citations
+simples et négations auto, valeurs numériques démesurées dans affichage/paramètres,
+cyan neutre des palettes. Nouveau vrai test clavier F10/Mini→normal/DPI.
+Suite globale :528tests,519réussis,9ignorés ; campagnes ciblées Tk8.6/9 vertes.
+Pas de validation matérielle distante. `main` inchangée. Prototype ModernGL
+optionnel autonome après ce contrôle ; aucune intégration de production avant
+mesures Windows RTX/voix/Ollama. Sourcebase a93a70f propre, aucun travail perdu.
+
+---
+
 # Reprise finale — aperçu RichText, 23 octobre 2026
 
 LOTS1/2 déjà livrés conservés. LOT3 publié65bd81c, LOT6 publié1e9c765,

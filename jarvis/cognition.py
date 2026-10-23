@@ -39,12 +39,13 @@ def route_request(settings, text, source="text", continuation=False):
     elif selected == "auto":
         origin = "local_heuristic"
         # Quoted/code examples are data, not requests to change policy.
-        query = re.sub(r"```.*?```|`[^`]*`|«[^»]*»|\"[^\"]*\"", " ", text[:16000], flags=re.DOTALL)
+        query = re.sub(r"""```.*?```|`[^`]*`|«[^»]*»|"[^"]*"|“[^”]*”|‘.*?’(?!\w)|(?<!\w)'.*?'(?!\w)""",
+                       " ", text[:16000], flags=re.DOTALL)
         query = _fold(query)
         # A negated request is not a request to activate that policy. Ambiguous
         # clauses fall back to fast; other explicit clauses remain eligible.
         query = " ".join(clause for clause in re.split(r"[,.!?;\n]+", query)
-                         if not re.search(r"\b(?:ne\s+\w+|n['’]\w+)\s+(?:\w+\s+){0,3}(?:pas|jamais|plus)\b", clause))
+                         if not re.search(r"\b(?:ne\s+\w+|n['’]\w+)\s+(?:\w+\s+){0,3}(?:pas|jamais|plus|rien|aucun(?:e|s|es)?)\b", clause))
         if re.search(r"\b(?:ecris|redige|raconte|invente|imagine|compose|cree|propose)\b.{0,80}\b(?:histoire|recit|conte|poeme|roman|scene|scenario|dialogue|chanson|personnage|idees originales)\b", query):
             selected, reason = "creative", "Demande explicite de création narrative ou artistique."
         elif re.search(r"\b(?:analyse|etudie|examine)\b.{0,80}\b(?:en profondeur|approfondi\w*|multicritere|compromis|risques|contraintes)\b|\b(?:demontre|prouve)\b.{0,60}\b(?:theoreme|proposition|mathematique|formellement)\b|\b(?:raisonne|resous)\b.{0,50}\b(?:etape par etape|probleme complexe)\b|\bcompare\b.{0,80}\b(?:criteres|compromis|risques)\b", query):

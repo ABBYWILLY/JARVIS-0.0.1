@@ -48,6 +48,13 @@ class PlaybackSpectrumTests(unittest.TestCase):
             self.assertEqual(PresenceSettings.from_dict({"spectrum_intensity": value}).spectrum_intensity, 65)
         self.assertEqual(PresenceSettings.from_dict({"spectrum_mode": []}).spectrum_mode, "thematic")
 
+    def test_malformed_timing_values_preserve_the_last_measured_duration(self):
+        self.view.update_timing({"stt_ms": 17})
+        for value in (10 ** 1000, -(10 ** 1000), float("nan"), float("inf"), -1, True, "17"):
+            with self.subTest(value_type=type(value).__name__):
+                self.view.update_timing({"stt_ms": value})
+                self.assertEqual(self.view.timings, {"stt_ms": 17})
+
     def test_color_transition_is_smooth_and_retargets_without_a_flash(self):
         transition = AccentTransition()
         transition.retarget("#ff717a", 10)
@@ -58,6 +65,29 @@ class PlaybackSpectrumTests(unittest.TestCase):
         self.assertEqual(transition.color(10.2), middle)
         self.assertEqual(transition.color(11), "#70dca0")
         self.assertFalse(transition.active(11))
+
+    def test_emotional_palettes_preserve_neutral_cyan_and_only_tint_emotional_field(self):
+        colors = []
+        for emotional_palette in ("original", "soft", "warm"):
+            with self.subTest(palette=emotional_palette):
+                self.view.set_options(emotional_palette=emotional_palette)
+                self.assertEqual(self.view._target_accent(), CYAN)
+                self.view.preview_text("Une colère et une rage explicites.")
+                colors.append(self.view._target_accent())
+                self.view.update_event("silent")
+                self.assertEqual(self.view.mesh_accent(time.monotonic() + 1), CYAN)
+                self.view.set_options(accent_mode="cyan")
+                self.view.preview_text("Une colère et une rage explicites.")
+                self.assertEqual(self.view._target_accent(), CYAN)
+                self.view.set_options(accent_mode="fixed", fixed_color="#ab78ef")
+                self.assertEqual(self.view._target_accent(), "#ab78ef")
+                self.view.set_options(accent_mode="none")
+                self.assertEqual(self.view._target_accent(), palette("#000000")["muted"])
+                self.view.set_options(accent_mode="adaptive", spectrum_mode="neutral")
+                self.assertEqual(self.view._target_accent(), CYAN)
+                self.view.set_options(spectrum_mode="thematic")
+                self.view.update_event("silent")
+        self.assertEqual(len(set(colors)), 3)
 
     def test_text_estimation_never_changes_visible_tone_before_pcm(self):
         self.view.set_options(spectrum_mode="thematic")
@@ -377,8 +407,11 @@ class GeometryTests(unittest.TestCase):
                                          "accent_mode": [], "fixed_color": "invisible"}):
             self.assertEqual(PresenceSettings.from_dict(raw), PresenceSettings())
         model = PresenceModel()
-        model.update_event("user_speaking", {"rms": float("nan"), "wave": [None, float("inf")]}, now=0)
-        self.assertTrue(all(y == 350 for _, y in model.frame(1000, 700, now=0.01)))
+        for rms in (float("nan"), 10 ** 1000, -(10 ** 1000)):
+            model.update_event("user_speaking", {"rms": rms,
+                               "wave": [None, float("inf"), 10 ** 1000, -(10 ** 1000)]}, now=0)
+            self.assertTrue(all(y == 350 for _, y in model.frame(1000, 700, now=0.01)))
+            self.assertEqual(model.signal, {"rms": 0., "wave": [0.] * 4})
         with self.assertRaises(ValueError):
             model.update_event("invented")
 

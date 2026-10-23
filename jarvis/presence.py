@@ -103,11 +103,11 @@ class PresenceSettings:
         for key in ("wave_expressivity", "spectrum_intensity", "halo_intensity"):
             value = values.get(key)
             if (isinstance(value, (int, float)) and not isinstance(value, bool)
-                    and math.isfinite(value) and 0 <= value <= 100):
+                    and 0 <= value <= 100 and math.isfinite(value)):
                 valid[key] = round(value)
         value = values.get("visualizer_thickness")
         if (isinstance(value, (int, float)) and not isinstance(value, bool)
-                and math.isfinite(value) and 1 <= value <= 10):
+                and 1 <= value <= 10 and math.isfinite(value)):
             valid["visualizer_thickness"] = round(value)
         for key, choices in (("fluidity", FLUIDITY_LABELS), ("subtitle_coloring", COLORING_LABELS),
                              ("morph_intensity", MORPH_INTENSITY_LABELS), ("ambience", AMBIENCE_LABELS),
@@ -237,7 +237,7 @@ def render_quality(settings, width, height, scale=1.0, overloaded=False):
 def _finite(value, default=0.0):
     try:
         value = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
     return value if math.isfinite(value) else default
 
@@ -1101,9 +1101,10 @@ class PresenceView:
         dominant = getattr(self, "dominant_tone", self.tone)
         field_color = (dominant.color if self.tone.name == "neutralité" else
                        mix(dominant.color, self.tone.color, .22))
-        if self.settings.emotional_palette == "soft":
+        emotional = dominant.name != "neutralité" or self.tone.name != "neutralité"
+        if emotional and self.settings.emotional_palette == "soft":
             field_color = mix(field_color, "#d5efff", .18)
-        elif self.settings.emotional_palette == "warm":
+        elif emotional and self.settings.emotional_palette == "warm":
             field_color = mix(field_color, "#ffbc82", .18)
         color = (self.settings.fixed_color if mode == "fixed" else
                  CYAN if mode == "cyan" or self.settings.spectrum_mode == "neutral" else mix(CYAN, field_color,
@@ -1142,7 +1143,7 @@ class PresenceView:
         for key in ("vad_silence_ms", "stt_ms", "llm_wait_ms", "token_to_audio_ms",
                     "turn_to_audio_ms", "speech_to_audio_ms"):
             value = values.get(key) if isinstance(values, dict) else None
-            if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and _finite(value, -1) >= 0:
                 self.timings[key] = round(value)
         if complete and not self._timing_recorded and "speech_to_audio_ms" in self.timings:
             self.timing_history = (self.timing_history + [self.timings["speech_to_audio_ms"]])[-12:]

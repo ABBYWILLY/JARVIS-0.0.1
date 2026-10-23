@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 import tempfile
 import tkinter as tk
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -26,6 +27,12 @@ class AdvancedGeometryTests(unittest.TestCase):
         settings = PresenceSettings.from_dict({"thinking_size": 130, "halo_intensity": 0,
             "mini_mode": True, "ambience": "focus", "emotional_palette": "warm"})
         self.assertEqual((settings.thinking_size, settings.halo_intensity, settings.mini_mode), (130, 0, True))
+
+    def test_unrepresentable_numeric_preferences_fall_back_without_breaking_startup(self):
+        for key in ("wave_expressivity", "spectrum_intensity", "halo_intensity", "visualizer_thickness"):
+            for value in (10 ** 1000, -(10 ** 1000)):
+                with self.subTest(key=key, value_sign=value > 0):
+                    self.assertEqual(PresenceSettings.from_dict({key: value}), PresenceSettings())
 
     def test_thinking_size_changes_real_geometry_and_ambiences_remain_visually_distinct(self):
         small = PresenceModel(PresenceSettings(reduced_motion=True))
@@ -167,6 +174,33 @@ class AdvancedPresenceTkTests(unittest.TestCase):
         self.assertIsNone(self.view.after_id)
         self.assertEqual(self.view.toggle_mini(), "break")
         self.assertTrue(self.view.settings.mini_mode)
+
+    def test_f10_binding_restores_normal_geometry_and_keeps_the_canvas_at_each_dpi(self):
+        self.view.show()
+        self.root.update()
+        canvas, items = self.view.canvas, self.view.canvas.find_all()
+        for scaling in (1., 2.5):
+            with self.subTest(scaling=scaling):
+                self.root.tk.call("tk", "scaling", 96 / 72 * scaling)
+                self.view.window.geometry("760x520+45+55")
+                # X focus is asynchronous, like native Windows geometry.
+                deadline = time.monotonic() + 2
+                while self.root.focus_get() != self.view.window and time.monotonic() < deadline:
+                    self.view.window.focus_force()
+                    self.root.update()
+                self.assertEqual(self.root.focus_get(), self.view.window)
+                geometry = self.view.window.geometry()
+                self.view.window.event_generate("<F10>")
+                self.root.update()
+                self.assertTrue(self.view.settings.mini_mode)
+                self.view.window.event_generate("<F10>")
+                self.root.update()
+                self.assertFalse(self.view.settings.mini_mode)
+                self.assertEqual(self.view.window.geometry(), geometry)
+                self.assertIs(self.view.canvas, canvas)
+                self.assertEqual(self.view.canvas.find_all(), items)
+        for command in (self.voice.toggle, self.voice.emergency, self.voice.stop_listening):
+            command.assert_not_called()
 
     @patch("jarvis.presence.time.monotonic", return_value=100.)
     def test_halo_strength_and_workshop_preferences_persist_without_touching_voice(self, _clock):

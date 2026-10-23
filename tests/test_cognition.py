@@ -45,12 +45,26 @@ class CognitivePolicyTests(unittest.TestCase):
     def test_length_quotes_negations_and_bare_keywords_do_not_trigger_deep_or_creative(self):
         for text in ("Bonjour " * 2000, "Que signifie le mot analyse ?", "Compare Paris et Lyon.",
                      'Explique la phrase « raconte une histoire ». ',
+                     "Que signifie 'raconte une histoire' ?",
+                     "Explique la phrase ‘raconte l’histoire d’Éole’.",
+                     'Explique la phrase “analyse en profondeur les risques”.',
                      'Explique le code `analyse en profondeur`.',
                      "Ne raconte pas d’histoire, réponds simplement.",
+                     "Ne raconte aucune histoire, donne seulement la date.",
+                     "Ne raconte rien sur cette histoire, donne seulement la date.",
                      "N’analyse pas les risques, donne seulement la date."):
             with self.subTest(text=text[:80]):
                 _, metadata = route_request(Settings(cognitive_mode="auto"), text)
                 self.assertEqual(metadata["mode"], "fast")
+
+    def test_quotes_and_negation_keep_other_explicit_requests_eligible(self):
+        for text, expected in (
+                ("Raconte l'histoire d'Éole.", "creative"),
+                ("Ne raconte aucune histoire. Analyse en profondeur les risques.", "deep"),
+                ("Explique ‘analyse les risques’. Raconte une histoire.", "creative")):
+            with self.subTest(text=text):
+                _, metadata = route_request(Settings(cognitive_mode="auto"), text)
+                self.assertEqual(metadata["mode"], expected)
 
     def test_explicit_policy_overrides_heuristics_and_creative_is_only_a_generation_policy(self):
         for mode in ("fast", "deep", "creative"):
