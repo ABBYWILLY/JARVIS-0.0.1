@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 
 from jarvis.audio import AudioEvent
 from jarvis.config import Settings
+from jarvis.presence import PresenceView
 from jarvis.storage import Store
 from jarvis.ui import App
 from jarvis.voice_runtime import AudioProcess, emit_event
@@ -183,6 +184,148 @@ class VoiceFlowTests(unittest.TestCase):
         self.assertFalse(self.voice.pending_visuals)
         self.assertFalse(self.voice.pending_segment_ends)
         self.assertIsNone(self.voice.visual_end_pending)
+
+    def real_semantic_phrase(self, text):
+        """Real text/orchestration/Canvas, designated PCM process double only."""
+        if self.voice.listening:
+            self.voice.stop_listening()
+        self.app.presence.close()
+        self.app.presence = PresenceView(self.app)
+        self.app.presence.show()
+        self.root.update()
+        self.activate("headphones")
+        mid = self.store.begin_turn(self.app.session_id, "Question", "local", source="voice")
+        self.voice.begin_turn(mid, "voice")
+        self.voice.chunk(text)
+        self.voice.finish_turn("complete")
+        phrase = [command for command in self.voice.speech.commands if command is not None][-1]
+        from dataclasses import asdict
+        payload = {"text": phrase.display_text, "response_id": self.voice.epoch,
+                   "segment_id": phrase.segment_id, "original_start": phrase.start,
+                   "original_end": phrase.end, "fraction": 1., "rms": .12,
+                   "wave": [.2, -.1, .05, -.3], "emitted_at": 10., "delay": 0.,
+                   "spectrum_mode": phrase.spectrum_mode,
+                   "spectrum_events": [asdict(event) for event in phrase.spectrum_events],
+                   "caption_plan": asdict(phrase.caption_plan)}
+        return phrase, payload
+
+    def finish_semantic_pcm(self, payload, *, played=True):
+        epoch = self.voice.epoch
+        if played:
+            self.voice.speech.events.append(AudioEvent("played", payload, epoch))
+        self.voice.speech.events.extend([
+            AudioEvent("segment_done", {**payload, "completed_at": 10.}, epoch),
+            AudioEvent("speech_done", generation=epoch)])
+        with patch("jarvis.voice_ui.time.monotonic", return_value=10.1):
+            self.voice.poll()
+
+    def assert_semantic_canvas(self, family):
+        view = self.app.presence
+        self.assertEqual(view.semantic.family, family)
+        items = view.canvas.find_all()
+        with patch("jarvis.presence.time.monotonic", return_value=10.65):
+            view._render()
+        points = view.canvas.coords(view.paths[-1])
+        self.assertGreater(max(points[1::2]) - min(points[1::2]), 30)
+        self.assertEqual(view.canvas.itemcget(view.paths[-1], "state"), "normal")
+        self.assertEqual(view.canvas.find_all(), items)
+        details = any(view.canvas.itemcget(path, "state") == "normal"
+                      for pair in view.semantic_paths for path in pair)
+        self.assertEqual(details, family != "affection")
+        self.assertFalse(self.voice.tts_active)
+        self.assertFalse(self.voice.reading)
+        self.assertEqual(view.state, "listening")
+
+    def test_three_terminal_expressions_via_real_voice_events_and_canvas(self):
+        for text, family in (("Heureux de te revoir 😊", "smile"),
+                             ("Je t'aime ❤️", "affection"),
+                             ("C'est drôle 😂", "laughter")):
+            with self.subTest(text=text):
+                phrase, payload = self.real_semantic_phrase(text)
+                self.assertTrue(any(event.kind == "expression" for event in phrase.events))
+                self.assertFalse(any(symbol in str(phrase) for symbol in ("😊", "❤", "😂")))
+                self.finish_semantic_pcm(payload)
+                self.assert_semantic_canvas(family)
+                self.app.presence.close()
+                self.voice.stop_listening()
+
+    def test_repeated_waiting_state_does_not_discard_queued_voice_expression(self):
+        _phrase, payload = self.real_semantic_phrase("Heureux de te revoir 😊")
+        self.voice.notify_presence("thinking")
+        self.finish_semantic_pcm(payload)
+        self.assert_semantic_canvas("smile")
+
+    def test_late_stt_notifications_do_not_preempt_a_response_without_speech_start(self):
+        for kind in ("transcribing", "stt_queued", "stt_error"):
+            with self.subTest(kind=kind):
+                _phrase, payload = self.real_semantic_phrase("Je t'aime ❤️")
+                self.voice.capture.events.append(AudioEvent(kind, {"error": "STT local", "elapsed_ms": 3}, self.voice.heard))
+                self.finish_semantic_pcm(payload)
+                self.assert_semantic_canvas("affection")
+                self.app.presence.close()
+                self.voice.stop_listening()
+
+    def test_late_stt_after_audio_finish_preserves_the_final_expression(self):
+        for kind in ("transcribing", "stt_queued", "stt_error"):
+            with self.subTest(kind=kind):
+                _phrase, payload = self.real_semantic_phrase("Heureux de te revoir 😊")
+                self.finish_semantic_pcm(payload)
+                self.voice.capture.events.append(AudioEvent(kind,
+                    {"error": "STT local", "elapsed_ms": 3}, self.voice.heard))
+                with patch("jarvis.voice_ui.time.monotonic", return_value=10.2):
+                    self.voice.poll()
+                self.assert_semantic_canvas("smile")
+
+    def test_reliable_segment_boundary_survives_dropped_pcm_visual_callbacks(self):
+        _phrase, payload = self.real_semantic_phrase("C'est drôle 😂")
+        self.finish_semantic_pcm(payload, played=False)
+        self.assert_semantic_canvas("laughter")
+
+    def test_real_user_interruption_closes_semantic_epoch_and_rejects_old_completion(self):
+        _phrase, payload = self.real_semantic_phrase("Heureux de te revoir 😊")
+        self.finish_semantic_pcm(payload)
+        self.assert_semantic_canvas("smile")
+        old_epoch = self.voice.epoch
+        self.voice.capture.events.append(AudioEvent("speech_start", generation=self.voice.heard + 1))
+        with patch("jarvis.voice_ui.time.monotonic", return_value=10.8):
+            self.voice.poll()
+        self.assertGreater(self.voice.epoch, old_epoch)
+        self.assertFalse(self.app.presence.semantic.active)
+        self.assertTrue(self.app.presence._semantic_closed)
+        self.assertEqual(self.app.presence.state, "user_speaking")
+        self.voice.speech.events.append(AudioEvent("segment_done", payload, old_epoch))
+        with patch("jarvis.voice_ui.time.monotonic", return_value=11.):
+            self.voice.poll()
+        self.assertFalse(self.app.presence.semantic.active)
+        self.assertFalse(self.app.presence._semantic_cues)
+
+    def test_code_and_technical_examples_never_trigger_through_voice_events(self):
+        for text in ("Exemple `😊`.", "La regex 😊 est un exemple technique.",
+                     "Le symbole « ❤️ » est montré."):
+            with self.subTest(text=text):
+                phrase, payload = self.real_semantic_phrase(text)
+                self.assertFalse(any(event.kind == "expression" for event in phrase.events))
+                self.finish_semantic_pcm(payload)
+                self.assertFalse(self.app.presence.semantic.active)
+
+    def test_semantic_trace_is_bounded_and_copyable_from_microphone_diagnostics(self):
+        _phrase, payload = self.real_semantic_phrase("C'est drôle 😂")
+        self.finish_semantic_pcm(payload)
+        self.app.presence.update_microphone("disabled")
+        self.app.presence.complete_segment(payload)
+        self.voice.open_diagnostics()
+        self.voice.copy_diagnostics()
+        copied = self.root.clipboard_get()
+        for stage in ("detected", "scheduled", "triggered", "cancelled", "ignored"):
+            self.assertIn(stage, copied)
+        self.assertIn("laughter", copied)
+        self.assertIn("microphone:disabled", copied)
+        self.assertIn("closed_or_stale_completion", copied)
+        for segment in range(100):
+            self.app.presence._trace_semantic("ignored", "test", (123, segment))
+        self.assertEqual(len(self.app.presence._semantic_trace), 48)
+        self.voice.copy_diagnostics()
+        self.assertIn("segment 99", self.root.clipboard_get())
 
     def test_visual_only_emoji_tail_attaches_to_previous_segment_without_empty_piper_request(self):
         recorder = self.app.presence = SemanticPresenceRecorder()

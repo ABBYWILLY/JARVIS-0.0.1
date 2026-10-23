@@ -331,6 +331,15 @@ class VoiceControls:
             self.app.root.after_cancel(self.resume_id)
         self.resume_id = self.app.root.after(350, lambda epoch=self.epoch: self._resume_microphone(epoch))
 
+    def _response_owns_visuals(self):
+        # Only speech_start is a new user interruption. A late STT status for
+        # the question being answered must not close its prepared visual epoch.
+        presence = getattr(self.app, "presence", None)
+        final_expression = getattr(getattr(presence, "semantic", None), "active", False) is True
+        return (self.reading or self.tts_active or bool(self.pending_visuals)
+                or bool(self.pending_segment_ends) or self.visual_end_pending is not None
+                or final_expression)
+
     def poll(self):
         now = time.monotonic()
         for event in self.capture.poll():
@@ -381,10 +390,13 @@ class VoiceControls:
                     self.diagnostic_failure = "STT : " + str(event.payload.get("error", "Transcription impossible"))
                     self.stt_latency(event.payload)
                     self.status.set("Échec STT ; écoute maintenue. Détails dans Diagnostic micro / STT.")
-                    if self.listening:
-                        self.set_mic_state("error", "STT ; écoute maintenue : " + str(event.payload.get("error", "")))
-                    if not self.app.operation:
-                        self.notify_presence("listening")
+                    if self._response_owns_visuals():
+                        self.record_diagnostic("stt_visual_ignored", "response_active; no speech_start")
+                    else:
+                        if self.listening:
+                            self.set_mic_state("error", "STT ; écoute maintenue : " + str(event.payload.get("error", "")))
+                        if not self.app.operation:
+                            self.notify_presence("listening")
             elif event.kind == "speech_start":
                 if self.microphone_state == "suspended" or event.generation <= self.heard:
                     continue
@@ -404,6 +416,9 @@ class VoiceControls:
             elif event.kind in {"transcribing", "stt_queued"}:
                 self.record_diagnostic(event.kind, {"tour": event.generation})
                 if event.generation == self.heard:
+                    if self._response_owns_visuals():
+                        self.record_diagnostic("stt_visual_ignored", "response_active; no speech_start")
+                        continue
                     self.transcribing = True
                     self.status.set("Transcription française locale…" if event.kind == "transcribing"
                                     else "Tour vocal conservé ; attente du STT local…")
@@ -641,6 +656,9 @@ class VoiceControls:
         meter_value = max(0., min(80., 80 + 20 * math.log10(rms))) if fresh_pcm and rms is not None and rms > 0 else 0.
         self.rms_meter.configure(value=meter_value)
         self.rms_meter.state(["!disabled"] if fresh_pcm and rms is not None else ["disabled"])
+        presence = getattr(self.app, "presence", None)
+        semantic = getattr(type(presence), "semantic_diagnostics", None)
+        semantic_text = semantic(presence) if callable(semantic) else "Semantic Morphing indisponible"
         text = (measurements
                 + f"\nCapture : {values.get('capture_status', '—')} ; étape : {values.get('stage', '—')}"
                 + f"\nTrames 16 kHz reçues : {values.get('frames_received', '—')} ; trames natives : {values.get('native_frames_received', '—')}"
@@ -655,6 +673,7 @@ class VoiceControls:
                 + f"Langue demandée : {self.stt_details.get('language_requested', '—')} ; segments écartés : {self.stt_details.get('discarded_segments', '—')}\n"
                 + (f"Qualité du dernier WAV : {self.last_sample.get('quality', {})} ; fin : {self.last_sample.get('end_reason', '—')}\n" if self.last_sample else "")
                 + self.reference_result + "\n\n"
+                + semantic_text + "\n\n"
                 + "\n".join(self.diagnostic_events))
         if text != self._diagnostic_body:
             position = self.diagnostic_text.yview()[0]
@@ -668,6 +687,11 @@ class VoiceControls:
             self.diagnostic_text.yview_moveto(position)
             self._diagnostic_body = text
 
+    def copy_diagnostics(self):
+        self.refresh_diagnostics()
+        self.app.root.clipboard_clear()
+        self.app.root.clipboard_append(self._diagnostic_body or "Aucun diagnostic disponible")
+
     def open_diagnostics(self):
         if self.diagnostic_window is not None and self.diagnostic_window.winfo_exists():
             self.diagnostic_window.lift()
@@ -676,8 +700,11 @@ class VoiceControls:
         dialog.title("Diagnostic local · micro → VAD → STT")
         dialog.geometry("820x670")
         dialog.configure(bg="#121c29", padx=12, pady=12)
-        tk.Label(dialog, text="Mesures réelles, actualisées 4 fois/s. Trace en mémoire ; WAV uniquement sur demande explicite. Aucun envoi réseau.",
-                 bg="#121c29", fg="#e4edf6", wraplength=720, justify="left").pack(anchor="w")
+        intro = tk.Frame(dialog, bg="#121c29")
+        intro.pack(fill="x")
+        tk.Label(intro, text="Mesures réelles, actualisées 4 fois/s. Trace en mémoire ; WAV uniquement sur demande explicite. Aucun envoi réseau.",
+                 bg="#121c29", fg="#e4edf6", wraplength=600, justify="left").pack(side="left", fill="x", expand=True)
+        ttk.Button(intro, text="Copier le diagnostic", command=self.copy_diagnostics).pack(side="right", padx=(8, 0))
         self.diagnostic_summary = tk.StringVar()
         summary = tk.Label(dialog, textvariable=self.diagnostic_summary, bg="#121c29", fg="#e4edf6",
                            justify="left", anchor="w", wraplength=780)

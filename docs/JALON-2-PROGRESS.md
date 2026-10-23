@@ -1,5 +1,16 @@
 # Jalon 2 — progression vérifiable
 
+## Reprise du23octobre — Semantic Morphing
+
+Correctif ciblé : attente THINKING idempotente, statuts STT tardifs non
+interruptifs sans nouvelle parole, fin de segment fiable malgré callback visuel
+PCM perdu. Annulation réelle et générations obsolètes préservées. Trace48étapes
+dans Diagnostic micro/STT, copiable. Trois phrases sourire/cœur/rire : parcours
+Tk/événements voix/Canvas couvert ; 164tests sous Tk8.6 et164sousTk9 réussis.
+Échantillons PCM de test, pas de micro physique ni d'audio Piper réel validés ici.
+Cause exacte du cas Windows à confirmer avec trace si le défaut persiste.
+Publication et CI : voir git log/Actions ; LOTS3/6 en finalisation séparée.
+
 ## J2.8 — lot 4 : observabilité et comparaison locale
 
 Les métriques masquables distinguent génération, durée totale serveur, traitement

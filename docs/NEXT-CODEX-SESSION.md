@@ -1,3 +1,22 @@
+# Reprise — correctif Semantic Morphing, 23 octobre 2026
+
+Priorité traitée avant publication des LOTS 3/6. Les trois phrases « Heureux de
+te revoir 😊 », « Je t'aime ❤️ », « C'est drôle 😂 » fonctionnent en parcours
+événements voix/Canvas. Cinq régressions reproduites : THINKING répété ferme le
+plan, statuts STT tardifs ferment la réponse, fin de segment fiable rejetée si le
+callback visuel PCM a été perdu. Correctif ciblé, audio/Piper inchangés, vrais
+speech_start/interruption et exclusions code/exemples conservés.
+Diagnostic micro/STT : trace Semantic Morphing bornée à48étapes et bouton Copier.
+164tests ciblés passent sous Tk8.6 et Tk9, dont parcours avec doublures PCM
+explicitement identifiées ; pas de validation matérielle distante. Le retour
+utilisateur confirme micro/onde/couleurs/sous-titres sur son PC. Morphing Windows
+reste à vérifier : PRESENCE visible, Semantic Morphing activé, les trois phrases,
+interruption puis reprise ; copier la trace si absent. Animation approximée par
+segment et pauses PCM, sans alignement mot à mot ni délai ajouté à Piper.
+LOTS 3/6 préexistants en cours de finalisation, ne pas les réimplémenter.
+
+---
+
 # Cognitive & Presence Evolution — LOT 2, 23 octobre 2026
 
 L'utilisateur a explicitement demandé de poursuivre le LOT 2 après livraison du

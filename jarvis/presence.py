@@ -476,6 +476,7 @@ class PresenceView:
         self._semantic_last_trigger = float("-inf")
         self._semantic_preview = False
         self._semantic_drawn = False
+        self._semantic_trace = deque(maxlen=48)
 
     @property
     def state(self):
@@ -580,13 +581,20 @@ class PresenceView:
             return
         # Actual functional events cancel the offline scenario before any drawing.
         self._cancel_scenario()
-        if state in {"user_speaking", "thinking", "dormant"} or self._semantic_preview:
-            self._cancel_semantics()
+        # Repeated waiting notifications are idempotent: text may already be
+        # queued while the first PCM is still being synthesized. A real state
+        # transition or user interruption still invalidates that response.
+        if (state in {"user_speaking", "dormant"} or self._semantic_preview
+                or state == "thinking" and (self.state != "thinking" or self.semantic.active)):
+            self._cancel_semantics("state:" + state)
         elif state == "jarvis_speaking":
             # Any new real audio pre-empts a held symbol immediately. Future
             # events in the response remain available; no audio is delayed.
             incoming = (caption.get("response_id", -1), caption.get("segment_id", -1)) if isinstance(caption, dict) else None
             if incoming != self._semantic_playing or _finite((signal or {}).get("rms")) > .008:
+                if self.semantic.active:
+                    self._trace_semantic("cancelled", "pcm_resumed", self._semantic_playing,
+                                         self.semantic.family)
                 self.semantic.cancel()
         # Real voice/state events always take priority over an optional local preview.
         if self._preview_text is not None:
@@ -633,7 +641,7 @@ class PresenceView:
         return self._last_estimate
 
     def begin_response(self):
-        self._cancel_semantics()
+        self._cancel_semantics("new_response")
         self.mood_tracker = MoodTracker(mode=self.settings.spectrum_mode)
         self._clear_playback()
         self._set_tone(Tone())
@@ -655,7 +663,23 @@ class PresenceView:
         self._prepared_semantic_caption = plan
         return events, plan
 
-    def _cancel_semantics(self):
+    def _trace_semantic(self, stage, reason, key=None, family=None):
+        # No answer text or PCM is retained. These are bounded UI-thread events,
+        # never per-sample logging in an audio or paint callback.
+        key = key if key is not None else (self._semantic_response, "—")
+        entry = f"{stage} · {reason} · réponse {key[0]} / segment {key[1]}"
+        if family is not None:
+            entry += " · " + family
+        if not self._semantic_trace or self._semantic_trace[-1] != entry:
+            self._semantic_trace.append(entry)
+
+    def semantic_diagnostics(self):
+        return ("Semantic Morphing · trace locale (48 étapes maximum)\n"
+                + ("\n".join(self._semantic_trace) or "Aucune expression reçue"))
+
+    def _cancel_semantics(self, reason="reset"):
+        if self.semantic.active or self._semantic_cues:
+            self._trace_semantic("cancelled", reason, self._semantic_playing, self.semantic.family)
         self.semantic.cancel()
         self._semantic_cues.clear()
         self._semantic_completed.clear()
@@ -668,12 +692,14 @@ class PresenceView:
         """Prepare a bounded timeline on text arrival, never on paint/PCM threads."""
         if (type(response_id) is not int or type(segment_id) is not int
                 or response_id < self._semantic_response or segment_id <= 0):
+            self._trace_semantic("ignored", "invalid_or_stale_response")
             return
         if response_id > self._semantic_response:
-            self._cancel_semantics()
+            self._cancel_semantics("newer_response")
             self._semantic_response, self._semantic_closed = response_id, False
             self._semantic_last_trigger = float("-inf")
         if self._semantic_closed:
+            self._trace_semantic("ignored", "closed_response", (response_id, segment_id))
             return
         key = (response_id, segment_id)
         source = str(original)[:4000]
@@ -692,6 +718,7 @@ class PresenceView:
         while len(self._semantic_plans) > 64:
             del self._semantic_plans[next(iter(self._semantic_plans))]
         if not self.settings.semantic_morphing:
+            self._trace_semantic("ignored", "disabled", key)
             return  # Caption preservation is independent of the optional effect.
         candidates = []
         for event in events[:64]:
@@ -699,7 +726,9 @@ class PresenceView:
                 continue
             family = expression_family(event.value)
             if family is None:
+                self._trace_semantic("ignored", "unsupported_symbol", key)
                 continue
+            self._trace_semantic("detected", "expression", key, family)
             tail = source[max(0, event.end - start):]
             terminal = not any(char.isalnum() for char in parse_text(tail).speech)
             cue = ExpressionCue(response_id, segment_id, event.start, event.end, family,
@@ -715,6 +744,10 @@ class PresenceView:
         for cue in candidates:
             if (cue.response_id, cue.segment_id, cue.start, cue.end) not in existing:
                 self._semantic_cues.append(cue)
+                self._trace_semantic("scheduled", "segment_end" if cue.terminal else "quiet_pcm",
+                                     key, cue.family)
+        if not candidates:
+            self._trace_semantic("ignored", "no_supported_expression", key)
         if key in self._semantic_completed and self.state in {"silent", "listening"}:
             self._start_expression(key, final=True)
         if self._visible():
@@ -729,8 +762,12 @@ class PresenceView:
             self._start_expression(key, fraction=fraction)
 
     def _start_expression(self, key, *, fraction=1., final=False):
-        if (not self.settings.semantic_morphing or self._semantic_closed or not self._visible()
-                or self.state in {"user_speaking", "thinking", "dormant"}):
+        reason = ("disabled" if not self.settings.semantic_morphing else
+                  "closed_response" if self._semantic_closed else
+                  "hidden" if not self._visible() else
+                  "state:" + self.state if self.state in {"user_speaking", "thinking", "dormant"} else None)
+        if reason is not None:
+            self._trace_semantic("ignored", reason, key)
             return
         now = time.monotonic()
         eligible = [cue for cue in self._semantic_cues
@@ -743,23 +780,33 @@ class PresenceView:
         for cue in eligible:
             self._semantic_cues.remove(cue)
         if now - self._semantic_last_trigger < 1.25:
+            self._trace_semantic("ignored", "cooldown", key, selected.family)
             return
         if self._trigger_morph(selected.family, now):
+            self._trace_semantic("triggered", "segment_end" if final else "quiet_pcm", key, selected.family)
             self._semantic_last_trigger = now
             self._render()
 
     def complete_segment(self, payload):
         """Actual worker completion, after its PCM callbacks; never an audio timer."""
         key = (payload.get("response_id"), payload.get("segment_id"))
-        if self._semantic_closed or key[0] != self._semantic_response:
+        if (type(key[0]) is not int or type(key[1]) is not int or key[1] <= 0
+                or self._semantic_closed or key[0] != self._semantic_response):
+            self._trace_semantic("ignored", "closed_or_stale_completion", key)
             return
         if key in self._semantic_completed:
+            self._trace_semantic("ignored", "duplicate_completion", key)
             return
         self._semantic_completed.append(key)
-        if key != self._semantic_playing:
+        if self._semantic_playing is not None and key < self._semantic_playing:
             self._semantic_cues = deque((cue for cue in self._semantic_cues
                                         if (cue.response_id, cue.segment_id) != key), maxlen=64)
+            self._trace_semantic("ignored", "newer_pcm_segment", key)
             return  # A newer segment already owns the real speaking visualizer.
+        # PCM display callbacks are deliberately lossy. The reliable worker
+        # boundary can still finish its prepared timeline if none of its played
+        # callbacks reached Tk; it never invents PCM or delays audio playback.
+        self._semantic_playing = key
         self._segment_fraction = 1.
         self._update_playback_tone()
         self._layout_caption()
@@ -983,7 +1030,7 @@ class PresenceView:
         self.operation_detail = str(detail)
         self._operation_explicit = True
         if key in {"error", "inactive"}:
-            self._cancel_semantics()
+            self._cancel_semantics("operation:" + key)
             self._cancel_scenario()
             self._cancel_animation()
             self._preview_text = None
@@ -1023,7 +1070,7 @@ class PresenceView:
             raise ValueError("État du microphone inconnu.")
         self.microphone_state, self.microphone_detail = state, str(detail)[:256]
         if state in {"disabled", "error", "starting", "voice", "stt"}:
-            self._cancel_semantics()
+            self._cancel_semantics("microphone:" + state)
         if state in {"disabled", "error"}:
             self._cancel_scenario()
             self._preview_text = None
@@ -1572,7 +1619,7 @@ class PresenceView:
         return "break"
 
     def return_to_command(self):
-        self._cancel_semantics()
+        self._cancel_semantics("return_to_command")
         self.clear_preview()
         if self.window is not None:
             self.window.withdraw()
@@ -1592,7 +1639,7 @@ class PresenceView:
 
     def _on_unmap(self, event):
         if event.widget is self.window:
-            self._cancel_semantics()
+            self._cancel_semantics("hidden")
             self.clear_preview()
             self._cancel_animation()
 
@@ -1606,7 +1653,7 @@ class PresenceView:
             self.settings_dialog = None
 
     def close(self):
-        self._cancel_semantics()
+        self._cancel_semantics("closed")
         self.clear_preview()
         self._cancel_scenario()
         self._cancel_animation()
