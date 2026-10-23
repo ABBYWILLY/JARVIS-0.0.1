@@ -1,23 +1,33 @@
 # Validation Centre / Studio — étape E, 24 octobre 2026
 
-A e2f8b27, B513dc86, C c0e21c6, D426e270 publiés. Livraison fonctionnelle :
-Centre recherché à5familles, éditeurs canoniques, Studio transactionnel et
-4réglages visuels rendus, démonstration8états/CLI/profiltemporaire, captures/MP4.
-Suite intégréeLinux Tk9+EGLréel logiciel :604tests,595réussis,9ignorés,
-76,079s.39tests ciblésTk8.6 puis32ciblésaprèsadaptationontégalementréussi.
-Les9ignorés concernentdépendances/modèlesnatifs absents et3essaisréelsopt-in.
-CI Averte40039278838 ; GPU A/B/C/Dverts. Build B40039808068 etC40040103974
-échoués : testsDPIlaissaient250%global (confirmé entre deuxinterpréteursTk),
-donc le pied de sous-titres se masquait correctement faute de place. Lesnouveaux
-testsrestaurentmaintenantl'échelleinitiale. Cavait aussil'anciencontratFermer,
-adaptéenD àAnnuler+vérificationrenforcéedes3actions. AucuneassertionPCM/caption
-supprimée ; aucunrendu métier modifié pour contourner les échecs. DernièreCI
-àsuivresurlecommitE, sansdéclarerverteavant lerésultat. Guideetpreuves :
-docs/CONTROL-STUDIO.md. ReposCanvasLinuxobservé5,02s :0,47%CPUuncoeur,
-36,38MiBRSSmoyen,aucunafterCanvas ; pasunecomparaisonglobaleLOT7.
-Reste : recetteutilisateurWindows/DPI/esthétique/microPiperQwen, paletteslibres
-nonajoutées, mémoireanciennefenêtre820px, intégrationGPUconditionnelleauxmesures
-RTX3070. LOT2nonofficiellementvalidé ; LOTS4/5/7noncommencés. mainpréservée.
+Commits publiés : A e2f8b27, B 513dc86, C c0e21c6, D 426e270,
+correctif d'isolation DPI 441f0dd. Centre à cinq familles avec recherche locale,
+éditeurs canoniques, Studio transactionnel, quatre réglages visuels réellement
+rendus, démonstration à huit états, CLI isolée, captures et MP4 sont livrés.
+
+Suite Linux Tk9 et EGL logiciel réel : 604 tests exécutés, 595 réussis,
+9 ignorés, 76,079 s. Les ignorés concernent six dépendances natives absentes
+et trois essais réels opt-in. Campagnes ciblées Tk8.6 réussies ; après
+isolation DPI, 23 tests ciblés réussis. Les comptes se recouvrent.
+
+La CI A est verte (40039278838). Les prototypes GPU A/B/C/D sont verts.
+Les builds applicatifs B 40039808068 et C 40040103974 ont révélé une pollution
+des nouvelles fixtures DPI : l'échelle 250 % restait active entre deux
+interpréteurs Tk. Le pied de sous-titres se masquait alors faute de place.
+Ces tests restaurent maintenant l'échelle initiale ; aucune assertion PCM,
+sous-titres ou mots-clés n'est supprimée et le rendu métier n'est pas modifié.
+C contenait aussi l'ancien contrat « Fermer », adapté dans D à « Annuler »
+avec vérification renforcée des trois actions. Suivre les derniers runs Actions
+avant de déclarer la compilation verte.
+
+Guide et preuves : docs/CONTROL-STUDIO.md. Observation du seul aperçu Canvas
+Linux au repos sur 5,02 s : CPU moyen 0,47 % d'un cœur, RSS moyen 36,38 MiB,
+aucun callback Canvas actif. Pas de comparaison globale LOT 7 ni de mesure RTX.
+
+Restent : recette Windows/DPI/esthétique et micro/Piper/Qwen sur le PC ; palettes
+libres non ajoutées ; ancienne fenêtre Mémoire de largeur minimale 820 px ;
+intégration GPU conditionnée aux mesures RTX3070. LOT 2 non officiellement validé.
+LOTS 4/5/7 non commencés. main préservée. Validation matérielle en attente.
 
 ---
 

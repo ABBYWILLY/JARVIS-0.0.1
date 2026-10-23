@@ -138,19 +138,20 @@ etTk8.6. La démonstration démarre également au premier clic sans PRESENCE ouv
 
 ## Étape E — Validation intégrée et CI
 
-Suite globale LinuxTk9/EGL réel logiciel :604tests,595réussis,9ignorés en
-76,079s. Les comptes ciblés ne s'additionnent pas. Les ignorés couvrent six
-dépendances/modèles locaux absents et trois essais réels opt-in.
+Suite globale Linux Tk9/EGL logiciel réel : 604 tests, 595 réussis, 9 ignorés
+sur 76,079 s. Les comptes ciblés ne s'additionnent pas. Les ignorés couvrent six
+dépendances natives absentes et trois essais réels opt-in.
 
-CIWindows B40039808068 puisC40040103974 : le test du pied de sous-titres révèle
-une pollution des nouvelles fixtures DPI, qui conservaient250% après leur fin.
-Reproduction Linux : un nouvel interpréteur Tk conserve3,3366 au lieu de1,3333.
-Les trois nouvelles campagnes DPI restaurent désormais leur échelle initiale.
-Le pied réactif ne change pas, la synchronisation/limite deux lignes/accents
-restent contrôlés ; aucun test désactivé. C contenait aussi l'ancien test
-Fermer, déjà adapté dansD au nouveau contrat avec contrôles renforcés.
+Les CI Windows B40039808068 puis C40040103974 révèlent une pollution des nouvelles
+fixtures DPI : elles conservaient 250 % après leur fin. Reproduction Linux :
+un nouvel interpréteur Tk conserve 3,3366 au lieu de 1,3333. Les trois nouvelles
+campagnes DPI restaurent désormais l'échelle initiale. Le pied réactif ne change
+pas ; synchronisation, limite de deux lignes et accents restent contrôlés.
+Aucun test désactivé. C contenait aussi l'ancien test « Fermer », déjà adapté
+dans D au nouveau contrat avec des contrôles renforcés. Les 23 tests ciblés
+après isolation DPI réussissent.
 
-RésultatsCI finaux : consulter le dernier commit de cette branche et Actions ;
+Résultats CI finaux : consulter le dernier commit de cette branche et Actions ;
 la livraison n'est pas une validation matérielle. Les limites et la recette
 utilisateur sont dans CONTROL-STUDIO.md. Aucun nouvel appel IA par réglage ou
 frame ; pas de moteur graphique obligatoire, de modèle téléchargé ou effacé.
