@@ -76,6 +76,10 @@ class PresenceSettings:
     emotional_palette: str = "original"
     microexpressions: bool = True
     mini_mode: bool = False
+    halo_diffusion: int = 100
+    animation_speed: int = 100
+    transition_speed: int = 100
+    thinking_structure: str = "lens"
 
     @classmethod
     def from_dict(cls, values):
@@ -117,6 +121,13 @@ class PresenceSettings:
         value = values.get("thinking_size")
         if type(value) is int and 70 <= value <= 130:
             valid["thinking_size"] = value
+        for key, low, high in (("halo_diffusion", 50, 180), ("animation_speed", 50, 150),
+                               ("transition_speed", 50, 150)):
+            value = values.get(key)
+            if type(value) is int and low <= value <= high:
+                valid[key] = value
+        if values.get("thinking_structure") in ("lens", "round", "elongated"):
+            valid["thinking_structure"] = values["thinking_structure"]
         value = values.get("subtitle_size")
         if isinstance(value, int) and not isinstance(value, bool) and 12 <= value <= 32:
             valid["subtitle_size"] = value
@@ -211,12 +222,13 @@ def dpi_scale(tk_scaling):
     return max(0.75, min(4.0, _finite(tk_scaling, 96 / 72) / (96 / 72)))
 
 
-def stroke_widths(thickness, scale=1.0):
+def stroke_widths(thickness, scale=1.0, diffusion=100):
     """Outer halo → inner halo → envelope → clear central stroke, in pixels."""
     amount = (max(1, min(10, thickness)) - 1) / 9
     edge = 2.5 + 6.3 * amount
     halo = 15.0 + 22.0 * amount
-    return tuple(width * scale for width in (halo, halo * 0.68, edge + 6.5, edge))
+    return tuple((edge + (width - edge) * diffusion / 100) * scale
+                 for width in (halo, halo * 0.68, edge + 6.5, edge))
 
 
 def render_quality(settings, width, height, scale=1.0, overloaded=False):
@@ -359,7 +371,7 @@ class PresenceModel:
         pace, curvature, _halo = AMBIENCES[self.settings.ambience]
         key = (width, height, self.state, self.settings.wave_expressivity,
                self.settings.reduced_motion, self.motion_allowed, self.settings.thinking_size, self.settings.ambience,
-               self.settings.mini_mode,
+               self.settings.mini_mode, self.settings.thinking_structure, self.settings.animation_speed,
                self._signal_version if active and self.state in {"listening", "user_speaking", "jarvis_speaking"} else None)
         if not moving and not micro_active and key == self._geometry_key:
             return self._geometry
@@ -372,7 +384,7 @@ class PresenceModel:
         amplitude = min(220, height * 0.24) * (0.18 + 0.82 * expressivity) * wave_energy
         wave, wave_line = self._wave, self._wave_line
         points = []
-        phase = (now - self.state_since) * 1.35 * pace if moving else 0.0
+        phase = (now - self.state_since) * 1.35 * pace * self.settings.animation_speed / 100 if moving else 0.0
         if moving and micro_active:
             # A short bounded phase nuance, independent of how long THINKING
             # has already lasted. Multiplying the entire age would cause jumps.
@@ -405,8 +417,11 @@ class PresenceModel:
                 if self.state == "thinking":
                     # A lenticular, softly pinched singularity remains distinct
                     # from the round PCM core even when motion is disabled.
-                    radius *= 1 + .055 * math.cos(4 * angle)
-                    x, y = cx + 1.08 * radius * math.cos(angle), cy + .76 * radius * math.sin(angle)
+                    structure = self.settings.thinking_structure
+                    radius *= 1 + (.0 if structure == "round" else .055) * math.cos(4 * angle)
+                    horizontal, vertical = {"lens": (1.08, .76), "round": (1., 1.),
+                                            "elongated": (1.18, .60)}[structure]
+                    x, y = cx + horizontal * radius * math.cos(angle), cy + vertical * radius * math.sin(angle)
                 else:
                     x, y = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
             else:
@@ -433,6 +448,7 @@ class PresenceModel:
             delta = max(0, min(0.1, now - self.last_frame))
             duration = {"reactive": 0.045, "cinematic": 0.065, "calm": 0.11}[self.settings.fluidity]
             duration *= self.emotional_inertia
+            duration *= 100 / self.settings.transition_speed
             if self.state in {"listening", "user_speaking"}:
                 extent = lambda points: max(y for _, y in points) - min(y for _, y in points)
                 duration = 0.022 if extent(target) >= extent(self.points) else 0.095
@@ -523,6 +539,8 @@ class PresenceView:
         self._normal_geometry = None
         self._window_mode = None
         self._controls_layout = None
+        self.studio = None
+        self._demo = None
 
     @property
     def state(self):
@@ -633,6 +651,11 @@ class PresenceView:
     def update_event(self, state, signal=None, caption=None):
         if state not in STATES or self.state == "dormant" and state != "dormant":
             return
+        synthetic = self._demo is not None and self._demo.dispatching
+        if self._demo is not None and self._demo.active and not synthetic:
+            self._demo.cancel("real_event")
+        if self.studio is not None and not synthetic:
+            self.studio.suspend_preview()
         if self._workshop_preview:
             self._workshop_preview = False
             self.model.micro.cancel()
@@ -698,6 +721,10 @@ class PresenceView:
         return self._last_estimate
 
     def begin_response(self):
+        if self._demo is not None and self._demo.active and not self._demo.dispatching:
+            self._demo.cancel("real_response")
+        if self.studio is not None and not (self._demo is not None and self._demo.dispatching):
+            self.studio.suspend_preview()
         self._cancel_semantics("new_response")
         self.model.micro.cancel()
         self.mood_tracker = MoodTracker(mode=self.settings.spectrum_mode)
@@ -1022,6 +1049,8 @@ class PresenceView:
         return tone
 
     def clear_preview(self):
+        if self._demo is not None and self._demo.active and not self._demo.dispatching:
+            self._demo.cancel("clear_preview")
         if self._semantic_preview:
             self._cancel_semantics()
         scenario = self._scenario_index is not None
@@ -1250,7 +1279,7 @@ class PresenceView:
         if self.state == "dormant":
             count, arc_count = 1, 0
         selected = ({3}, {2, 3}, {0, 2, 3}, {0, 1, 2, 3})[count - 1]
-        widths = stroke_widths(self.settings.visualizer_thickness, scale)
+        widths = stroke_widths(self.settings.visualizer_thickness, scale, self.settings.halo_diffusion)
         accent = self.mesh_accent(started)
         # Local mood changes the halo/inertia and symbolic thinking curves only.
         # Speech displacement and amplitude still come exclusively from PCM.
@@ -1259,7 +1288,7 @@ class PresenceView:
         strength = 1.0 if semantic_frame is not None else 0.25 if self.state == "dormant" else 0.72 if self.state == "silent" else 1.0
         breath = 0.0
         if self.state == "thinking" and self.model.motion_allowed:
-            breath = math.sin((started - self.model.state_since) * 1.1)
+            breath = math.sin((started - self.model.state_since) * 1.1 * self.settings.animation_speed / 100)
             strength = 0.9 + breath * 0.08
         # Every halo uses precisely the same coordinates, never another visualizer.
         for index, path in enumerate(self.paths):
@@ -1271,7 +1300,8 @@ class PresenceView:
             self.canvas.itemconfigure(path, state="normal" if index in selected else "hidden",
                                       width=widths[index],
                                       fill=mix(self.settings.background, accent, opacity))
-        phase = (started - self.model.state_since) * 0.055 if self.model.motion_allowed else 0.0
+        phase = ((started - self.model.state_since) * 0.055 * self.settings.animation_speed / 100
+                 if self.model.motion_allowed else 0.0)
         highlight = mix(accent, self._colors["foreground"], .32)
         for index, (path, offset, length) in enumerate(zip(self.orbital_paths,
                                                          (0.03, 0.43, 0.72), (0.20, 0.12, 0.16))):
@@ -1497,7 +1527,8 @@ class PresenceView:
                              highlightbackground=bg, highlightcolor=colors["accent"])
 
     def set_options(self, **changes):
-        candidate = PresenceSettings.from_dict({**asdict(self.settings), **changes})
+        baseline = self.studio.baseline if self.studio is not None else self.settings
+        candidate = PresenceSettings.from_dict({**asdict(baseline), **changes})
         values = {**self._saved_preferences, **asdict(candidate)}
         try:
             self.app.store.set_preference("presence", values)
@@ -1505,6 +1536,13 @@ class PresenceView:
             messagebox.showerror("Préférences PRESENCE", "Impossible d’enregistrer les préférences locales. Vérifiez les droits et l’espace disque.", parent=self.window or self.app.root)
             return False
         self._saved_preferences = values
+        self._apply_options(candidate)
+        if self.studio is not None:
+            self.studio.rebase(candidate, set(changes))
+        return True
+
+    def _apply_options(self, candidate):
+        """Apply validated visual settings without writing; Studio owns its draft."""
         old_mode = self.settings.spectrum_mode
         self.settings = self.model.settings = candidate
         if not candidate.microexpressions or candidate.reduced_motion or not candidate.animations:
@@ -1552,243 +1590,13 @@ class PresenceView:
 
     def open_settings(self):
         if self.settings_dialog is not None and self.settings_dialog.winfo_exists():
+            self.settings_dialog.deiconify()
             self.settings_dialog.lift()
-            return
-        dialog = self.settings_dialog = tk.Toplevel(self.window)
-        dialog.title("PRESENCE · atelier")
-        dialog.transient(self.window)
-        colors = palette(self.settings.background)
-        dialog.configure(bg=colors["background"], padx=20, pady=18)
-        screen_w, screen_h = dialog.winfo_screenwidth(), dialog.winfo_screenheight()
-        dialog.maxsize(max(320, screen_w - 40), max(300, screen_h - 60))
-        # Reserve the close control before the expandable notebook. Each page
-        # scrolls independently when large Windows fonts need more height.
-        ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(side="bottom", fill="x", pady=(12, 0))
-        notebook = ttk.Notebook(dialog)
-        notebook.pack(fill="both", expand=True)
-        def page(title):
-            outer = tk.Frame(notebook, bg=colors["background"])
-            notebook.add(outer, text=title)
-            canvas = tk.Canvas(outer, bg=colors["background"], highlightthickness=0,
-                               width=min(600, screen_w - 120), height=min(660, screen_h - 240))
-            scroll = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
-            scroll.pack(side="right", fill="y")
-            canvas.pack(side="left", fill="both", expand=True)
-            canvas.configure(yscrollcommand=scroll.set)
-            inner = tk.Frame(canvas, bg=colors["background"], padx=12, pady=10)
-            item = canvas.create_window(0, 0, anchor="nw", window=inner)
-            inner.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
-            canvas.bind("<Configure>", lambda event: canvas.itemconfigure(item, width=event.width))
-            def reveal(event):
-                if event.widget is inner:
-                    return
-                y = event.widget.winfo_rooty() - inner.winfo_rooty()
-                bottom = y + event.widget.winfo_height()
-                top = canvas.canvasy(0)
-                if y < top or bottom > top + canvas.winfo_height():
-                    canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, inner.winfo_height()))
-            inner.bind("<FocusIn>", reveal)
-            # FocusIn propagates through the toplevel bindtag; only reveal
-            # descendants of this page, without changing global mouse bindings.
-            dialog.bind("<FocusIn>", lambda event: reveal(event) if str(event.widget).startswith(str(inner) + ".") else None, add="+")
-            def wheel(event):
-                if (str(event.widget).startswith(str(inner))
-                        and not isinstance(event.widget, (ttk.Combobox, tk.Scale))):
-                    direction = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
-                    canvas.yview_scroll(direction * 3, "units")
-                    return "break"
-            for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-                dialog.bind(sequence, wheel, add="+")
-            return inner
-        workshop = page("Atelier")
-        visual = page("Visualiseur")
-        spectrum_page = page("Spectre et aperçu")
-        captions_page = page("Sous-titres")
-        expressions_page = page("Expressions")
-        tk.Label(workshop, text="Un seul visualiseur · aperçu hors ligne sans micro ni modèle",
-                 bg=colors["background"], fg=colors["muted"], wraplength=420,
-                 justify="left").pack(anchor="w", pady=(0, 10))
-        for key, label, choices in (("ambience", "Ambiance visuelle", AMBIENCE_LABELS),
-                                     ("emotional_palette", "Palette émotionnelle", PALETTE_LABELS)):
-            tk.Label(workshop, text=label, bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
-            variable = tk.StringVar(value=choices[getattr(self.settings, key)])
-            choice = ttk.Combobox(workshop, name=key, state="readonly", textvariable=variable,
-                                  values=list(choices.values()))
-            choice.pack(fill="x", pady=(4, 10))
-            choice.bind("<<ComboboxSelected>>", lambda _event, k=key, v=variable, c=choices:
-                        self.set_options(**{k: next(option for option, label in c.items() if label == v.get())}))
-        for key, label, low, high in (("halo_intensity", "Intensité du halo (%)", 0, 100),
-                                       ("thinking_size", "Taille du noyau THINKING (%)", 70, 130)):
-            tk.Label(workshop, text=label, bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
-            variable = tk.IntVar(value=getattr(self.settings, key))
-            tk.Scale(workshop, name=key, from_=low, to=high, resolution=1, orient="horizontal", variable=variable,
-                     bg=colors["background"], fg=colors["foreground"], troughcolor=colors["button"],
-                     highlightthickness=0, command=lambda value, k=key:
-                     self.set_options(**{k: round(float(value))})).pack(fill="x", pady=(0, 10))
-        micro_enabled = tk.BooleanVar(value=self.settings.microexpressions)
-        tk.Checkbutton(workshop, text="Microexpressions contextuelles", variable=micro_enabled,
-                       bg=colors["background"], fg=colors["foreground"], selectcolor=colors["button"],
-                       command=lambda: self.set_options(microexpressions=micro_enabled.get())).pack(anchor="w", pady=6)
-        micro_family = tk.StringVar(value=MICRO_LABELS["surprise"])
-        ttk.Combobox(workshop, name="micro_family", state="readonly", textvariable=micro_family,
-                     values=list(MICRO_LABELS.values())).pack(fill="x", pady=4)
-        ttk.Button(workshop, text="Prévisualiser la microexpression", command=lambda:
-                   self.preview_workshop(next(key for key, label in MICRO_LABELS.items() if label == micro_family.get()))).pack(fill="x", pady=4)
-        ttk.Button(workshop, text="Prévisualiser le noyau THINKING", command=self.preview_workshop).pack(fill="x", pady=4)
-        ttk.Button(workshop, text="Prévisualiser la ligne sans signal", command=lambda: self.preview_workshop("line")).pack(fill="x", pady=4)
-        ttk.Button(workshop, text="Arrêter l’aperçu", command=self.clear_preview).pack(fill="x", pady=4)
-        ttk.Button(workshop, text="Mini-PRESENCE / fenêtre normale (F10)", command=self.toggle_mini).pack(fill="x", pady=(12, 4))
-        tk.Label(workshop, text="Épaisseur, fluidité et qualité : onglet Visualiseur. Morphing : Expressions.\n"
-                 "Ces ambiances sont visuelles ; elles ne modifient ni voix, ni permissions, ni capacités.",
-                 wraplength=420, justify="left", bg=colors["background"], fg=colors["muted"]).pack(anchor="w", pady=8)
-        morph_enabled = tk.BooleanVar(value=self.settings.semantic_morphing)
-        ttk.Checkbutton(expressions_page, text="Semantic Morphing", variable=morph_enabled,
-                        command=lambda: self.set_options(semantic_morphing=morph_enabled.get())).pack(anchor="w", pady=8)
-        tk.Label(expressions_page, text="Intensité de l’expression", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w")
-        morph_intensity = tk.StringVar(value=MORPH_INTENSITY_LABELS[self.settings.morph_intensity])
-        morph_choice = ttk.Combobox(expressions_page, state="readonly", textvariable=morph_intensity,
-                                    values=list(MORPH_INTENSITY_LABELS.values()))
-        morph_choice.pack(fill="x", pady=8)
-        morph_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
-            morph_intensity=next(key for key, label in MORPH_INTENSITY_LABELS.items() if label == morph_intensity.get())))
-        tk.Label(expressions_page, text="Aperçu vectoriel local · huit familles", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w", pady=(12, 4))
-        morph_family = tk.StringVar(value=EXPRESSION_LABELS["smile"])
-        ttk.Combobox(expressions_page, state="readonly", textvariable=morph_family,
-                     values=list(EXPRESSION_LABELS.values())).pack(fill="x", pady=4)
-        morph_status = tk.StringVar(value="Au repos, sans Ollama ni Piper")
-        def preview_morph():
-            family = next(key for key, label in EXPRESSION_LABELS.items() if label == morph_family.get())
-            available = self.preview_expression(family)
-            morph_status.set("Aperçu hors ligne : " + EXPRESSION_LABELS[family] if available
-                             else "Désactivez l’écoute et attendez le repos pour cet aperçu.")
-        ttk.Button(expressions_page, text="Prévisualiser l’expression", command=preview_morph).pack(fill="x", pady=6)
-        ttk.Button(expressions_page, text="Arrêter l’aperçu", command=self.clear_preview).pack(fill="x", pady=4)
-        tk.Label(expressions_page, textvariable=morph_status, bg=colors["background"],
-                 fg=colors["muted"], wraplength=360).pack(anchor="w", pady=8)
-        tk.Label(expressions_page, text="Réduction des mouvements / animations désactivées : symbole statique.\n"
-                 "Synchronisation estimée par segment PCM. Au milieu d’une phrase, un creux audio est prioritaire ;\n"
-                 "sinon l’expression attend la fin du segment. Toute reprise audio ou parole micro annule le symbole.",
-                 bg=colors["background"], fg=colors["muted"], wraplength=360, justify="left").pack(anchor="w", pady=8)
-        tk.Label(visual, text="Profil graphique", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
-        profile = tk.StringVar(value=PROFILE_LABELS[self.settings.profile])
-        choice = ttk.Combobox(visual, state="readonly", values=list(PROFILE_LABELS.values()), textvariable=profile)
-        choice.pack(fill="x", pady=(6, 12))
-        choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
-            profile=next(key for key, label in PROFILE_LABELS.items() if label == profile.get())))
-        tk.Label(visual, text="Fluidité", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
-        fluidity = tk.StringVar(value=FLUIDITY_LABELS[self.settings.fluidity])
-        flow = ttk.Combobox(visual, state="readonly", values=list(FLUIDITY_LABELS.values()), textvariable=fluidity)
-        flow.pack(fill="x", pady=(4, 8))
-        flow.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
-            fluidity=next(key for key, label in FLUIDITY_LABELS.items() if label == fluidity.get())))
-        tk.Label(visual, text="Expressivité de l’onde (%)", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w")
-        expressivity = tk.IntVar(value=self.settings.wave_expressivity)
-        tk.Scale(visual, name="wave_expressivity", from_=0, to=100, resolution=1, orient="horizontal", variable=expressivity,
-                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
-                 troughcolor=colors["button"],
-                 command=lambda value: self.set_options(wave_expressivity=round(float(value)))).pack(fill="x")
-        tk.Label(visual, text="Affichage uniquement · aucun effet sur le micro ou la détection vocale",
-                 wraplength=360, justify="left", bg=colors["background"],
-                 fg=colors["muted"]).pack(anchor="w", pady=(0, 8))
-        tk.Label(visual, text="Épaisseur du visualiseur", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w", pady=(8, 0))
-        thickness = tk.IntVar(value=self.settings.visualizer_thickness)
-        tk.Scale(visual, from_=1, to=10, resolution=1, orient="horizontal", variable=thickness,
-                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
-                 troughcolor=colors["button"],
-                 command=lambda value: self.set_options(visualizer_thickness=round(float(value)))).pack(fill="x")
-        reduced = tk.BooleanVar(value=self.settings.reduced_motion)
-        subtitles = tk.BooleanVar(value=self.settings.subtitles)
-        halos = tk.BooleanVar(value=self.settings.halos)
-        animations = tk.BooleanVar(value=self.settings.animations)
-        for label, variable, key in (("Réduire les mouvements", reduced, "reduced_motion"),
-                                     ("Afficher les sous-titres", subtitles, "subtitles"),
-                                     ("Halos lumineux", halos, "halos"),
-                                     ("Animations visuelles", animations, "animations")):
-            tk.Checkbutton(visual, text=label, variable=variable, bg=colors["background"],
-                           fg=colors["foreground"], selectcolor=colors["button"],
-                           activebackground=colors["background"], activeforeground=colors["foreground"],
-                           command=lambda v=variable, k=key: self.set_options(**{k: v.get()})).pack(anchor="w", pady=5)
-        tk.Label(spectrum_page, text="Accents de tonalité (estimation, sans effet sur les permissions)",
-                 wraplength=360, justify="left", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w", pady=(12, 4))
-        accent = tk.StringVar(value=ACCENT_LABELS[self.settings.accent_mode])
-        accent_choice = ttk.Combobox(spectrum_page, state="readonly", values=list(ACCENT_LABELS.values()), textvariable=accent, width=35)
-        accent_choice.pack(fill="x", pady=4)
-        accent_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
-            accent_mode=next(key for key, label in ACCENT_LABELS.items() if label == accent.get())))
-        tk.Label(spectrum_page, text="Interprétation du spectre", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w", pady=(10, 4))
-        spectrum = tk.StringVar(value=SPECTRUM_LABELS[self.settings.spectrum_mode])
-        spectrum_choice = ttk.Combobox(spectrum_page, state="readonly", values=list(SPECTRUM_LABELS.values()),
-                                       textvariable=spectrum, width=35)
-        spectrum_choice.pack(fill="x", pady=4)
-        spectrum_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
-            spectrum_mode=next(key for key, label in SPECTRUM_LABELS.items() if label == spectrum.get())))
-        tk.Label(spectrum_page, text="Intensité du spectre (%)", bg=colors["background"],
-                 fg=colors["foreground"]).pack(anchor="w")
-        intensity = tk.IntVar(value=self.settings.spectrum_intensity)
-        tk.Scale(spectrum_page, name="spectrum_intensity", from_=0, to=100, resolution=1, orient="horizontal", variable=intensity,
-                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
-                 troughcolor=colors["button"],
-                 command=lambda value: self.set_options(spectrum_intensity=round(float(value)))).pack(fill="x")
-        tk.Label(spectrum_page, text="Aperçu local · phrase au choix", bg=colors["background"],
-                 fg=colors["muted"]).pack(anchor="w", pady=(10, 4))
-        preview_phrase = tk.StringVar(value="Je suis heureux et ravi.")
-        ttk.Entry(spectrum_page, textvariable=preview_phrase).pack(fill="x")
-        preview_result = tk.Label(spectrum_page, text="Sans micro, modèle ni réseau", anchor="w",
-                                  bg=colors["background"], fg=colors["muted"])
-        preview_result.pack(fill="x", pady=4)
-
-        def preview():
-            tone = self.preview_text(preview_phrase.get())
-            preview_result.configure(text=("Aperçu : " + tone.name if tone is not None else
-                                           "Aperçu disponible lorsque la voix est au repos"),
-                                     fg=self._target_accent() if tone is not None else colors["muted"])
-
-        ttk.Button(spectrum_page, text="Prévisualiser la phrase", command=preview).pack(fill="x", pady=4)
-        ttk.Button(spectrum_page, text="Scénario hors ligne · espoir → affection → tension → apaisement",
-                   command=self.preview_scenario).pack(fill="x", pady=4)
-        ttk.Button(spectrum_page, text="Arrêter l’aperçu", command=self.clear_preview).pack(fill="x", pady=4)
-        emotion_caps = tk.BooleanVar(value=self.settings.emotional_subtitles)
-        ttk.Checkbutton(captions_page, text="Sous-titres émotionnels", variable=emotion_caps,
-                        command=lambda: self.set_options(emotional_subtitles=emotion_caps.get())).pack(anchor="w", pady=8)
-        tk.Label(captions_page, text="Colorisation", bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
-        coloring = tk.StringVar(value=COLORING_LABELS[self.settings.subtitle_coloring])
-        color_choice = ttk.Combobox(captions_page, textvariable=coloring,
-                                    values=list(COLORING_LABELS.values()), state="readonly")
-        color_choice.pack(fill="x", pady=8)
-        color_choice.bind("<<ComboboxSelected>>", lambda _event: self.set_options(
-            subtitle_coloring=next(key for key, label in COLORING_LABELS.items() if label == coloring.get())))
-        tk.Label(captions_page, text="Taille préférée · ajustée dans les petites fenêtres", bg=colors["background"], fg=colors["foreground"], wraplength=360).pack(anchor="w")
-        size = tk.IntVar(value=self.settings.subtitle_size)
-        tk.Scale(captions_page, from_=12, to=32, variable=size, orient="horizontal", resolution=1,
-                 bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
-                 command=lambda value: self.set_options(subtitle_size=round(float(value)))).pack(fill="x")
-        ttk.Button(captions_page, text="Immersion / Diagnostic (F9)", command=self.toggle_diagnostic).pack(fill="x", pady=12)
-        tk.Label(captions_page, text="Deux lignes maximum. Synchronisation estimée par groupes de mots / bloc PCM.\nLes indicateurs micro, arrêt et sécurité restent visibles en Immersion.",
-                 wraplength=360, justify="left", bg=colors["background"], fg=colors["muted"]).pack(fill="x", pady=8)
-
-        def closed(event):
-            if event.widget is dialog:
-                self.clear_preview()
-                self.settings_dialog = None
-
-        dialog.bind("<Destroy>", closed)
-
-        def choose_accent():
-            _rgb_value, color = colorchooser.askcolor(self.settings.fixed_color,
-                                                    title="Accent personnalisé", parent=dialog)
-            if color:
-                self.set_options(fixed_color=color, accent_mode="fixed")
-                accent.set(ACCENT_LABELS["fixed"])
-
-        ttk.Button(spectrum_page, text="Choisir la couleur d’accent…", command=choose_accent).pack(fill="x", pady=4)
-        ttk.Button(visual, text="Choisir le fond…", command=self.choose_background).pack(fill="x", pady=(12, 4))
-        ttk.Button(visual, text="Rétablir le noir", command=self.reset_background).pack(fill="x", pady=4)
+            return self.settings_dialog
+        from .presence_studio import PresenceStudio
+        self.studio = PresenceStudio(self)
+        self.settings_dialog = self.studio.window
+        return self.settings_dialog
 
     def toggle_listening(self):
         if self.state == "dormant":
@@ -1860,14 +1668,23 @@ class PresenceView:
 
     def _on_destroy(self, event):
         if event.widget is self.window:
+            # Destroy fires after child widgets have gone. Detach them before
+            # rolling back a Studio draft, which normally repaints the view.
+            self.window = self.canvas = None
+            self._window_mode = self._controls_layout = None
+            self._cancel_animation()
+            if self.studio is not None:
+                self.studio.cancel()
+            self.clear_preview()
             self._cancel_semantics()
             self._cancel_scenario()
             self._caption_font = None
             self._cancel_animation()
-            self.window = self.canvas = None
             self.settings_dialog = None
 
     def close(self):
+        if self.studio is not None:
+            self.studio.cancel()
         self._cancel_semantics("closed")
         self.clear_preview()
         self._cancel_scenario()

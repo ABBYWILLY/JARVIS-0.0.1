@@ -1,7 +1,7 @@
 """Searchable navigation to the existing preference owners; no copied values."""
 from dataclasses import dataclass
 import tkinter as tk
-from tkinter import ttk
+from tkinter import font, ttk
 import unicodedata
 
 
@@ -67,7 +67,7 @@ def find_routes(query="", family=None, advanced=False):
 class ControlCenter:
     """Two navigation levels: family/search, then the canonical editor."""
     def __init__(self, app):
-        from .ui import PANEL, TEXT, MUTED
+        from .ui import PANEL, FIELD, TEXT, MUTED, CYAN
         self.app = app
         self.window = dialog = tk.Toplevel(app.root)
         dialog.title("JARVIS · Centre de contrôle")
@@ -101,7 +101,15 @@ class ControlCenter:
         self.detail.bind("<ISO_Left_Tab>", lambda event: self._tab(event, reverse=True))
         body = ttk.Frame(dialog)
         body.pack(fill="both", expand=True)
-        self.results = ttk.Treeview(body, show="tree", selectmode="browse", height=5)
+        # Tk9's default Treeview does not inherit the dark TFrame palette.
+        self.result_font = font.Font(dialog, family=app.font_family, size=10)
+        style = ttk.Style(dialog)
+        style.configure("Control.Treeview", background=FIELD, fieldbackground=FIELD,
+                        foreground=TEXT, font=self.result_font,
+                        rowheight=self.result_font.metrics("linespace") + 10)
+        style.map("Control.Treeview", background=[("selected", "#244055")],
+                  foreground=[("selected", CYAN)])
+        self.results = ttk.Treeview(body, style="Control.Treeview", show="tree", selectmode="browse", height=5)
         self.results.column("#0", minwidth=80, width=250, stretch=True)
         scrollbar = ttk.Scrollbar(body, command=self.results.yview)
         self.results.configure(yscrollcommand=scrollbar.set)

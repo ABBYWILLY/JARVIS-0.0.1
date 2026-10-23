@@ -3,6 +3,7 @@ import gc
 from pathlib import Path
 import tempfile
 import tkinter as tk
+from tkinter import ttk
 import unittest
 from unittest.mock import patch
 
@@ -52,6 +53,9 @@ class ControlCenterTkTests(unittest.TestCase):
 
     def test_existing_editors_are_dispatched_without_copied_preferences(self):
         center = self.app.open_control_center()
+        style = ttk.Style(self.root)
+        self.assertEqual(style.lookup("Control.Treeview", "fieldbackground"), "#192638")
+        self.assertEqual(style.lookup("Control.Treeview", "foreground"), "#e4edf6")
         with patch.object(self.app.voice, "open_settings") as voice, patch.object(self.app.presence, "open_settings") as presence:
             with patch.object(self.store, "set_preference") as save:
                 center.query.set("silence")

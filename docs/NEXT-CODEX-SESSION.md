@@ -1,3 +1,22 @@
+# PRESENCE Studio2.0 — étape C, 24 octobre 2026
+
+B publié513dc86. Nouveau Studio remplace l'atelier immédiat : un brouillon,
+Avant/Après sur le même Canvas, préréglages Éco/Équilibré/Cinématique,
+Annuler/Restaurer/Appliquer. Seul Appliquer enregistre ; restauration d'origine
+reste un brouillon. Préférences futures et raccourcis externes préservés.
+Tous les réglages existants restent accessibles ; diffusion du halo, structure
+THINKING et vitesses d'animation/transition ont un effet réel dans Canvas.
+PresenceSettings demeure le contrat partagé, sans intégration GPU production.
+Scénario hors ligne complet par DemoController : vrais objets de rendu,
+PCM synthétique explicitement étiqueté ; événements réels prioritaires.
+Deux défauts reproduits corrigés : Treeview blanc illisible sousTk9 et
+TclError/callback résiduel après destruction directe de PRESENCE avec Studio.
+79tests intégrés Tk9 réussis (5,710s), 39tests ciblés Tk8.6 réussis (8,639s).
+Export et captures étapeD en préparation ; suite globale/CI ensuite.
+Aucun modèle ou moteur obligatoire ajouté. Validation matérielle en attente.
+
+---
+
 # UX Master Control — étape B, 24 octobre 2026
 
 Inventaire A publié e2f8b27, deux CI Windows vertes (40039278838 application,

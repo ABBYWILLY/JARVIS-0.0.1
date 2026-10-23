@@ -92,3 +92,31 @@ connue, pas une conformité responsive annoncée pour tous les écrans.
 360×340/620×380/380×640, DPI100/250% testés pour le Centre ; clavier, fermeture
 sans callbacks et source de préférences unique vérifiés. CI de cette étape :
 voir le commit et le dernier run Actions, résultat à confirmer après push.
+
+## Étape C — Studio et scénario interne
+
+L'atelier est remplacé par un Studio à cinq sections : Atelier, Visualiseur,
+Spectre et aperçu, Sous-titres, Expressions. Les réglages ont un seul éditeur,
+les préréglages sont des actions sur le brouillon. Avant/Après alterne les
+préférences sur le même Canvas/pool23objets ; Annuler restaure les valeurs
+enregistrées, Restaurer prépare les valeurs d'origine, Appliquer enregistre.
+Les raccourcis externes sont fusionnés au brouillon, pas écrasés à sa fermeture.
+Erreurs d'enregistrement visibles, inconnus SQLite préservés.
+
+Quatre champs visuels validés ajoutés au contrat PresenceSettings :
+halo_diffusion50–180%, animation_speed50–150%, transition_speed50–150%,
+thinking_structure lentille/cercle/lentille étirée. Effets réels de largeur,
+géométrie et vitesse ; le PCM/VAD/TTS n'est pas modifié. GPU demeure autonome :
+le schéma commun prépare l'adaptation, sans prétendre régler ses shaders ici.
+
+La démonstration interne enchaîne huit états avec du PCM synthétique déclaré
+à l'écran. Les vrais événements, nouvelle réponse, masquage/fermeture et arrêt
+annulent ses callbacks. Huit familles expressives existantes, aucune nouvelle
+bibliothèque de100emojis annoncée. La revue visuelle a révélé une liste blanche
+illisible : style sombre explicite ajouté. Une régression a reproduit l'erreur
+Tcl lors de destruction directe du Canvas : les références sont maintenant
+détachées avant restauration du brouillon, sans callback fantôme.
+
+79tests intégrés Tk9 et39ciblés Tk8.6 réussis. Tests de transaction, persistance,
+paramètres bornés, rendu réel, interruption, mouvement réduit, fermeture, clavier
+et DPI ; doubles PCM explicitement identifiés. Les comptes se recouvrent.
