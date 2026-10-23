@@ -688,7 +688,7 @@ Syntaxe standard/extensions explicitée ; tableaux textuels et maths simples res
 les limites connues, sans composition LaTeX. Aucun HTML actif ; liens validés
 ouverts seulement après confirmation.
 
-Tests locaux Tk9 : 472 exécutés, 463 réussis, 9 ignorés pour natifs/modèles absents.
+Tests locaux Tk9 : 473 exécutés, 464 réussis, 9 ignorés pour natifs/modèles absents.
 Tk8.6 : 85 tests ciblés réussis, démarrages sources Tk8.6/9 avec profils isolés OK.
 Tests couvrant styles effectifs, persistance/reset, source/copie/sélection/scroll,
 streaming et voix, formats complexes, petites fenêtres et DPI100–250 %, y compris
@@ -696,3 +696,10 @@ lecture maximale24pt/175 %. CI Windows du SHA courant : workflow Windows Jarvis,
 tests complets, compilation et deux démarrages EXE ; résultat accessible dans Actions.
 Recette humaine Windows/Tom/Siwis/micro reste à effectuer (docs/VOICE.md).
 LOT 3 non commencé ; aucun modèle, moteur ou dépendance supplémentaire téléchargé.
+
+CI4eda447 / run39915837584 : un test géométrique PRESENCE supposait tous les arcs
+visibles alors qu'une frame >12ms déclenche correctement la réduction adaptative.
+Même échec reproduit par horloge de coût contrôlé. Fixture cinématique stabilisée
+(horloge/DPI) sans retirer ses assertions ; régression supplémentaire vérifiant
+20ms de coût, réduction à2calques/1arc puis retour4calques/3arcs après3s, avec pool
+Canvas et absence de timer inchangés. Aucun code applicatif PRESENCE modifié.

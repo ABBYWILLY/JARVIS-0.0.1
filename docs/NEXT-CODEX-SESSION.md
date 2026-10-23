@@ -19,8 +19,12 @@ Streaming et sourcesSQLite inchangés, TTS sans marqueurs ~~ ; code/tildes techn
 préservés. Sélection/copie/scroll testés ; HTML reste inerte, liens confirmés.
 Limites : tableaux textuels pouvant se replier, maths textuelles simples ; aucun
 moteur LaTeX, stylesHTML ou rendu complet de toutes variantes Markdown annoncé.
-Suite locale Tk9 : 472 tests exécutés, 463 réussis, 9 ignorés (natifs/modèles absents).
+Suite locale Tk9 : 473 tests exécutés, 464 réussis, 9 ignorés (natifs/modèles absents).
 Tk8.6 : 85 tests ciblés verts ; démarrages sources Tk8.6/9 avec profils isolés OK.
+LOT2 publié4eda447 ; CI39915837584 a révélé un test ancien dépendant du coût réel
+d'une frame : le mode adaptatif >12ms masque des arcs que le test attendait tous.
+Reproduction déterministe, horloge contrôlée pour la géométrie ; nouvelle régression
+de charge20ms puis reprise des calques sans allocation. Runtime PRESENCE inchangé.
 CI et commit : voir progression, git log et dernier run Windows Jarvis.
 Captures réelles Linux avec textes de démonstration explicites, sans modèle/micro :
 /workspace/artifacts/command-os-neo-linux.png et command-os-neo-compact-linux.png.

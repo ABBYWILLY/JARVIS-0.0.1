@@ -414,7 +414,10 @@ class PresenceTkTests(unittest.TestCase):
         self.assertFalse(reopened.settings.animations)
         self.assertLessEqual(self.view.settings_dialog.winfo_height(), self.root.winfo_screenheight())
 
-    def test_layers_use_scaled_widths_and_orbital_highlights_reuse_canvas_items(self):
+    @patch("jarvis.presence.time.monotonic", return_value=100.)
+    def test_layers_use_scaled_widths_and_orbital_highlights_reuse_canvas_items(self, _clock):
+        # This tests the full cinematic geometry, not the host's frame cost.
+        # The adaptive overload/recovery contract is tested separately below.
         old_scaling = self.root.tk.call("tk", "scaling")
         self.addCleanup(lambda: self.root.tk.call("tk", "scaling", old_scaling))
         self.root.tk.call("tk", "scaling", 96 / 72)
@@ -441,6 +444,43 @@ class PresenceTkTests(unittest.TestCase):
                          ["hidden", "hidden", "hidden", "normal"])
         self.assertTrue(all(self.view.canvas.itemcget(path, "state") == "hidden"
                             for path in self.view.orbital_paths))
+
+    def test_slow_frame_reduces_layers_then_recovers_without_allocating_canvas_items(self):
+        old_scaling = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", old_scaling))
+        self.root.tk.call("tk", "scaling", 96 / 72)
+        self.view.set_options(profile="cinematic", reduced_motion=True)
+        self.view.show()
+        self.root.update()
+        clock = [100.]
+        # Discard any incidental initialization load before the controlled frame.
+        self.view._slow_until = 0.
+        with patch("jarvis.presence.time.monotonic", side_effect=lambda: clock[0]):
+            self.view.update_event("thinking")
+            items = self.view.canvas.find_all()
+            self.assertEqual(sum(self.view.canvas.itemcget(path, "state") == "normal"
+                                 for path in self.view.orbital_paths), 3)
+            update_overlays = self.view._update_overlays
+
+            def slow_overlay(width):
+                update_overlays(width)
+                clock[0] += .020  # Deterministic 20 ms frame; no hardware sleep.
+
+            with patch.object(self.view, "_update_overlays", side_effect=slow_overlay):
+                self.view._render()
+            self.assertEqual(self.view._slow_until, 103.)
+            self.view._render()
+            self.assertEqual(sum(self.view.canvas.itemcget(path, "state") == "normal"
+                                 for path in self.view.paths), 2)
+            self.assertEqual([self.view.canvas.itemcget(path, "state") for path in self.view.orbital_paths],
+                             ["normal", "hidden", "hidden"])
+            self.assertEqual(self.view.canvas.find_all(), items)
+            clock[0] = 103.1
+            self.view._render()
+            self.assertTrue(all(self.view.canvas.itemcget(path, "state") == "normal"
+                                for path in self.view.paths + self.view.orbital_paths))
+            self.assertEqual(self.view.canvas.find_all(), items)
+            self.assertIsNone(self.view.after_id)
 
     def test_disabled_motion_profiles_and_hidden_window_leave_no_orbital_callbacks(self):
         self.view.show()
