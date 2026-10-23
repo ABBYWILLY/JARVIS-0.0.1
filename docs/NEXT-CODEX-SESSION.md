@@ -1,3 +1,28 @@
+# PRESENCE GPU — prototype repris et terminé, 23 octobre 2026
+
+Audit préalable e6d33c4 publié, CI Windows39950656791 verte ; ne pas le refaire.
+Prototype autonome ModernGL5.13/glcontext3.1/glfw2.11 : run_presence_gpu.py,
+ReactorScene (PresenceModel/MorphController existants), GpuRenderer et GLSL
+intégrés, instrumentation bornée, WAV local réel et exportPNG sans dépendance.
+Code repris après quota : exclusions sémantiques corrigées, dernière frame plate
+à expiration PCM, absence de boucle inutile après THINKING→parole silencieuse,
+refus du logiciel par défaut en fenêtre et erreurs de fermeture visibles.
+47tests initiaux +1régression d'économie de rendu ; suite globale576tests,
+567réussis,9ignorés,70,325s Tk9/EGL réel logiciel. Guide PRESENCE-GPU.md,
+faisabilité et benchmarks dans les fichiers GPU dédiés. Quatre mesures en
+processus isolés,960×640 : équilibré29,70FPS/cinématique36,28FPS, CPU logiciel
+318–398% d'un cœur. RAM moyenne ~95MiB ; ressources renderer estimées7,04MiB,
+pas VRAM physique. Repos/mouvement réduit :1frame puis attente. Aucune mesureRTX.
+Packaging séparé JarvisPresenceGPU.exe et workflow PRESENCE GPU prototype ;
+CI compileWindows et testsMesa/EGL. Si pilote3.3 absent sur runner : seul refus
+explicite context est accepté, pas une erreur de dépendances/shaders/cleanup.
+Pas d'intégration production autorisée par ces mesures : Canvas/Jarvis.exe
+conservés ; recueillir recette RTX3070+Ollama+Whisper/Piper/VAD et longue durée
+avant adaptateur Canvas/GPU/raccordement commun. Aucun modèle téléchargé/effacé.
+Dernier commit et état CI : git log / dernier run Actions, jamais main.
+
+---
+
 # PRESENCE GPU — phase0 audit, 23 octobre 2026
 
 Nouvelle demande : `PRESENCE-GPU-SPEC.md`. Audit complet ciblé LOTS3/6 dans

@@ -1,0 +1,88 @@
+name: PRESENCE GPU prototype
+on:
+  push:
+    branches: [feat/jalon-2-voice-presence]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-package:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+          architecture: x64
+      - name: Compile standalone GPU EXE and validate fresh probe reports
+        shell: powershell
+        run: .\scripts\build-presence-gpu.ps1 -PythonExecutable (Get-Command python).Source
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Jarvis-Presence-GPU-Windows-x64-${{ github.sha }}
+          path: |
+            dist/presence-gpu/JarvisPresenceGPU.exe
+            dist/presence-gpu/JarvisPresenceGPU.exe.sha256
+            dist/presence-gpu/diagnostics/
+            dist/presence-gpu/licenses/
+            docs/PRESENCE-GPU.md
+            requirements-gpu.txt
+          if-no-files-found: error
+          retention-days: 14
+  linux-shaders:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EGL_PLATFORM: surfaceless
+      MESA_SHADER_CACHE_DIR: /tmp/jarvis-presence-mesa-cache
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      JARVIS_REQUIRE_GPU: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.10'
+      - name: Install optional GPU dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-gpu.txt
+      - name: Ensure Mesa EGL and import-time Tk libraries are available
+        shell: bash
+        run: |
+          packages=()
+          if ! python -c 'import ctypes; ctypes.CDLL("libEGL.so.1")' || [ ! -f /usr/lib/x86_64-linux-gnu/dri/swrast_dri.so ]; then
+            packages+=(libegl1 libgl1-mesa-dri)
+          fi
+          if ! python -c 'import tkinter'; then
+            packages+=(libtk8.6)
+          fi
+          if [ "${#packages[@]}" -gt 0 ]; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y "${packages[@]}"
+          fi
+          python -c 'import tkinter'
+      - name: Test real OpenGL shaders, resources, reports and CLI without a GUI
+        run: python -m unittest -v tests.test_gpu_renderer tests.test_gpu_benchmark tests.test_presence_gpu
+      - name: Compile shaders and render one real headless EGL frame
+        shell: bash
+        run: |
+          mkdir -p dist/presence-gpu-linux
+          python run_presence_gpu.py --headless --probe --report dist/presence-gpu-linux/egl-probe.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('dist/presence-gpu-linux/egl-probe.json').read_text(encoding='utf-8'))
+          assert report['status'] == 'supported', report
+          assert report['shader_compile_and_frame'] is True, report
+          assert report['shutdown'] == 'complete', report
+          assert report['renderer']['hardware_validation'] == 'pending', report
+          print('Real Mesa EGL shader/frame probe passed; software CI is not RTX validation.')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Jarvis-Presence-GPU-Mesa-EGL-${{ github.sha }}
+          path: dist/presence-gpu-linux/
+          if-no-files-found: warn
+          retention-days: 14

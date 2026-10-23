@@ -1,0 +1,467 @@
+{
+  "created_utc": "2026-10-23T18:14:49.689770+00:00",
+  "base_commit": "e6d33c4",
+  "source_sha256": {
+    "jarvis/presence_gpu.py": "da2d8e8f319575201040b9ad36d26692c36829ac7956ea5752f4851db8efe321",
+    "jarvis/gpu_renderer.py": "41df641cd0e20dea6e13a4c18f0e261c7eaa6813769355d724d484394ce68057",
+    "jarvis/reactor_shaders.py": "e8704fd519ff146b15b7e5894aeb230101d7d7584c9f2773e1443c19699f7c4a",
+    "jarvis/gpu_benchmark.py": "cad8e7dfa6a1397bf78589bc31ec77a460a788918f02fe898a135ef095b16e2d"
+  },
+  "scope": "Linux cloud, real OpenGL software llvmpipe EGL, no physical GPU, no models or audio devices",
+  "protocol": "Fresh process and context per case, same960x640 viewport, shared Mesa shader disk cache. Wall includes driver finish and pacing. CPU includes Mesa worker threads. No extrapolation to RTX.",
+  "cases": [
+    {
+      "case": "idle-balanced",
+      "status": "complete",
+      "application_integrated": false,
+      "offline_preview": true,
+      "startup_scope": "Python_initialization_excludes_frozen_bootloader",
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "input_source": "none",
+      "synthetic_pcm": false,
+      "quality_requested": "balanced",
+      "renderer_resources_estimated_bytes": 7380864,
+      "benchmark_version": 1,
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "startup_seconds": 0.0708769760094583,
+      "frames": {
+        "frame_count": 1,
+        "elapsed_seconds": 5.042066613037605,
+        "fps": 0.19833137416594893,
+        "sampled_frame_count": 1,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 33.42857805546373,
+        "frame_p95_ms": 33.42857805546373,
+        "render_median_ms": 21.904832974541932,
+        "render_p95_ms": 21.904832974541932,
+        "render_scope": "CPU_wall_including_driver_completion; not_GPU_timer",
+        "frame_scope": "rendered_frame_intervals; idle_and_hidden_gaps_in_elapsed_and_fps",
+        "rendered_frame_wall_seconds": 0.03342857805546373
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 1.0465888689432583,
+        "cpu_peak_percent": 8.824790955524492,
+        "elapsed_seconds": 5.043015989009291,
+        "interval_seconds": 0.5,
+        "sample_count": 11,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 99438592,
+        "rss_average_bytes": 98598912.0,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 12,
+        "rss_peak_bytes": 99438592,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "gpu_device": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "shader_resources": {
+        "allocation_estimate_bytes": 7380864,
+        "estimate_scope": "application_requested_resources_not_physical_VRAM",
+        "physical_vram_measured_bytes": null,
+        "unavailable_reason": "Per-process physical GL VRAM is not measured."
+      },
+      "unmeasured_workloads": {
+        "ollama": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "piper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "whisper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "vad": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        }
+      },
+      "unmeasured_gpu_metrics": {
+        "gpu_execution_ms": null,
+        "process_graphics_utilization_percent": null,
+        "reason": "No GPU timer or per-process graphics-utilization counter is collected."
+      },
+      "quality_effective": "balanced",
+      "adaptive_degraded": false,
+      "quality_changes": 0,
+      "output_size": [
+        960,
+        640
+      ],
+      "internal_size": [
+        960,
+        640
+      ],
+      "timings_scope": "headless_render_complete_includes_driver_wait",
+      "shutdown": "complete"
+    },
+    {
+      "case": "thinking-balanced",
+      "status": "complete",
+      "application_integrated": false,
+      "offline_preview": true,
+      "startup_scope": "Python_initialization_excludes_frozen_bootloader",
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "input_source": "none",
+      "synthetic_pcm": false,
+      "quality_requested": "balanced",
+      "renderer_resources_estimated_bytes": 7380864,
+      "benchmark_version": 1,
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "startup_seconds": 0.058503428008407354,
+      "frames": {
+        "frame_count": 298,
+        "elapsed_seconds": 10.032071377034299,
+        "fps": 29.704732831366215,
+        "sampled_frame_count": 298,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 33.42987550422549,
+        "frame_p95_ms": 33.58946199296042,
+        "render_median_ms": 23.52489047916606,
+        "render_p95_ms": 31.041018955875188,
+        "render_scope": "CPU_wall_including_driver_completion; not_GPU_timer",
+        "frame_scope": "rendered_frame_intervals; idle_and_hidden_gaps_in_elapsed_and_fps",
+        "rendered_frame_wall_seconds": 10.026381140458398
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 318.36749916239063,
+        "cpu_peak_percent": 363.1265054306322,
+        "elapsed_seconds": 10.032504989998415,
+        "interval_seconds": 0.5,
+        "sample_count": 20,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 100061184,
+        "rss_average_bytes": 99548403.8095238,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 21,
+        "rss_peak_bytes": 100061184,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "gpu_device": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "shader_resources": {
+        "allocation_estimate_bytes": 7380864,
+        "estimate_scope": "application_requested_resources_not_physical_VRAM",
+        "physical_vram_measured_bytes": null,
+        "unavailable_reason": "Per-process physical GL VRAM is not measured."
+      },
+      "unmeasured_workloads": {
+        "ollama": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "piper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "whisper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "vad": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        }
+      },
+      "unmeasured_gpu_metrics": {
+        "gpu_execution_ms": null,
+        "process_graphics_utilization_percent": null,
+        "reason": "No GPU timer or per-process graphics-utilization counter is collected."
+      },
+      "quality_effective": "balanced",
+      "adaptive_degraded": false,
+      "quality_changes": 0,
+      "output_size": [
+        960,
+        640
+      ],
+      "internal_size": [
+        960,
+        640
+      ],
+      "timings_scope": "headless_render_complete_includes_driver_wait",
+      "shutdown": "complete"
+    },
+    {
+      "case": "thinking-cinematic",
+      "status": "complete",
+      "application_integrated": false,
+      "offline_preview": true,
+      "startup_scope": "Python_initialization_excludes_frozen_bootloader",
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "input_source": "none",
+      "synthetic_pcm": false,
+      "quality_requested": "cinematic",
+      "renderer_resources_estimated_bytes": 7380864,
+      "benchmark_version": 1,
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "startup_seconds": 0.05985617800615728,
+      "frames": {
+        "frame_count": 363,
+        "elapsed_seconds": 10.006386009976268,
+        "fps": 36.27683357788642,
+        "sampled_frame_count": 363,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 24.87785805715248,
+        "frame_p95_ms": 38.925776025280356,
+        "render_median_ms": 24.864679027814418,
+        "render_p95_ms": 38.91245502745733,
+        "render_scope": "CPU_wall_including_driver_completion; not_GPU_timer",
+        "frame_scope": "rendered_frame_intervals; idle_and_hidden_gaps_in_elapsed_and_fps",
+        "rendered_frame_wall_seconds": 9.999933170969598
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 398.43163749302636,
+        "cpu_peak_percent": 407.70247426431655,
+        "elapsed_seconds": 10.006817889981903,
+        "interval_seconds": 0.5,
+        "sample_count": 18,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 100306944,
+        "rss_average_bytes": 99727683.36842105,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 19,
+        "rss_peak_bytes": 100306944,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "gpu_device": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "shader_resources": {
+        "allocation_estimate_bytes": 7380864,
+        "estimate_scope": "application_requested_resources_not_physical_VRAM",
+        "physical_vram_measured_bytes": null,
+        "unavailable_reason": "Per-process physical GL VRAM is not measured."
+      },
+      "unmeasured_workloads": {
+        "ollama": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "piper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "whisper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "vad": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        }
+      },
+      "unmeasured_gpu_metrics": {
+        "gpu_execution_ms": null,
+        "process_graphics_utilization_percent": null,
+        "reason": "No GPU timer or per-process graphics-utilization counter is collected."
+      },
+      "quality_effective": "cinematic",
+      "adaptive_degraded": false,
+      "quality_changes": 0,
+      "output_size": [
+        960,
+        640
+      ],
+      "internal_size": [
+        960,
+        640
+      ],
+      "timings_scope": "headless_render_complete_includes_driver_wait",
+      "shutdown": "complete"
+    },
+    {
+      "case": "thinking-reduced-motion",
+      "status": "complete",
+      "application_integrated": false,
+      "offline_preview": true,
+      "startup_scope": "Python_initialization_excludes_frozen_bootloader",
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "input_source": "none",
+      "synthetic_pcm": false,
+      "quality_requested": "cinematic",
+      "renderer_resources_estimated_bytes": 7380864,
+      "benchmark_version": 1,
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "startup_seconds": 0.056495483964681625,
+      "frames": {
+        "frame_count": 1,
+        "elapsed_seconds": 5.056033922010101,
+        "fps": 0.19778348314610103,
+        "sampled_frame_count": 1,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 47.267787042073905,
+        "frame_p95_ms": 47.267787042073905,
+        "render_median_ms": 47.24671499570832,
+        "render_p95_ms": 47.24671499570832,
+        "render_scope": "CPU_wall_including_driver_completion; not_GPU_timer",
+        "frame_scope": "rendered_frame_intervals; idle_and_hidden_gaps_in_elapsed_and_fps",
+        "rendered_frame_wall_seconds": 0.047267787042073905
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 3.018486722021279,
+        "cpu_peak_percent": 28.796991188127173,
+        "elapsed_seconds": 5.05662830604706,
+        "interval_seconds": 0.5,
+        "sample_count": 11,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 100155392,
+        "rss_average_bytes": 99252224.0,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 12,
+        "rss_peak_bytes": 100155392,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "gpu_device": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "shader_resources": {
+        "allocation_estimate_bytes": 7380864,
+        "estimate_scope": "application_requested_resources_not_physical_VRAM",
+        "physical_vram_measured_bytes": null,
+        "unavailable_reason": "Per-process physical GL VRAM is not measured."
+      },
+      "unmeasured_workloads": {
+        "ollama": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "piper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "whisper": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        },
+        "vad": {
+          "latency_seconds": null,
+          "reason": "Not measured in this render benchmark."
+        }
+      },
+      "unmeasured_gpu_metrics": {
+        "gpu_execution_ms": null,
+        "process_graphics_utilization_percent": null,
+        "reason": "No GPU timer or per-process graphics-utilization counter is collected."
+      },
+      "quality_effective": "cinematic",
+      "adaptive_degraded": false,
+      "quality_changes": 0,
+      "output_size": [
+        960,
+        640
+      ],
+      "internal_size": [
+        960,
+        640
+      ],
+      "timings_scope": "headless_render_complete_includes_driver_wait",
+      "shutdown": "complete"
+    }
+  ],
+  "production_integration": "not_approved_pending_Windows_RTX_and_IA_voice_coexecution"
+}

@@ -1,5 +1,18 @@
 # Jalon 2 — progression vérifiable
 
+## PRESENCE GPU — prototype optionnel
+
+Reprise après quota, aucun travail perdu : moteur ModernGL/GLFW autonome avec
+shaders procéduraux, anneaux/filaments/particules, bloom quart-résolution,
+réemploi des8familles et du modèle PRESENCE. Canvas reste celui de JARVIS.
+Guide, étude et mesures : PRESENCE-GPU*.md ; JSON brut dans docs/benchmarks.
+47tests ciblés puis une régression d'économie de rendu ; suite intégrée :
+576tests,567réussis,9ignorés,70,325s. EGL/GLFW Linux réels, driver logiciel.
+Mesures isolées :29,70/36,28FPS aux profils30/60, CPU logiciel318–398%,
+~95MiB RSS moyenne ; aucune VRAM physique/latence IA ou voix mesurée.
+Intégration différée jusqu'à recetteRTX3070+IA/voix. CompilationWindows séparée
+avec sondes et licences ; résultats finaux dans Actions du commit publié.
+
 ## PRESENCE GPU — phase0 préalable
 
 Audit LOTS3/6 sura93a70f, rapport `AUDIT-LOTS-3-6.md`. Corrections démontrées :

@@ -1,0 +1,4 @@
+# Optional standalone prototype only; the Jarvis.exe Canvas build is unchanged.
+moderngl==5.13.0
+glcontext==3.1.0
+glfw==2.11.0
