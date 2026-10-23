@@ -150,8 +150,9 @@ exporter un unique WAV sur demande explicite. La base texte reste non chiffrée.
 
 ## Compilation et récupération de l’artefact
 
-Lot 2 : la case **Métriques**, près du choix du modèle COMMAND OS, masque/affiche
-les statistiques sous chaque réponse, avec préférence persistante. Tokens et durée
+La case **Menu → Conversation → Métriques de génération** masque/affiche
+les statistiques sous chaque réponse, avec préférence persistante. Elles sont
+masquées initialement ; un choix antérieur est conservé. Tokens et durée
 de génération proviennent de `eval_count`/`eval_duration` d’Ollama ; tokens/s =
 tokens ÷ durée en secondes. Le **TTFT reçu** est le délai HTTP jusqu’au premier
 texte visible (chargement/réflexion/réseau inclus), pas le premier token interne.
@@ -179,6 +180,36 @@ Ni installateur Windows ni signature binaire ajoutés à ce jalon.
 La CI vérifie les imports natifs, le VAD ONNX livré, la suite de tests, puis deux
 smoke tests de l’EXE. Elle ne dispose pas de microphone, de modèles STT/TTS installés
 ni du PC cible : **un artefact vert ne valide pas la qualité vocale ou le barge-in**.
+
+## COMMAND OS NEO — lecture et présentation
+
+**Menu → Lecture et typographie** : police installée, taille9–24, échelle75–175 %,
+densité compacte/confortable, police monospace du code/tableaux et accents0–100 %.
+**Enregistrer** applique et conserve ces choix ; **Réglages d’origine** rétablit
+immédiatement les préférences de lecture, sans toucher à la voix, PRESENCE ou aux
+archives. La grande police reste appliquée à la conversation ; en petite fenêtre,
+la saisie est plafonnée à18points pour garder Envoyer/Arrêter accessibles.
+
+Markdown rendu : titres, gras/italique/combinés, listes imbriquées, citations,
+séparateurs, liens HTTPS confirmés, code inline/blocs, Unicode et emojis.
+Extensions : `~~barré~~` (délimiteurs doubles aux limites de mots), `++souligné++`,
+`==surligné==` et tableaux textuels monospace. Les tildes d'une notation technique
+intramot restent littéraux. Pas de styles HTML ou de couleurs arbitraires exécutés.
+Les tableaux peuvent se replier dans une petite fenêtre ; les formules simples
+restent textuelles, sans composition LaTeX ni prétention de prise en charge complète.
+
+Pendant le streaming, seule la réponse active est modifiée ; sélection, copie et
+défilement restent natifs. Clic droit/Ctrl+Maj+C copie la réponse originale ; Ctrl+C
+copie la sélection rendue. Les marqueurs sont retirés uniquement de la présentation
+et du texte vocal, jamais de SQLite. Le code reste non lu par défaut (résumé explicite).
+Les surfaces arrondies sont statiques, sans image, moteur supplémentaire ou animation.
+
+Recette Windows : demander une réponse avec titres, liste imbriquée, tableau,
+code, citation, `~~barré~~`, `++souligné++`, `==surligné==`, accents français et 😊.
+Sélectionner/copier un passage pendant le streaming, faire défiler vers le haut,
+changer les réglages, redémarrer et vérifier la conservation des choix/source.
+Tester Tab/focus, F6/F7/F8, paysage/portrait, 560×400 et DPI100/150/200/250 %,
+puis la lecture Piper réelle. Cette recette humaine reste à effectuer sur le PC.
 
 ## Recette réelle sur votre Windows
 

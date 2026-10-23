@@ -17,10 +17,22 @@ from tests.test_jarvis import display_available
 class TypographyValidationTests(unittest.TestCase):
     def test_preferences_validate_available_fonts_and_bounded_numeric_values(self):
         value = ConversationTypography.from_dict({"family": "test font", "size": 18,
-            "scale": 125, "spacing": "compact"}, ("Test Font",))
-        self.assertEqual(value.to_dict(), {"family": "Test Font", "size": 18, "scale": 125, "spacing": "compact"})
-        for raw in (None, [], {"family": "missing", "size": True, "scale": 999, "spacing": []}):
+            "scale": 125, "spacing": "compact", "accent_intensity": 23, "code_family": "test mono"},
+            ("Test Font", "Proportional"), ("Test Mono",))
+        self.assertEqual(value.to_dict(), {"family": "Test Font", "size": 18, "scale": 125,
+            "spacing": "compact", "accent_intensity": 23, "code_family": "Test Mono"})
+        for raw in (None, [], {"family": "missing", "size": True, "scale": 999, "spacing": [],
+                              "accent_intensity": True, "code_family": "Proportional"}):
             self.assertEqual(ConversationTypography.from_dict(raw, ("Test Font",)), ConversationTypography())
+
+    def test_accent_endpoints_and_only_measured_monospace_choices_are_allowed(self):
+        for intensity in (0, 100):
+            value = ConversationTypography.from_dict({"accent_intensity": intensity,
+                "code_family": "Installed Proportional"}, ("Installed Proportional",), ("Fixed Font",))
+            self.assertEqual(value.accent_intensity, intensity)
+            self.assertEqual(value.code_family, "")
+        for intensity in (-1, 101, "65", None):
+            self.assertEqual(ConversationTypography.from_dict({"accent_intensity": intensity}).accent_intensity, 65)
 
 
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")
@@ -94,6 +106,48 @@ class RichConversationWidgetTests(unittest.TestCase):
         self.view.copy_original()
         self.assertEqual(self.widget.clipboard_get(), source)
         self.assertEqual(self.widget.get("sel.first", "sel.last"), "choisi 31")
+
+    def test_strikethrough_composes_with_bold_italic_and_leaves_code_literal(self):
+        source = "~~***obsolète***~~ et `~~littéral~~` ; ++souligné++ et ==surligné==."
+        region = self.view.append(source)
+        self.assertEqual(region.text, "obsolète et ~~littéral~~ ; souligné et surligné.")
+        self.assertIn("obsolète", self.tagged("strike"))
+        position = self.widget.search("obsolète", region.start)
+        name = next(name for name in self.widget.tag_names(position) if name.startswith("md_font_"))
+        actual = self.widget.tk.call("font", "actual", self.widget.tag_cget(name, "font"))
+        actual = dict(zip(actual[::2], actual[1::2]))
+        self.assertEqual(actual["-weight"], "bold")
+        self.assertEqual(actual["-slant"], "italic")
+        self.assertEqual(int(actual["-overstrike"]), 1)
+        self.assertNotIn("~~littéral~~", self.tagged("strike"))
+        self.assertEqual(region.original, source)
+
+    def test_accent_and_code_font_update_existing_tags_without_reparsing_or_losing_selection(self):
+        source = "## Titre\n[guide](https://example.com) ==accent== et `code`"
+        region = self.view.append(source)
+        selected = self.widget.search("guide", region.start)
+        self.widget.tag_add("sel", selected, self.view.offset(selected, "guide"))
+        old_fonts = {key: id(face) for key, (_, face) in self.view.fonts.items()}
+        code_family = self.view.code_families[-1]
+        with patch("jarvis.markdown_view.parse_text", side_effect=AssertionError("historical text re-parsed")):
+            self.view.configure_typography(ConversationTypography(code_family=code_family, accent_intensity=0))
+        self.assertEqual(self.widget.winfo_rgb(self.widget.tag_cget("md_link", "foreground")),
+                         self.widget.winfo_rgb(self.view.foreground))
+        self.assertEqual(self.widget.winfo_rgb(self.widget.tag_cget("md_highlight", "background")),
+                         self.widget.winfo_rgb(self.widget.cget("background")))
+        link_tag = self.view.links["https://example.com"]
+        self.assertEqual(self.widget.winfo_rgb(self.widget.tag_cget(link_tag, "foreground")),
+                         self.widget.winfo_rgb(self.view.foreground))
+        for key, (_, face) in self.view.fonts.items():
+            if key[0]:
+                self.assertEqual(face.actual("family"), code_family)
+                self.assertTrue(face.metrics("fixed"))
+        self.assertEqual(old_fonts, {key: id(face) for key, (_, face) in self.view.fonts.items()})
+        self.assertEqual(self.widget.get("sel.first", "sel.last"), "guide")
+        self.assertEqual(region.original, source)
+        self.view.configure_typography(ConversationTypography(accent_intensity=100))
+        self.assertEqual(self.widget.winfo_rgb(self.widget.tag_cget(link_tag, "foreground")),
+                         self.widget.winfo_rgb(self.view.accent))
 
     def test_only_active_region_is_parsed_and_link_cache_is_bounded(self):
         history = self.view.append("\n".join(f"Archive {i} : **été**" for i in range(90)))
@@ -215,6 +269,20 @@ class ConversationPreferenceTests(unittest.TestCase):
                 self.assertIsNone(self.app.conversation_dialog)
         finally:
             self.root.tk.call("tk", "scaling", scaling)
+
+    def test_code_font_and_accent_survive_reopen_with_unknown_preferences_preserved(self):
+        self.store.set_preference("conversation", {"future_option": "keep", "size": 13})
+        self.close_app()
+        self.open_app()
+        code_family = self.app.markdown.code_families[0]
+        self.app.set_conversation_typography(code_family=code_family, accent_intensity=24)
+        self.assertEqual(self.store.get_preference("conversation")["future_option"], "keep")
+        self.close_app()
+        self.open_app()
+        self.assertEqual(self.app.typography.code_family, code_family)
+        self.assertEqual(self.app.typography.accent_intensity, 24)
+        self.assertEqual(self.app.typography.size, 13)
+        self.assertEqual(self.store.get_preference("conversation")["future_option"], "keep")
 
 
 if __name__ == "__main__":

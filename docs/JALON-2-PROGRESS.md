@@ -665,3 +665,34 @@ dans le workflow Windows Jarvis (tests, compilation PyInstaller et démarrages E
 silence/parole/silence réel, onde, VAD→Whisper→Ollama, erreur/reprise, Windows/DPI.
 LOT 1 non déclaré entièrement validé ; LOTS 2–7 non commencés avant cette recette.
 Demande globale conservée dans `docs/COGNITIVE-PRESENCE-SPEC.md`.
+
+## Cognitive & Presence Evolution — LOT 2 COMMAND OS NEO / Rich Text2.0
+
+Poursuite explicitement demandée par l'utilisateur après le LOT 1 logiciel3c75c54
+(CI Windows verte39910459009). La validation matérielle de son microphone reste
+en attente ; aucun succès audio physique ou gain de latence n'est déduit de ce lot.
+
+Interface Tk conservée : surfaces arrondies statiques pour conversation/saisie,
+hiérarchie des messages, navigation et groupes secondaires, boutons/focus cohérents,
+défilement natif réservé même en petite fenêtre. Métriques initialement masquées,
+choix antérieurs conservés. Deux objets Canvas statiques au total pour ces surfaces,
+aucune animation ou widget par message ; PRESENCE et pipeline audio non remplacés.
+
+Rich Text réutilisé et complété : barré réel combinable avec gras/italique, accents
+contrôlés0–100 %, fonte code/tableaux monospace vérifiée sur le système. Réglages
+persistants et remise à l'origine, clés inconnues et profils voix/PRESENCE conservés.
+Fontes/marges changées en place sans reparsing d'archive. Composer limité à18pt en
+compact pour garder les actions visibles, texte conversation à la taille demandée.
+TTS dérivé par le même scanner, marqueurs ~~ retirés sans perte de mots/source.
+Syntaxe standard/extensions explicitée ; tableaux textuels et maths simples restent
+les limites connues, sans composition LaTeX. Aucun HTML actif ; liens validés
+ouverts seulement après confirmation.
+
+Tests locaux Tk9 : 472 exécutés, 463 réussis, 9 ignorés pour natifs/modèles absents.
+Tk8.6 : 85 tests ciblés réussis, démarrages sources Tk8.6/9 avec profils isolés OK.
+Tests couvrant styles effectifs, persistance/reset, source/copie/sélection/scroll,
+streaming et voix, formats complexes, petites fenêtres et DPI100–250 %, y compris
+lecture maximale24pt/175 %. CI Windows du SHA courant : workflow Windows Jarvis,
+tests complets, compilation et deux démarrages EXE ; résultat accessible dans Actions.
+Recette humaine Windows/Tom/Siwis/micro reste à effectuer (docs/VOICE.md).
+LOT 3 non commencé ; aucun modèle, moteur ou dépendance supplémentaire téléchargé.

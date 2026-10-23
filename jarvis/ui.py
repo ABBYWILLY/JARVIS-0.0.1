@@ -12,6 +12,33 @@ from .worker import Worker
 
 BG, PANEL, FIELD = "#0b1019", "#121c29", "#192638"
 TEXT, MUTED, CYAN, RED = "#e4edf6", "#a6b8cb", "#65e0ef", "#ff9c9c"
+SURFACE, BORDER = "#101925", "#2b4053"
+
+
+class RoundedSurface(tk.Canvas):
+    """One static rounded shell around native, accessible Tk widgets.
+
+    One Canvas item per surface, no animation, images or message widgets. Text
+    remains in the existing Text widget for selection and incremental streaming.
+    """
+    def __init__(self, parent, *, color):
+        super().__init__(parent, bg=BG, highlightthickness=0, borderwidth=0, height=1)
+        self.outline = self.create_polygon(0, 0, 0, 0, smooth=True, splinesteps=24,
+                                           fill=color, outline=BORDER, width=1)
+        self.body = tk.Frame(self, bg=color)
+        # Native geometry propagation keeps the composer fitted to font/DPI
+        # changes, including before the first paint of a very small window.
+        self.body.pack(fill="both", expand=True, padx=12, pady=10)
+        self.bind("<Configure>", self._resize)
+
+    def _resize(self, event):
+        w, h = max(2, event.width - 1), max(2, event.height - 1)
+        r = min(16, w / 3, h / 3)
+        self.coords(self.outline, r, 1, w-r, 1, w, 1, w, r, w, h-r,
+                    w, h, w-r, h, r, h, 1, h, 1, h-r, 1, r, 1, 1)
+
+    def focus_ring(self, active):
+        self.itemconfigure(self.outline, outline=CYAN if active else BORDER)
 
 
 class App:
@@ -37,12 +64,28 @@ class App:
         style = ttk.Style(root)
         style.theme_use("clam")
         style.configure(".", background=PANEL, foreground=TEXT, font=(self.font_family, 11))
-        style.configure("TButton", padding=(12, 8), background=FIELD, foreground=TEXT)
-        style.map("TButton", background=[("active", "#244055")], foreground=[("disabled", "#7b8999")])
-        style.configure("TCombobox", fieldbackground=FIELD, foreground=TEXT, arrowcolor=CYAN)
-        style.map("TCombobox", fieldbackground=[("readonly", FIELD)], selectbackground=[("readonly", FIELD)])
-        style.configure("Vertical.TScrollbar", background=FIELD, troughcolor=BG, arrowcolor=CYAN, bordercolor=BG)
+        style.configure("TButton", padding=(12, 7), background=FIELD, foreground=TEXT,
+                        borderwidth=1, relief="flat", bordercolor=FIELD, focusthickness=1,
+                        focuscolor=CYAN)
+        style.map("TButton", background=[("disabled", PANEL), ("pressed", "#2b4b61"), ("active", "#244055")],
+                  foreground=[("disabled", "#7b8999")], bordercolor=[("focus", CYAN), ("active", BORDER)])
+        style.configure("Primary.TButton", background=CYAN, foreground=BG, bordercolor=CYAN)
+        style.map("Primary.TButton", background=[("disabled", FIELD), ("pressed", "#40bfce"), ("active", "#96f1f7")],
+                  foreground=[("disabled", MUTED), ("!disabled", BG)])
+        style.configure("Quiet.TButton", background=PANEL, bordercolor=PANEL, foreground=MUTED)
+        style.configure("Danger.TButton", foreground=RED)
+        style.map("Danger.TButton", foreground=[("disabled", "#7b8999"), ("!disabled", RED)])
+        style.configure("TCombobox", fieldbackground=FIELD, foreground=TEXT, arrowcolor=CYAN,
+                        bordercolor=BORDER, lightcolor=FIELD, darkcolor=FIELD, padding=(6, 3))
+        style.map("TCombobox", fieldbackground=[("readonly", FIELD)], selectbackground=[("readonly", FIELD)],
+                  bordercolor=[("focus", CYAN), ("!focus", BORDER)])
+        style.layout("Vertical.TScrollbar", [("Vertical.Scrollbar.trough", {"sticky": "ns", "children": [
+            ("Vertical.Scrollbar.thumb", {"sticky": "nswe", "expand": True})]})])
+        style.configure("Vertical.TScrollbar", background=BORDER, troughcolor=BG, arrowcolor=CYAN,
+                        bordercolor=BG, lightcolor=BORDER, darkcolor=BORDER, borderwidth=0, arrowsize=9)
         style.configure("TEntry", fieldbackground=FIELD, foreground=TEXT, insertcolor=TEXT)
+        style.configure("TCheckbutton", background=PANEL, foreground=MUTED, focuscolor=CYAN)
+        style.map("TCheckbutton", foreground=[("active", TEXT), ("selected", CYAN)])
         root.option_add("*TCombobox*Listbox.background", FIELD)
         root.option_add("*TCombobox*Listbox.foreground", TEXT)
 
@@ -51,7 +94,10 @@ class App:
         self.navigation = tk.Frame(root, bg=PANEL, padx=8, pady=5)
         self.navigation.grid(row=0, column=0, columnspan=2, sticky="ew")
         self.navigation_font = font.Font(root=root, family=self.font_family, size=9)
-        style.configure("Navigation.TButton", font=self.navigation_font, padding=(8, 5))
+        style.configure("Navigation.TButton", font=self.navigation_font, padding=(8, 5),
+                        background=PANEL, bordercolor=PANEL)
+        style.map("Navigation.TButton", background=[("selected", FIELD), ("active", FIELD)],
+                  foreground=[("selected", CYAN)])
         self.sidebar_button = ttk.Button(self.navigation, text="Menu", style="Navigation.TButton",
                                          command=self.toggle_sidebar, width=0)
         self.conversation_button = ttk.Button(self.navigation, text="Conversation", style="Navigation.TButton",
@@ -62,6 +108,7 @@ class App:
                                            command=lambda: self.voice.emergency(), width=0)
         for button in (self.sidebar_button, self.conversation_button, self.presence_button, self.emergency_button):
             button.pack(side="left", padx=2)
+        self.conversation_button.state(["selected"])
         self.sidebar_collapsed = store.get_preference("sidebar_collapsed", False) is True
         self._sidebar_manual = None
         self._navigation_layout = None
@@ -103,11 +150,21 @@ class App:
         self.history.pack(side="left", fill="both", expand=True)
         history_scroll.pack(side="right", fill="y")
         self.history.bind("<<ListboxSelect>>", self.select_session)
-        self.delete_button = ttk.Button(sidebar, text="Supprimer la conversation", command=self.delete_session)
+        self.delete_button = ttk.Button(sidebar, text="Supprimer la conversation", command=self.delete_session, style="Quiet.TButton")
         self.delete_button.pack(fill="x", pady=(10, 6))
-        self.settings_button = ttk.Button(sidebar, text="Paramètres", command=self.open_settings)
+        tools = self.conversation_tools = tk.Frame(sidebar, bg=PANEL)
+        tools.pack(fill="x", pady=(12, 8))
+        tk.Label(tools, text="CONVERSATION", bg=PANEL, fg=MUTED,
+                 font=(self.font_family, 9)).pack(anchor="w", pady=(0, 6))
+        preferences = tk.Frame(sidebar, bg=PANEL)
+        preferences.pack(fill="x", pady=(6, 8))
+        tk.Label(preferences, text="PRÉFÉRENCES", bg=PANEL, fg=MUTED,
+                 font=(self.font_family, 9)).pack(anchor="w", pady=(0, 6))
+        self.settings_button = ttk.Button(preferences, text="Paramètres", command=self.open_settings)
         self.settings_button.pack(fill="x")
-        ttk.Button(sidebar, text="Lecture et typographie", command=self.open_conversation_settings).pack(fill="x", pady=4)
+        ttk.Button(preferences, text="Lecture et typographie", command=self.open_conversation_settings).pack(fill="x", pady=4)
+        tk.Label(sidebar, text="VOIX LOCALE", bg=PANEL, fg=MUTED,
+                 font=(self.font_family, 9)).pack(anchor="w", pady=(12, 0))
         from .voice_ui import VoiceControls
         self.voice = VoiceControls(self, sidebar)
         from .presence import PresenceView
@@ -117,7 +174,7 @@ class App:
 
         top = self.model_panel = tk.Frame(root, bg=BG, padx=20, pady=15)
         top.grid(row=1, column=1, sticky="ew")
-        self.model_heading = tk.Label(top, text="MODÈLE LOCAL", bg=BG, fg=MUTED, font=(self.font_family, 9))
+        self.model_heading = tk.Label(top, text="COMMAND OS  /  CONVERSATION", bg=BG, fg=TEXT, font=(self.font_family, 12, "bold"))
         self.model_heading.pack(anchor="w")
         model_row = self.model_row = tk.Frame(top, bg=BG)
         model_row.pack(fill="x", pady=(6, 0))
@@ -138,51 +195,67 @@ class App:
 
         chat_frame = tk.Frame(root, bg=BG, padx=20)
         chat_frame.grid(row=2, column=1, sticky="nsew")
-        self.chat = tk.Text(chat_frame, bg=BG, fg=TEXT, wrap="word", state="disabled",
-            font=(self.font_family, 12), padx=14, pady=14, borderwidth=0,
-            highlightthickness=1, highlightbackground=FIELD, highlightcolor=CYAN,
+        self.chat_surface = RoundedSurface(chat_frame, color=SURFACE)
+        self.chat_surface.pack(fill="both", expand=True)
+        self.chat = tk.Text(self.chat_surface.body, bg=SURFACE, fg=TEXT, wrap="word", state="disabled",
+            font=(self.font_family, 12), padx=8, pady=8, borderwidth=0,
+            highlightthickness=0,
             selectbackground="#244055", insertbackground=CYAN)
-        scroll = ttk.Scrollbar(chat_frame, command=self.chat.yview)
+        self.chat.bind("<FocusIn>", lambda _event: self.chat_surface.focus_ring(True))
+        self.chat.bind("<FocusOut>", lambda _event: self.chat_surface.focus_ring(False))
+        scroll = self.chat_scroll = ttk.Scrollbar(self.chat_surface.body, command=self.chat.yview)
         self.chat.configure(yscrollcommand=scroll.set)
-        self.chat.pack(side="left", fill="both", expand=True)
+        # Reserve the scrollbar before the wide native Text asks for space.
         scroll.pack(side="right", fill="y")
+        self.chat.pack(side="left", fill="both", expand=True)
         self.chat.tag_configure("speaker", foreground=CYAN, font=(self.font_family, 10, "bold"), spacing1=18, spacing3=8)
+        self.chat.tag_configure("speaker_user", foreground=MUTED, font=(self.font_family, 10, "bold"), spacing1=18, spacing3=8)
+        self.chat.tag_configure("message_user", background=FIELD, lmargin1=14, lmargin2=14,
+                                rmargin=14, spacing1=8, spacing3=10)
+        self.chat.tag_configure("welcome", foreground=TEXT, font=(self.font_family, 20, "bold"), spacing1=24, spacing3=12)
         self.chat.tag_configure("meta", foreground=MUTED, font=(self.font_family, 9), spacing3=10)
-        self.metrics_visible = tk.BooleanVar(value=store.get_preference("show_generation_metrics", True) is not False)
+        self.metrics_visible = tk.BooleanVar(value=store.get_preference("show_generation_metrics", False) is True)
         self.chat.tag_configure("metrics", foreground=MUTED, font=(self.font_family, 9),
                                 spacing3=10, elide=not self.metrics_visible.get())
         from .markdown_view import ConversationTypography, MarkdownView
         self.markdown = MarkdownView(self.chat, self.font_family, TEXT, MUTED, CYAN, FIELD)
         self.conversation_families = tuple(sorted(font.families(root), key=str.casefold))
         self.conversation_preferences = store.get_preference("conversation", {})
-        self.typography = ConversationTypography.from_dict(self.conversation_preferences, self.conversation_families)
+        self.typography = ConversationTypography.from_dict(self.conversation_preferences, self.conversation_families,
+                                                          self.markdown.code_families)
         self._apply_conversation_typography(self.typography)
         self.conversation_dialog = None
         self.assistant_region = None
         compose = self.compose_panel = tk.Frame(root, bg=BG, padx=20, pady=14)
         compose.grid(row=3, column=1, sticky="ew")
-        self.input = tk.Text(compose, height=4, bg=FIELD, fg=TEXT, insertbackground=CYAN,
-            wrap="word", font=(self.font_family, 11), padx=10, pady=8, borderwidth=0,
-            highlightthickness=1, highlightcolor=CYAN, highlightbackground=FIELD)
+        self.input_surface = RoundedSurface(compose, color=FIELD)
+        self.input_surface.pack(fill="x")
+        self.input = tk.Text(self.input_surface.body, height=3, bg=FIELD, fg=TEXT, insertbackground=CYAN,
+            wrap="word", font=(self.font_family, 11), padx=2, pady=2, borderwidth=0,
+            highlightthickness=0)
         self.input.pack(fill="x")
+        self.input.bind("<FocusIn>", lambda _event: self.input_surface.focus_ring(True))
+        self.input.bind("<FocusOut>", lambda _event: self.input_surface.focus_ring(False))
         self.input.bind("<Control-Return>", lambda e: self.send() or "break")
-        self.input.configure(font=self.markdown.body_font)
-        actions = tk.Frame(compose, bg=BG)
-        actions.pack(fill="x", pady=(10, 0))
+        self.input_font = font.Font(root=root, family=self.markdown.body_font.actual("family"),
+                                    size=self.markdown.body_font.actual("size"))
+        self.input.configure(font=self.input_font)
+        actions = tk.Frame(self.input_surface.body, bg=FIELD)
+        actions.pack(fill="x", pady=(8, 0))
         self.compose_hint = tk.Label(actions, text="Ctrl + Entrée : envoyer · Entrée : nouvelle ligne",
-                 bg=BG, fg=MUTED, font=(self.font_family, 9))
-        style.configure("Metrics.TCheckbutton", background=BG, foreground=MUTED,
+                 bg=FIELD, fg=MUTED, font=(self.font_family, 9))
+        style.configure("Metrics.TCheckbutton", background=PANEL, foreground=MUTED,
                         font=(self.font_family, 9))
-        self.metrics_toggle = ttk.Checkbutton(sidebar, text="Métriques de génération", variable=self.metrics_visible,
+        self.metrics_toggle = ttk.Checkbutton(tools, text="Métriques de génération", variable=self.metrics_visible,
             command=self.toggle_metrics, style="Metrics.TCheckbutton")
         self.metrics_toggle.pack(fill="x", pady=3)
-        self.context_button = ttk.Button(sidebar, text="Contexte", command=self.open_context)
+        self.context_button = ttk.Button(tools, text="Contexte", command=self.open_context)
         self.context_button.pack(fill="x", pady=3)
-        self.memory_button = ttk.Button(sidebar, text="Mémoire", command=self.open_memory)
+        self.memory_button = ttk.Button(tools, text="Mémoire", command=self.open_memory)
         self.memory_button.pack(fill="x", pady=3)
-        self.send_button = ttk.Button(actions, text="Envoyer", command=self.send, width=0)
+        self.send_button = ttk.Button(actions, text="Envoyer", command=self.send, width=0, style="Primary.TButton")
         self.send_button.pack(side="right")
-        self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled", width=0)
+        self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled", width=0, style="Danger.TButton")
         self.stop_button.pack(side="right", padx=8)
         self.compose_hint.pack(side="left")
         root.rowconfigure(2, weight=1)
@@ -263,7 +336,7 @@ class App:
         compact = width < round(980 * scale) or height < round(680 * scale)
         wide = width >= round(980 * scale)
         show_sidebar = self._sidebar_manual if self._sidebar_manual is not None else not self.sidebar_collapsed and wide
-        layout = (width, height, scale, show_sidebar, compact)
+        layout = (width, height, scale, show_sidebar, compact, self.typography)
         if layout == self._navigation_layout:
             return
         self._navigation_layout = layout
@@ -290,7 +363,9 @@ class App:
             self.navigation_font.configure(size=-pixels)
         self.model_panel.configure(padx=10 if compact else 20, pady=5 if compact else 15)
         self.compose_panel.configure(padx=10 if compact else 20, pady=5 if compact else 14)
-        self.input.configure(height=1 if compact else 4)
+        self.input.configure(height=1 if compact else 3)
+        self.input_font.configure(family=self.markdown.body_font.actual("family"),
+            size=min(18, self.markdown.body_font.actual("size")) if compact else self.markdown.body_font.actual("size"))
         self.status_label.configure(height=(1 if height < max(500, round(240 * scale)) else 2) if compact else 0)
         if compact:
             self.model_heading.pack_forget()
@@ -302,9 +377,9 @@ class App:
     def set_conversation_typography(self, **changes):
         from .markdown_view import ConversationTypography
         options = {**self.typography.to_dict(), **changes}
-        validated = ConversationTypography.from_dict(options, self.conversation_families)
+        validated = ConversationTypography.from_dict(options, self.conversation_families, self.markdown.code_families)
         if any(getattr(validated, key, None) != value for key, value in changes.items()):
-            raise ValueError("Choisissez une police installée, une taille de 9 à 24 et une échelle de 75 à 175 %.")
+            raise ValueError("Choisissez une police installée (monospace pour le code), une taille de 9 à 24, une échelle de 75 à 175 % et des accents de 0 à 100 %.")
         saved = self.conversation_preferences if isinstance(self.conversation_preferences, dict) else {}
         saved = {**saved, **validated.to_dict()}
         self.store.set_preference("conversation", saved)
@@ -313,12 +388,14 @@ class App:
 
     def _apply_conversation_typography(self, validated):
         self.markdown.configure_typography(validated)
-        # The input shares this reusable font; controls and PRESENCE retain
-        # their own geometry and preferences.
-        for tag, base in (("speaker", 10), ("meta", 9), ("metrics", 9)):
+        # Reading fonts are reused; the composer adapts in compact windows.
+        # Controls and PRESENCE retain their own geometry and preferences.
+        for tag, base in (("speaker", 10), ("speaker_user", 10), ("meta", 9), ("metrics", 9), ("welcome", 20)):
             size = max(8, round((base + validated.size - 12) * validated.scale / 100))
             self.chat.tag_configure(tag, font=(validated.family or self.font_family, size,
-                                              "bold" if tag == "speaker" else "normal"))
+                                              "bold" if tag in {"speaker", "speaker_user", "welcome"} else "normal"))
+        if hasattr(self, "input_font"):
+            self._responsive_navigation()
 
     def open_conversation_settings(self):
         if self.conversation_dialog is not None and self.conversation_dialog.winfo_exists():
@@ -343,6 +420,13 @@ class App:
         item = canvas.create_window(0, 0, anchor="nw", window=content)
         content.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.bind("<Configure>", lambda event: canvas.itemconfigure(item, width=event.width))
+        def wheel(event):
+            if str(event.widget).startswith(str(content)) and not isinstance(event.widget, (ttk.Combobox, tk.Scale)):
+                direction = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
+                canvas.yview_scroll(direction * 3, "units")
+                return "break"
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            dialog.bind(sequence, wheel, add="+")
         def reveal(event):
             if not str(event.widget).startswith(str(content) + "."):
                 return
@@ -357,20 +441,51 @@ class App:
             "size": tk.StringVar(value=str(self.typography.size)),
             "scale": tk.StringVar(value=str(self.typography.scale)),
             "spacing": tk.StringVar(value="Compact" if self.typography.spacing == "compact" else "Confortable"),
+            "code_family": tk.StringVar(value=self.typography.code_family or self.markdown.fixed_family),
+            "accent_intensity": tk.IntVar(value=self.typography.accent_intensity),
         }
         for key, label, values in (("family", "Police installée", self.conversation_families),
                                     ("size", "Taille du texte (9–24 points)", None),
                                     ("scale", "Échelle de lecture (75–175 %)", None),
-                                    ("spacing", "Interlignage", ("Compact", "Confortable"))):
+                                    ("spacing", "Densité de lecture", ("Compact", "Confortable")),
+                                    ("code_family", "Police monospace du code et des tableaux", self.markdown.code_families)):
             tk.Label(content, text=label, bg=PANEL, fg=TEXT).pack(anchor="w", pady=(8, 3))
             if values is None:
                 ttk.Entry(content, name=key, textvariable=variables[key]).pack(fill="x")
             else:
                 ttk.Combobox(content, name=key, textvariable=variables[key], values=values,
                              state="readonly").pack(fill="x")
+        accent_label = tk.StringVar()
+        def show_accent(*_args):
+            accent_label.set(f"Intensité des accents visuels : {variables['accent_intensity'].get()} %")
+        variables["accent_intensity"].trace_add("write", show_accent)
+        show_accent()
+        tk.Label(content, textvariable=accent_label, bg=PANEL, fg=TEXT).pack(anchor="w", pady=(8, 3))
+        tk.Scale(content, name="accent_intensity", from_=0, to=100, resolution=1, orient="horizontal",
+                 variable=variables["accent_intensity"], bg=PANEL, fg=TEXT, troughcolor=FIELD,
+                 highlightthickness=0, activebackground=CYAN, takefocus=True).pack(fill="x")
+
+        def reset():
+            from .markdown_view import ConversationTypography
+            try:
+                self.set_conversation_typography(**ConversationTypography().to_dict())
+            except (ValueError, sqlite3.Error) as exc:
+                messagebox.showerror("Lecture", str(exc), parent=dialog)
+                return
+            for key, value in self.typography.to_dict().items():
+                if key == "family":
+                    value = value or self.markdown.family
+                elif key == "code_family":
+                    value = value or self.markdown.fixed_family
+                elif key == "spacing":
+                    value = "Compact" if value == "compact" else "Confortable"
+                variables[key].set(value)
+        ttk.Button(content, name="reset_typography", text="Réglages d’origine", command=reset).pack(fill="x", pady=(12, 4))
         tk.Label(content, bg=PANEL, fg=MUTED, justify="left", wraplength=max(240, width - 55),
                  text="Titres, listes et code gardent leur hiérarchie.\n"
-                      "++souligné++ · ==surligné==\n"
+                      "Markdown : **gras**, *italique*, listes, liens, code.\n"
+                      "Extensions : ~~barré~~ (GFM), ++souligné++, ==surligné==.\n"
+                      "Tableaux textuels ; formules simples, sans composition LaTeX.\n"
                       "Clic droit ou Ctrl+Maj+C : copier la réponse originale.\n"
                       "Ctrl+C : copier la sélection affichée.").pack(anchor="w", pady=12)
 
@@ -378,7 +493,8 @@ class App:
             try:
                 self.set_conversation_typography(family=variables["family"].get(), size=int(variables["size"].get()),
                     scale=int(variables["scale"].get()),
-                    spacing="compact" if variables["spacing"].get() == "Compact" else "comfortable")
+                    spacing="compact" if variables["spacing"].get() == "Compact" else "comfortable",
+                    code_family=variables["code_family"].get(), accent_intensity=variables["accent_intensity"].get())
             except (ValueError, sqlite3.Error) as exc:
                 messagebox.showerror("Lecture", str(exc), parent=dialog)
                 return
@@ -435,11 +551,11 @@ class App:
         self.chat.configure(state="disabled")
         rows = self.store.messages(self.session_id)
         if not rows:
-            self.append("JARVIS / CONVERSATION LOCALE\n", "speaker")
-            self.append("Choisissez un modèle, puis écrivez votre message.\n"
-                        "Les réponses du modèle ne peuvent déclencher aucune action système.\n", "meta")
+            self.append("Que souhaitez-vous explorer ?\n", "welcome")
+            self.append("Choisissez un modèle local, puis partagez une question, une idée ou un projet.\n", "meta")
         for row in rows:
-            self.append(("VOUS" if row["role"] == "user" else "JARVIS · " + row["model"]) + "\n", "speaker")
+            self.append(("VOUS" if row["role"] == "user" else "JARVIS · " + row["model"]) + "\n",
+                        "speaker_user" if row["role"] == "user" else "speaker")
             if row["role"] == "assistant":
                 region = self.markdown.append(row["content"], final=row["status"] != "streaming")
                 if row["status"] == "streaming":
@@ -447,7 +563,7 @@ class App:
                 else:
                     self.append("\n")
             else:
-                self.append(row["content"] + "\n")
+                self.append(row["content"] + "\n", "message_user")
             if row["status"] not in {"complete", "streaming"}:
                 self.append({"streaming": "En cours", "cancelled": "Arrêtée", "error": "Échec",
                              "interrupted": "Interrompue à la fermeture"}[row["status"]] + "\n", "meta")
@@ -833,4 +949,5 @@ class App:
             self.markdown.close()
             self.store.close()
             self.navigation_font = None
+            self.input_font = None
             self.root.destroy()

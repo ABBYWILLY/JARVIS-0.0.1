@@ -423,7 +423,7 @@ class _Scanner:
                 block = ()
                 i += 1
                 continue
-            if char == "\\" and i + 1 < end and text[i + 1] in r"\`*_{}[]<>#$!+=|":
+            if char == "\\" and i + 1 < end and text[i + 1] in r"\`*_{}[]<>#$!+=|~":
                 self.add(text[i + 1], tags)
                 self.protect(i, i + 2)
                 i += 2
@@ -510,14 +510,23 @@ class _Scanner:
                 self.protect(i, stop, i + url_match.end() < end or self.final)
                 i = stop
                 continue
-            if char in "*_":
+            if char in "*_~":
                 run_end = i + 1
                 while run_end < end and text[run_end] == char:
                     run_end += 1
                 count = run_end - i
+                # Strikethrough is the explicit ~~extension~~, never a single
+                # approximation tilde, an inline ~~~run~~~ or intraword code.
+                # Fenced code was already handled before entering this branch.
+                if char == "~" and count != 2:
+                    self.add(char * count, tags)
+                    if not self.final and run_end == end:
+                        self.protect(i, end, False)
+                    i = run_end
+                    continue
                 before = text[i - 1] if i > start else " "
                 after = text[run_end] if run_end < end else ""
-                intraword = char == "_" and before.isalnum() and after.isalnum()
+                intraword = char in "_~" and before.isalnum() and after.isalnum()
                 remaining = count
                 if not intraword and not before.isspace():
                     while stack and stack[-1][0][0] == char and len(stack[-1][0]) <= remaining:
@@ -527,7 +536,7 @@ class _Scanner:
                 if not intraword and remaining and (after and not after.isspace()):
                     while remaining:
                         length = 2 if remaining >= 2 else 1
-                        stack.append((char * length, "bold" if length == 2 else "italic", i))
+                        stack.append((char * length, "strike" if char == "~" else "bold" if length == 2 else "italic", i))
                         remaining -= length
                 if intraword or remaining:
                     self.add(char * remaining, tags)
@@ -539,7 +548,7 @@ class _Scanner:
             # Coalesce plain runs rather than processing every character separately.
             stop = i + 1
             while (stop < end and stop not in self.ascii_expressions
-                   and text[stop] not in "\n\\`[*_$+="
+                   and text[stop] not in "\n\\`[*_$+=~"
                    and not text.startswith(("http://", "https://", "ftp://", "www."), stop)):
                 stop += 1
             self.add(text[i:stop], tags)

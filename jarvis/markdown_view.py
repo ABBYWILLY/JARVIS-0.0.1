@@ -14,15 +14,20 @@ class ConversationTypography:
     size: int = 12
     scale: int = 100
     spacing: str = "comfortable"
+    accent_intensity: int = 65
+    code_family: str = ""
 
     @classmethod
-    def from_dict(cls, value, families=()):
+    def from_dict(cls, value, families=(), code_families=()):
         value = value if isinstance(value, dict) else {}
         installed = {name.casefold(): name for name in families}
         family = value.get("family")
         family = installed.get(family.casefold(), "") if isinstance(family, str) else ""
-        options = {"family": family}
-        for key, low, high in (("size", 9, 24), ("scale", 75, 175)):
+        fixed = {name.casefold(): name for name in code_families}
+        code_family = value.get("code_family")
+        code_family = fixed.get(code_family.casefold(), "") if isinstance(code_family, str) else ""
+        options = {"family": family, "code_family": code_family}
+        for key, low, high in (("size", 9, 24), ("scale", 75, 175), ("accent_intensity", 0, 100)):
             number = value.get(key)
             if type(number) is int and low <= number <= high:
                 options[key] = number
@@ -68,6 +73,16 @@ class MarkdownView:
         self.fixed_family = next((families[name] for name in
             ("cascadia mono", "consolas", "dejavu sans mono", "liberation mono", "courier new")
             if name in families), font.nametofont("TkFixedFont", root=widget).actual("family"))
+        # Resolve installed fixed-width faces once, outside streaming/animation.
+        # Tk's measured 'fixed' metric also handles local fonts not in our list.
+        fixed = {self.fixed_family}
+        for family_name in families.values():
+            face = font.Font(root=widget, family=family_name, size=12)
+            if face.metrics("fixed"):
+                fixed.add(face.actual("family"))
+            del face
+        self.code_families = tuple(sorted(fixed, key=str.casefold))
+        self.highlight_background = "#544a21" if sum(widget.winfo_rgb(foreground)) > 90000 else "#fff0a0"
         styles = {
             "quote": {"foreground": muted, "lmargin1": 18, "lmargin2": 18},
             "list": {"lmargin1": 10, "lmargin2": 24},
@@ -75,8 +90,8 @@ class MarkdownView:
             "code": {"background": code_background},
             "codeblock": {"background": code_background, "lmargin1": 12,
                           "lmargin2": 12, "spacing1": 5, "spacing3": 5},
-            "math": {}, "bold": {}, "italic": {}, "underline": {"underline": True},
-            "highlight": {"background": "#544a21" if sum(widget.winfo_rgb(foreground)) > 90000 else "#fff0a0"},
+            "math": {}, "bold": {}, "italic": {}, "strike": {}, "underline": {"underline": True},
+            "highlight": {"background": self.highlight_background},
             "separator": {"foreground": muted, "spacing1": 8, "spacing3": 8},
             "table": {"spacing1": 1, "spacing3": 1}, "tableheader": {},
         }
@@ -155,15 +170,47 @@ class MarkdownView:
         gap = max(1, round(size * (.09 if settings.spacing == "compact" else .3)))
         widget.configure(font=self.body_font, spacing1=gap, spacing2=gap, spacing3=gap)
         for key, (_name, face) in self.fonts.items():
-            code, heading, _bold, _italic = key
-            face.configure(family=self.fixed_family if code else family,
+            code, heading, _bold, _italic, _strike = key
+            face.configure(family=self.code_family if code else family,
                            size=self._point_size(code, heading))
+        indent = max(8, round(size * .9))
+        widget.tag_configure("md_quote", lmargin1=indent * 2, lmargin2=indent * 2)
+        widget.tag_configure("md_list", lmargin1=indent, lmargin2=indent * 2)
+        for depth in range(7):
+            widget.tag_configure(f"md_list_depth_{depth}", lmargin1=indent + depth * indent * 2,
+                                 lmargin2=indent * 2 + depth * indent * 2)
+        for level in range(1, 7):
+            widget.tag_configure(f"md_heading{level}", spacing1=max(gap, round(size * .8)), spacing3=gap)
+        widget.tag_configure("md_codeblock", lmargin1=indent, lmargin2=indent, spacing1=gap, spacing3=gap)
+        self._configure_accents(settings.accent_intensity)
         # Font changes preserve the selected characters and visible text anchor.
         widget.update_idletasks()
         widget.yview(viewport)
         restored = widget.dlineinfo(viewport)
         if top is not None and restored is not None:
             widget.yview_scroll(restored[1] - top[1], "pixels")
+
+    @property
+    def code_family(self):
+        selected = self.typography.code_family
+        return selected if selected in self.code_families else self.fixed_family
+
+    def _blend(self, start, end, amount):
+        first, last = self.widget.winfo_rgb(start), self.widget.winfo_rgb(end)
+        return "#" + "".join(f"{round((a + (b - a) * amount) / 257):02x}"
+                              for a, b in zip(first, last))
+
+    def _configure_accents(self, intensity):
+        amount = max(0, min(100, intensity)) / 100
+        self.display_accent = self._blend(self.foreground, self.accent, amount)
+        self.widget.tag_configure("md_link", foreground=self.display_accent)
+        for tag in self.links.values():
+            self.widget.tag_configure(tag, foreground=self.display_accent)
+        for level in range(1, 7):
+            self.widget.tag_configure(f"md_heading{level}",
+                foreground=self._blend(self.foreground, self.accent, amount * .55))
+        self.widget.tag_configure("md_highlight", background=self._blend(
+            self.widget.cget("background"), self.highlight_background, amount))
 
     def _point_size(self, code, heading):
         base = self.typography.size - (1 if code else 0)
@@ -173,13 +220,14 @@ class MarkdownView:
     def _font_tag(self, tags):
         heading = next((int(tag[7:]) for tag in tags if tag.startswith("heading")), 0)
         code = "code" in tags or "codeblock" in tags or "table" in tags
-        key = (code, heading, "bold" in tags or "tableheader" in tags or bool(heading), "italic" in tags)
+        key = (code, heading, "bold" in tags or "tableheader" in tags or bool(heading), "italic" in tags,
+               "strike" in tags)
         if key not in self.fonts:
             name = "md_font_" + "_".join(str(int(value)) for value in key)
-            face = font.Font(root=self.widget, family=self.fixed_family if code else self.typography.family or self.family,
+            face = font.Font(root=self.widget, family=self.code_family if code else self.typography.family or self.family,
                              size=self._point_size(code, heading),
                              weight="bold" if key[2] else "normal",
-                             slant="italic" if key[3] else "roman")
+                             slant="italic" if key[3] else "roman", overstrike=key[4])
             self.fonts[key] = (name, face)
             self.tags.add(name)
             self.widget.tag_configure(name, font=face)
@@ -195,7 +243,7 @@ class MarkdownView:
             tag = f"md_url_{self.link_serial}"
             self.links[url] = tag
             self.tags.add(tag)
-            self.widget.tag_configure(tag, foreground=self.accent, underline=True)
+            self.widget.tag_configure(tag, foreground=self.display_accent, underline=True)
             self.widget.tag_bind(tag, "<Button-1>", lambda event, address=url: self._preview(address))
             self.widget.tag_bind(tag, "<Enter>", lambda event: self.widget.configure(cursor="hand2"))
             self.widget.tag_bind(tag, "<Leave>", lambda event: self.widget.configure(cursor=""))

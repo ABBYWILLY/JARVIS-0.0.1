@@ -210,6 +210,10 @@ class MetricsDesktopTests(unittest.TestCase):
         self.assertEqual(self.metric_text(), label)
 
     def test_toggle_during_stream_does_not_interrupt_and_persists(self):
+        # Detailed statistics are now hidden initially; retain the explicit
+        # opt-in → hide-during-stream → reopen contract of this regression.
+        self.app.metrics_visible.set(True)
+        self.app.toggle_metrics()
         with MetricsFixture() as fixture:
             fixture.server.messages.insert(3, "wait")
             self.send(fixture)

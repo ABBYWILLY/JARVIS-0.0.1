@@ -113,6 +113,40 @@ class RichTextTests(unittest.TestCase):
         self.assertFalse(any({"underline", "highlight"} & set(span.tags) for span in opaque.spans))
         self.assertIn("++a++ ==b==", opaque.text)
 
+    def test_strikethrough_composes_with_emphasis_and_preserves_french_and_currency(self):
+        raw = "Avant ~~Été **gras et *italique***~~, 20 $. Après."
+        doc = parse_text(raw)
+        self.assertEqual(doc.original, raw)
+        self.assertEqual(doc.text, "Avant Été gras et italique, 20 $. Après.")
+        self.assertEqual(doc.speech, "Avant Été gras et italique, 20 dollars. Après.")
+        self.assertTrue(any(span.text == "italique" and {"strike", "bold", "italic"} <= set(span.tags)
+                            for span in doc.spans))
+        self.assertFalse(any("strike" in span.tags for span in doc.spans if "Après" in span.text))
+
+    def test_strikethrough_does_not_close_inside_code_or_interpret_technical_tildes(self):
+        raw = "~~Ancien `a~~b` résultat~~. [~~le guide~~](https://example.org)."
+        doc = parse_text(raw)
+        self.assertEqual(doc.text, "Ancien a~~b résultat. le guide.")
+        self.assertTrue(any(span.text == "a~~b" and {"strike", "code"} <= set(span.tags)
+                            for span in doc.spans))
+        self.assertTrue(any(span.text == "le guide" and {"strike", "link"} <= set(span.tags)
+                            and span.url == "https://example.org" for span in doc.spans))
+        literal = parse_text(r"~10 et a~~b~~c ; `~~code~~` ; \~\~littéral\~\~")
+        self.assertEqual(literal.text, "~10 et a~~b~~c ; ~~code~~ ; ~~littéral~~")
+        self.assertFalse(any("strike" in span.tags for span in literal.spans))
+        fenced = parse_text("~~~python\n~~code~~\n~~~\n")
+        self.assertTrue(all("strike" not in span.tags for span in fenced.spans))
+        self.assertIn("~~code~~", fenced.text)
+
+    def test_partial_strikethrough_retains_words_and_holds_speech_until_closed(self):
+        self.assertEqual(parse_text("~~Été inachevé").speech, "Été inachevé")
+        self.assertEqual(parse_text("~~Été inachevé", final=False).text, "Été inachevé")
+        buffer = SpeechBuffer()
+        self.assertEqual(buffer.feed("~~Une phrase. "), [])
+        segments = buffer.feed("Encore une~~. ")
+        self.assertEqual([segment.text for segment in segments], ["Une phrase. Encore une."])
+        self.assertEqual(segments[0].original, "~~Une phrase. Encore une~~. ")
+
     def test_controlled_partial_styles_are_provisional_until_closed(self):
         for marker, tag in (("++", "underline"), ("==", "highlight")):
             with self.subTest(marker=marker):
@@ -175,6 +209,7 @@ class SpeechBufferTests(unittest.TestCase):
             "Un lien nu https://example.com/path. Puis la suite.",
             "Texte **inachevé et `code",
             "Titre\n\n- Premier élément\n- Deuxième.\nFin",
+            "~~Ancien **choix**~~. [~~le guide~~](https://example.org) ; ~10 euros. Fin.",
         ]
         for raw in samples:
             for speak_code in (False, True):

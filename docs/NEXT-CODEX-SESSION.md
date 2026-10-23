@@ -1,3 +1,34 @@
+# Cognitive & Presence Evolution — LOT 2, 23 octobre 2026
+
+L'utilisateur a explicitement demandé de poursuivre le LOT 2 après livraison du
+LOT 1 logiciel3c75c54 (CI verte39910459009). Cela ne valide pas le micro physique :
+**validation matérielle en attente**, recette dans `docs/VOICE.md`.
+COMMAND OS NEO réutilise Tk/MarkdownView : deux surfaces arrondies statiques,
+navigation LOT1 préservée, groupes secondaires, hiérarchie des messages, saisie
+adaptative, états survol/focus/sélection/désactivation et scrollbars réservées.
+Métriques masquées par défaut, préférence antérieure respectée. Un seul Text pour
+les messages, aucun widget/animation par message ; pas de WebView/dépendance.
+Rich Text2.0 complète l'existant : barré ~~texte~~ combinable, accents0–100 et
+police code/tableaux monospace réellement mesurée. Corps/titres/styles/listes/
+citations/liens/code/tableaux/Unicode déjà livrés réutilisés, sans réécriture.
+Menu→Lecture et typographie : champs persistants accent_intensity/code_family,
+reset aux réglages d'origine, densité et tailles. Anciennes préférences et clés
+inconnues conservées ; fontes et marges réutilisées sans reparsing de l'historique.
+La saisie compacte est limitée à18pt, le texte de lecture garde sa taille choisie.
+Streaming et sourcesSQLite inchangés, TTS sans marqueurs ~~ ; code/tildes techniques
+préservés. Sélection/copie/scroll testés ; HTML reste inerte, liens confirmés.
+Limites : tableaux textuels pouvant se replier, maths textuelles simples ; aucun
+moteur LaTeX, stylesHTML ou rendu complet de toutes variantes Markdown annoncé.
+Suite locale Tk9 : 472 tests exécutés, 463 réussis, 9 ignorés (natifs/modèles absents).
+Tk8.6 : 85 tests ciblés verts ; démarrages sources Tk8.6/9 avec profils isolés OK.
+CI et commit : voir progression, git log et dernier run Windows Jarvis.
+Captures réelles Linux avec textes de démonstration explicites, sans modèle/micro :
+/workspace/artifacts/command-os-neo-linux.png et command-os-neo-compact-linux.png.
+LOT 3 et suivants non commencés. Ne pas refaire les lots1/2 ni annoncer le problème
+de transcription matériel Windows résolu sans recette sur le PC utilisateur.
+
+---
+
 # Cognitive & Presence Evolution — LOT 1, 23 octobre 2026
 
 Demande complète : `docs/COGNITIVE-PRESENCE-SPEC.md` ; branche uniquement
@@ -21,8 +52,8 @@ Résultats finaux et SHA : voir `docs/JALON-2-PROGRESS.md` et `git log -1`.
 **Validation matérielle en attente** : recette simple dans `docs/VOICE.md`, section
 LOT 1. Vérifier sur le PC USB réel RMS silence/parole/silence, onde, VAD→Whisper→
 Ollama, erreurs et navigation Windows/DPI. Ni microphone physique ni latence/CPU
-Windows mesurés ici. Ne pas annoncer le LOT 1 entièrement validé. LOTS 2–7 non
-commencés : attendre la recette matérielle, ne pas redévelopper les acquis.
+Windows mesurés ici. Ne pas annoncer le LOT 1 entièrement validé. À cette livraison,
+les LOTS 2–7 n'étaient pas commencés ; les missions ultérieures sont indiquées en tête.
 
 ---
 
