@@ -10,6 +10,8 @@ from unittest.mock import patch
 from jarvis.storage import Store
 from jarvis.ui import App
 from jarvis.markdown_view import ConversationTypography
+from jarvis.richtext import parse_text
+from jarvis.ui import READING_PREVIEW
 from tests.test_jarvis import display_available
 
 
@@ -193,10 +195,14 @@ class ResponsiveNavigationTests(unittest.TestCase):
         region = self.app.markdown.regions[0]
         selected = self.app.chat.search("originale", region.start)
         self.app.chat.tag_add("sel", selected, self.app.markdown.offset(selected, "originale"))
-        with patch("jarvis.markdown_view.parse_text", side_effect=AssertionError("archive reparsed")):
+        def sample_only(text, **options):
+            self.assertEqual(text, READING_PREVIEW, "archive reparsed")
+            return parse_text(text, **options)
+        with patch("jarvis.markdown_view.parse_text", side_effect=sample_only) as scanner:
             self.app.open_conversation_settings()
             self.root.update()
             self.reading_control("reset_typography").invoke()
+            scanner.assert_called_once_with(READING_PREVIEW, final=True)
         self.assertEqual(self.app.typography, ConversationTypography())
         self.assertEqual(self.app.store.get_preference("conversation")["future_option"], "préserver")
         self.assertEqual(self.app.store.get_preference("presence"), {"wave_expressivity": 42})

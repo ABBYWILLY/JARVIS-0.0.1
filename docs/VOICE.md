@@ -4,6 +4,32 @@ Le chat reste utilisable sans dépendances vocales. Le microphone est fermé au
 lancement. Aucun poids STT/TTS n’est téléchargé par l’application. Les modèles
 Ollama restent indépendants des modèles vocaux.
 
+## Recette PC — reprise C1/PRESENCE, 23 octobre 2026
+
+**Validation matérielle en attente** : le propriétaire a signalé micro, onde,
+couleurs et sous-titres fonctionnels ; ce retour ne remplace pas une recette du
+nouveau correctif. Les tests cloud utilisent des doublures PCM, pas votre USB.
+
+1. Ouvrir PRESENCE (F7), Atelier→Expressions : prévisualiser Sourire/Affection/
+   Rire, puis couper l'aperçu et activer l'écoute. Vérifier qu'une parole réelle
+   annule immédiatement l'aperçu.
+2. Avec Piper installé, faire lire « Heureux de te revoir 😊 », « Je t'aime ❤️ »
+   et « C'est drôle 😂 ». Attendu : forme reconnaissable en fin de portion lue,
+   puis retour au noyau/à la ligne, sans couper l'audio. Les callbacks PCM et fins
+   de segments fournissent une approximation, pas un alignement mot à mot.
+3. Si absent : ouvrir Diagnostic micro/STT→Copier le diagnostic. La trace Semantic
+   Morphing indique detected/scheduled/triggered/ignored/cancelled et leur raison.
+4. Tester THINKING, épaisseur/halo, ambiances et Mini/F10→Étendre, portrait/paysage
+   et DPI Windows ; le micro et COMMAND OS restent accessibles. Un seul Canvas.
+5. Menu→Lecture et typographie : choisir police/taille, vérifier titres, souligné
+   et surligné dans l'aperçu, Enregistrer puis redémarrer. Fermer abandonne le
+   brouillon ; Réglages d'origine applique explicitement le reset immédiat.
+6. Conversation→Automatique local, demander un récit puis Continuer après limite
+   de tokens ; interrompre/reprendre. Inspecter Contexte et Mémoire : seuls les
+   souvenirs approuvés sont sélectionnés, les réponses restent non vérifiées.
+
+Ni qualité narrative Qwen ni latence/CPU/RAM/VRAM Windows mesurés dans le cloud.
+
 ## Installation Windows 11 (une fois, accès Internet nécessaire)
 
 Conservez votre EXE du jalon 1 et sauvegardez le dossier `%LOCALAPPDATA%\Jarvis`

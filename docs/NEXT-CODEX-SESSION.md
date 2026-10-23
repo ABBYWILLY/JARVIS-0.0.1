@@ -1,3 +1,23 @@
+# Reprise finale — aperçu RichText, 23 octobre 2026
+
+LOTS1/2 déjà livrés conservés. LOT3 publié65bd81c, LOT6 publié1e9c765,
+correctif morphing cec390b ; aucun changement de main. Dernier ajout : Menu→
+Lecture et typographie montre un vrai aperçu Markdown local (H1/H2/H3, gras,
+italique, souligné, surligné, barré, code/tableau). Six réglages actualisent les
+fontes/tags réutilisés sans reparsing de l'historique. Saisie incomplète garde le
+dernier aperçu valide. Fermer/Restaurer l'aperçu ne modifient pas SQLite ;
+Réglages d'origine conserve son contrat explicite de reset immédiat enregistré.
+Navigation Tab/Maj+Tab et libération des ressources testées. 46tests ciblés
+intégrés Tk9 réussis ; 32ciblés Tk8.6 réussis en copie isolée avant intégration.
+Suite globale finale Tk8.6 :523tests exécutés,514réussis,9ignorés. CI : voir
+progression et dernier run Windows, pas de modèle
+ou téléchargement ajouté. Recette PC courte dans VOICE.md.
+La bibliothèque existante reste8familles expressives, pas100nouveaux emojis.
+Pas de validation du microphone physique à distance ou de synchronisation
+mot à mot prétendue. Ne pas refaire les LOTS3/6 ; LOTS4/5/7 restent hors livraison.
+
+---
+
 # Reprise — LOT6 PRESENCE avancé, 23 octobre 2026
 
 Travail interrompu conservé, intégré après LOT3/cec390b. THINKING devient une

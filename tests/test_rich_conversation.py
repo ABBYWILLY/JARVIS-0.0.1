@@ -10,7 +10,7 @@ from unittest.mock import patch
 from jarvis.markdown_view import ConversationTypography, MarkdownView
 from jarvis.richtext import parse_text
 from jarvis.storage import Store
-from jarvis.ui import App
+from jarvis.ui import App, READING_PREVIEW
 from tests.test_jarvis import display_available
 
 
@@ -229,6 +229,126 @@ class ConversationPreferenceTests(unittest.TestCase):
         self.app = self.root = self.store = None
         gc.collect()
 
+    def reading_control(self, name):
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+        return next(widget for widget in descendants(self.app.conversation_dialog)
+                    if widget.winfo_name() == name)
+
+    def reading_button(self, label):
+        return next(button for frame in self.app.conversation_dialog.winfo_children()
+                    for button in frame.winfo_children()
+                    if button.winfo_class() == "TButton" and button.cget("text") == label)
+
+    def replace_reading_value(self, name, value):
+        control = self.reading_control(name)
+        control.delete(0, "end")
+        control.insert(0, str(value))
+
+    def test_reading_preview_uses_real_styles_and_live_fonts_without_writes_or_reparsing(self):
+        source = "# Archive privée\n++À préserver++ et ==été==."
+        message = self.store.begin_turn(self.app.session_id, "Question", "local")
+        self.store.update_response(message, source, "complete")
+        self.app.render_session()
+        saved, typography = self.store.get_preference("conversation"), self.app.typography
+        archive = self.app.chat.get("1.0", "end-1c")
+        with patch.object(self.app.worker, "start") as inference, patch.object(self.app.voice.capture, "start") as capture:
+            self.app.open_conversation_settings()
+            self.root.update()
+            preview = self.app.conversation_dialog.typography_preview
+            widget = preview.widget
+            self.assertEqual(preview.regions[0].original, READING_PREVIEW)
+            for tag, word in (("underline", "souligné"), ("highlight", "surligné")):
+                ranges = widget.tag_ranges("md_" + tag)
+                self.assertEqual([widget.get(a, b) for a, b in zip(ranges[::2], ranges[1::2])], [word])
+            self.assertTrue(widget.tk.getboolean(widget.tag_cget("md_underline", "underline")))
+            self.assertNotEqual(widget.tag_cget("md_highlight", "background"), widget.cget("background"))
+            sizes = []
+            for word in ("Titre H1", "Sous-titre H2", "Section H3", "Texte courant"):
+                index = widget.search(word, "1.0")
+                tag = next(tag for tag in widget.tag_names(index) if tag.startswith("md_font_"))
+                sizes.append(int(widget.tk.call("font", "actual", widget.tag_cget(tag, "font"), "-size")))
+            self.assertTrue(all(a > b for a, b in zip(sizes, sizes[1:])))
+            original_fonts = {key: id(face) for key, (_, face) in preview.fonts.items()}
+            family = next((name for name in self.app.conversation_families if name != preview.family), preview.family)
+            mono = preview.code_families[-1]
+            with patch("jarvis.markdown_view.parse_text", side_effect=AssertionError("text reparsed")), \
+                 patch.object(self.store, "set_preference", side_effect=AssertionError("preview persisted")):
+                self.reading_control("family").set(family)
+                self.replace_reading_value("size", 18)
+                self.replace_reading_value("scale", 125)
+                self.reading_control("spacing").set("Compact")
+                self.reading_control("code_family").set(mono)
+                self.reading_control("accent_intensity").set(0)
+                self.root.update()
+            expected_face = font.Font(root=self.root, family=family, size=22)
+            self.assertEqual(preview.body_font.actual("family"), expected_face.actual("family"))
+            self.assertEqual(preview.typography.family, family)
+            del expected_face
+            self.assertEqual(preview.body_font.actual("size"), 22)
+            self.assertEqual(preview.typography.spacing, "compact")
+            self.assertEqual(int(widget.cget("spacing1")), 2)
+            self.assertEqual(widget.winfo_rgb(widget.tag_cget("md_highlight", "background")),
+                             widget.winfo_rgb(widget.cget("background")))
+            self.assertEqual(widget.winfo_rgb(widget.tag_cget("md_heading1", "foreground")),
+                             widget.winfo_rgb(preview.foreground))
+            self.assertEqual({key: id(face) for key, (_, face) in preview.fonts.items()}, original_fonts)
+            self.assertTrue(all(face.actual("family") == mono for key, (_, face) in preview.fonts.items() if key[0]))
+            self.assertEqual(self.app.typography, typography)
+            self.assertEqual(self.store.get_preference("conversation"), saved)
+            self.assertEqual(self.app.chat.get("1.0", "end-1c"), archive)
+            self.assertEqual(self.store.message(message)["content"], source)
+            inference.assert_not_called()
+            capture.assert_not_called()
+
+    def test_invalid_draft_restore_and_close_keep_saved_preferences_and_release_preview(self):
+        self.app.set_conversation_typography(size=16, accent_intensity=34)
+        saved, typography = self.store.get_preference("conversation"), self.app.typography
+        self.app.open_conversation_settings()
+        self.root.update()
+        preview = self.app.conversation_dialog.typography_preview
+        preview.widget.focus_force()
+        self.root.update()
+        next_control = preview.widget.tk_focusNext()
+        preview.widget.event_generate("<Tab>")
+        self.root.update()
+        self.assertIs(self.root.focus_get(), next_control)
+        preview.widget.focus_force()
+        self.root.update()
+        previous_control = preview.widget.tk_focusPrev()
+        preview.widget.event_generate("<Shift-Tab>")
+        self.root.update()
+        self.assertIs(self.root.focus_get(), previous_control)
+        self.replace_reading_value("size", 19)
+        self.assertEqual(preview.typography.size, 19)
+        self.replace_reading_value("size", "")
+        self.assertEqual(preview.typography.size, 19)
+        status = self.reading_control("preview_status")
+        self.assertIn("Aperçu conservé", status.cget("text"))
+        with patch("jarvis.ui.messagebox.showerror") as error:
+            self.reading_button("Enregistrer").invoke()
+        error.assert_called_once()
+        self.assertIsNotNone(self.app.conversation_dialog)
+        with patch.object(self.store, "set_preference", side_effect=AssertionError("draft persisted")):
+            self.reading_control("restore_preview").invoke()
+            self.assertEqual(self.reading_control("size").get(), "16")
+            self.assertEqual(preview.typography.size, 16)
+            self.assertEqual(preview.typography.accent_intensity, 34)
+            self.replace_reading_value("size", 20)
+            self.reading_button("Fermer").invoke()
+        self.assertIsNone(self.app.conversation_dialog)
+        self.assertIsNone(preview.widget)
+        self.assertFalse(preview.fonts)
+        self.assertEqual(self.app.typography, typography)
+        self.assertEqual(self.store.get_preference("conversation"), saved)
+        self.app.open_conversation_settings()
+        preview = self.app.conversation_dialog.typography_preview
+        self.assertEqual(preview.typography.size, 16)
+        self.app.close()
+        self.assertIsNone(preview.widget)
+
     def test_preferences_survive_reopen_and_original_history_is_unchanged(self):
         source = "# Titre **été** 😊\n\n++précis++ et ==utile==."
         message = self.store.begin_turn(self.app.session_id, "Question **littérale**", "test")
@@ -261,10 +381,25 @@ class ConversationPreferenceTests(unittest.TestCase):
                 self.app.open_conversation_settings()
                 self.root.update()
                 dialog = self.app.conversation_dialog
+                preview = dialog.typography_preview
+                preview_height = preview.widget.winfo_height()
+                self.replace_reading_value("size", 24)
+                self.replace_reading_value("scale", 175)
+                self.root.update()
+                self.assertEqual(preview.widget.winfo_height(), preview_height)
+                self.assertGreater(preview.widget.winfo_width(), 0)
                 frames = dialog.winfo_children()
                 footer = next(frame for frame in frames if any(child.winfo_class() == "TButton" for child in frame.winfo_children()))
                 self.assertEqual({button.cget("text") for button in footer.winfo_children()}, {"Enregistrer", "Fermer"})
                 self.assertLessEqual(footer.winfo_y() + footer.winfo_height(), dialog.winfo_height())
+                # Tabbing to the last action reveals it inside the settings pane.
+                control = self.reading_control("restore_preview")
+                control.focus_force()
+                self.root.update()
+                canvas = control.master.master
+                self.assertGreaterEqual(control.winfo_rooty(), canvas.winfo_rooty())
+                self.assertLessEqual(control.winfo_rooty() + control.winfo_height(),
+                                     canvas.winfo_rooty() + canvas.winfo_height())
                 dialog.destroy()
                 self.assertIsNone(self.app.conversation_dialog)
         finally:

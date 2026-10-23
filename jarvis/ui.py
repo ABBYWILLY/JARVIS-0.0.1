@@ -26,6 +26,12 @@ def cognitive_label(record):
     origin = "heuristique locale" if record.get("origin") == "local_heuristic" else "réglage manuel"
     return f"Mode choisi : {mode} · {record.get('budget', '—')} tokens maximum · {origin}"
 
+# A fixed, local sample uses the conversation renderer, never message history.
+READING_PREVIEW = ("# Titre H1\n## Sous-titre H2\n### Section H3\n"
+                   "Texte courant : **gras**, *italique*, ++souligné++, ==surligné==, ~~barré~~.\n"
+                   "- Élément de liste\n> Citation\n`code = 42`\n"
+                   "| Nom | Valeur |\n| --- | --- |\n| Été | 12 € |")
+
 
 class RoundedSurface(tk.Canvas):
     """One static rounded shell around native, accessible Tk widgets.
@@ -421,6 +427,7 @@ class App:
             self._responsive_navigation()
 
     def open_conversation_settings(self):
+        from .markdown_view import ConversationTypography, MarkdownView
         if self.conversation_dialog is not None and self.conversation_dialog.winfo_exists():
             self.conversation_dialog.lift()
             return
@@ -428,10 +435,36 @@ class App:
         dialog.title("COMMAND OS · lecture")
         dialog.transient(self.root)
         dialog.configure(bg=PANEL, padx=16, pady=12)
-        width, height = min(620, dialog.winfo_screenwidth() - 60), min(430, dialog.winfo_screenheight() - 100)
+        width, height = min(760, dialog.winfo_screenwidth() - 60), min(680, dialog.winfo_screenheight() - 100)
         dialog.geometry(f"{width}x{height}")
         footer = ttk.Frame(dialog)
         footer.pack(side="bottom", fill="x", pady=(12, 0))
+        tk.Label(dialog, text="Aperçu réel · Markdown", bg=PANEL, fg=TEXT,
+                 font=(self.font_family, 11, "bold")).pack(anchor="w")
+        # A pixel-bounded pane keeps settings/footer reachable at large text/DPI.
+        preview_frame = tk.Frame(dialog, bg=SURFACE, height=max(110, min(220, height // 3)))
+        preview_frame.pack(fill="x", pady=(0, 8))
+        preview_frame.pack_propagate(False)
+        preview_widget = tk.Text(preview_frame, name="typography_preview", bg=SURFACE, fg=TEXT,
+                                 insertbackground=CYAN, selectbackground=BORDER, wrap="word",
+                                 state="disabled", borderwidth=0, padx=10, pady=6, height=1,
+                                 exportselection=False)
+        preview_scroll = ttk.Scrollbar(preview_frame, command=preview_widget.yview)
+        preview_scroll.pack(side="right", fill="y")
+        preview_widget.configure(yscrollcommand=preview_scroll.set)
+        preview_widget.pack(side="left", fill="both", expand=True)
+        preview = dialog.typography_preview = MarkdownView(preview_widget, self.font_family, TEXT, MUTED, CYAN, FIELD)
+        def preview_tab(event, reverse=False):
+            target = event.widget.tk_focusPrev() if reverse else event.widget.tk_focusNext()
+            target.focus_set()
+            return "break"
+        # Read-only Text otherwise consumes Tab as an attempted text insertion.
+        preview_widget.bind("<Tab>", preview_tab)
+        for sequence in ("<Shift-Tab>", "<ISO_Left_Tab>"):
+            preview_widget.bind(sequence, lambda event: preview_tab(event, reverse=True))
+        preview.configure_typography(self.typography)
+        preview.append(READING_PREVIEW)
+        preview_widget.yview_moveto(0)
         body = tk.Frame(dialog, bg=PANEL)
         body.pack(fill="both", expand=True)
         canvas = tk.Canvas(body, bg=PANEL, highlightthickness=0)
@@ -460,13 +493,16 @@ class App:
                 canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, content.winfo_height()))
         dialog.bind("<FocusIn>", reveal, add="+")
         variables = {
-            "family": tk.StringVar(value=self.typography.family or self.markdown.family),
-            "size": tk.StringVar(value=str(self.typography.size)),
-            "scale": tk.StringVar(value=str(self.typography.scale)),
-            "spacing": tk.StringVar(value="Compact" if self.typography.spacing == "compact" else "Confortable"),
-            "code_family": tk.StringVar(value=self.typography.code_family or self.markdown.fixed_family),
-            "accent_intensity": tk.IntVar(value=self.typography.accent_intensity),
+            "family": tk.StringVar(dialog, value=self.typography.family or self.markdown.family),
+            "size": tk.StringVar(dialog, value=str(self.typography.size)),
+            "scale": tk.StringVar(dialog, value=str(self.typography.scale)),
+            "spacing": tk.StringVar(dialog, value="Compact" if self.typography.spacing == "compact" else "Confortable"),
+            "code_family": tk.StringVar(dialog, value=self.typography.code_family or self.markdown.fixed_family),
+            "accent_intensity": tk.IntVar(dialog, value=self.typography.accent_intensity),
         }
+        preview_status = tk.StringVar(dialog)
+        tk.Label(content, textvariable=preview_status, name="preview_status", bg=PANEL, fg=MUTED,
+                 wraplength=max(240, width - 55), justify="left").pack(anchor="w", pady=(0, 6))
         for key, label, values in (("family", "Police installée", self.conversation_families),
                                     ("size", "Taille du texte (9–24 points)", None),
                                     ("scale", "Échelle de lecture (75–175 %)", None),
@@ -478,23 +514,41 @@ class App:
             else:
                 ttk.Combobox(content, name=key, textvariable=variables[key], values=values,
                              state="readonly").pack(fill="x")
-        accent_label = tk.StringVar()
+        accent_label = tk.StringVar(dialog)
         def show_accent(*_args):
             accent_label.set(f"Intensité des accents visuels : {variables['accent_intensity'].get()} %")
-        variables["accent_intensity"].trace_add("write", show_accent)
+        traces = [(variables["accent_intensity"], variables["accent_intensity"].trace_add("write", show_accent))]
         show_accent()
         tk.Label(content, textvariable=accent_label, bg=PANEL, fg=TEXT).pack(anchor="w", pady=(8, 3))
         tk.Scale(content, name="accent_intensity", from_=0, to=100, resolution=1, orient="horizontal",
                  variable=variables["accent_intensity"], bg=PANEL, fg=TEXT, troughcolor=FIELD,
                  highlightthickness=0, activebackground=CYAN, takefocus=True).pack(fill="x")
 
-        def reset():
-            from .markdown_view import ConversationTypography
-            try:
-                self.set_conversation_typography(**ConversationTypography().to_dict())
-            except (ValueError, sqlite3.Error) as exc:
-                messagebox.showerror("Lecture", str(exc), parent=dialog)
+        def settings_from_controls():
+            values = dict(family=variables["family"].get(), size=int(variables["size"].get()),
+                          scale=int(variables["scale"].get()),
+                          spacing="compact" if variables["spacing"].get() == "Compact" else "comfortable",
+                          code_family=variables["code_family"].get(), accent_intensity=variables["accent_intensity"].get())
+            settings = ConversationTypography.from_dict(values, self.conversation_families, self.markdown.code_families)
+            if settings.to_dict() != values:
+                raise ValueError("Choisissez une police installée, une taille de 9 à 24 et une échelle de 75 à 175 %.")
+            return settings
+
+        loading_controls = False
+        def refresh_preview(*_args):
+            if loading_controls:
                 return
+            try:
+                settings = settings_from_controls()
+            except (ValueError, tk.TclError):
+                preview_status.set("Aperçu conservé : taille de 9 à 24 points, échelle de 75 à 175 %.")
+                return
+            preview.configure_typography(settings)
+            preview_status.set("Exemple local. Enregistrer applique vos choix ; Fermer les abandonne.")
+
+        def restore_preview():
+            nonlocal loading_controls
+            loading_controls = True
             for key, value in self.typography.to_dict().items():
                 if key == "family":
                     value = value or self.markdown.family
@@ -503,28 +557,47 @@ class App:
                 elif key == "spacing":
                     value = "Compact" if value == "compact" else "Confortable"
                 variables[key].set(value)
+            loading_controls = False
+            refresh_preview()
+
+        for variable in variables.values():
+            traces.append((variable, variable.trace_add("write", refresh_preview)))
+        refresh_preview()
+        ttk.Button(content, name="restore_preview", text="Restaurer l’aperçu", command=restore_preview).pack(fill="x", pady=(12, 4))
+
+        def reset():
+            try:
+                self.set_conversation_typography(**ConversationTypography().to_dict())
+            except (ValueError, sqlite3.Error) as exc:
+                messagebox.showerror("Lecture", str(exc), parent=dialog)
+                return
+            restore_preview()
         ttk.Button(content, name="reset_typography", text="Réglages d’origine", command=reset).pack(fill="x", pady=(12, 4))
         tk.Label(content, bg=PANEL, fg=MUTED, justify="left", wraplength=max(240, width - 55),
-                 text="Titres, listes et code gardent leur hiérarchie.\n"
-                      "Markdown : **gras**, *italique*, listes, liens, code.\n"
-                      "Extensions : ~~barré~~ (GFM), ++souligné++, ==surligné==.\n"
+                 text="Réglages d’origine : restauration immédiate, enregistrée.\n\n"
+                      "Mise en forme des réponses par syntaxe Markdown :\n"
+                      "# Titre H1 · ## Sous-titre H2 · ### Section H3\n"
+                      "**gras** · *italique* · ~~barré~~ (GFM)\n"
+                      "++souligné++ · ==surligné==\n"
+                      "- liste · > citation · `code` · [texte](https://…)\n"
+                      "Ces réglages changent la lecture, pas le texte des messages.\n"
                       "Tableaux textuels ; formules simples, sans composition LaTeX.\n"
                       "Clic droit ou Ctrl+Maj+C : copier la réponse originale.\n"
                       "Ctrl+C : copier la sélection affichée.").pack(anchor="w", pady=12)
 
         def save():
             try:
-                self.set_conversation_typography(family=variables["family"].get(), size=int(variables["size"].get()),
-                    scale=int(variables["scale"].get()),
-                    spacing="compact" if variables["spacing"].get() == "Compact" else "comfortable",
-                    code_family=variables["code_family"].get(), accent_intensity=variables["accent_intensity"].get())
-            except (ValueError, sqlite3.Error) as exc:
+                self.set_conversation_typography(**settings_from_controls().to_dict())
+            except (ValueError, sqlite3.Error, tk.TclError) as exc:
                 messagebox.showerror("Lecture", str(exc), parent=dialog)
                 return
             dialog.destroy()
 
         def closed(event):
             if event.widget is dialog:
+                for variable, trace in traces:
+                    variable.trace_remove("write", trace)
+                preview.close()
                 self.conversation_dialog = None
 
         dialog.bind("<Destroy>", closed)

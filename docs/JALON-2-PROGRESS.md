@@ -1,5 +1,19 @@
 # Jalon 2 — progression vérifiable
 
+## Finition reprise — aperçu RichText
+
+Menu Lecture et typographie : vrai MarkdownView local, polices/styles et titres
+visibles avant enregistrement. Modifications temporaires séparées de l'archive,
+pas de reparsing du chat ni d'inférence. Aide syntaxique explicite souligné et
+surligné, aperçu restaurable, clavier et nettoyage ressources testés.
+46tests intégrés Tk9 et32tests isolés Tk8.6 réussis. Suite finale intégrée
+Tk8.6 :523tests exécutés,514réussis,9ignorés (natifs/modèles absents),97,162s.
+La suite Tk9 avant cet ajout comptait521tests,512réussis,9ignorés ; ses46tests
+concernés repassent après intégration. Commits de reprise :
+cec390b morphing,65bd81c LOT3,1e9c765 LOT6 ; dernier ajout par git log.
+CI morphing39944644962 etLOT3 39944920954 vertes, compilation/EXEsmoke Windows.
+Dernière CI et validation globale après intégration : consulter Actions.
+
 ## Presence Evolution — LOT6 P1
 
 Travail interrompu repris après LOT3 : THINKING lenticulaire organique, trait6px
