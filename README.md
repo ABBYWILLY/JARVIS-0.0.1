@@ -4,6 +4,10 @@ Premier socle desktop local : fenêtre sombre COMMAND OS, modèles Ollama instal
 conversation en streaming, arrêt, conversations SQLite et paramètres persistants.
 Aucun abonnement, compte cloud, téléchargement silencieux ou outil système.
 
+**Centre de contrôle :** Menu → Centre de contrôle ou Ctrl+,. PRESENCE Studio
+permet de prévisualiser, comparer et appliquer les réglages graphiques.
+[Guide, démonstration hors ligne et recette Windows](docs/CONTROL-STUDIO.md).
+
 ## Lancer sur Windows 11
 
 1. Installer **Python 3.12 x64** depuis [python.org](https://www.python.org/downloads/windows/),

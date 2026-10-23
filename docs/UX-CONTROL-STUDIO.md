@@ -120,3 +120,18 @@ détachées avant restauration du brouillon, sans callback fantôme.
 79tests intégrés Tk9 et39ciblés Tk8.6 réussis. Tests de transaction, persistance,
 paramètres bornés, rendu réel, interruption, mouvement réduit, fermeture, clavier
 et DPI ; doubles PCM explicitement identifiés. Les comptes se recouvrent.
+
+## Étape D — Preuves et lancement autonome
+
+Voir CONTROL-STUDIO.md pour le guide, les quatre visuels, le MP4 et la recette
+Windows. Scénario sur le vrai Canvas et profil temporaire ; signaux synthétiques
+étiquetés,202images exportées25FPS, aucune mesure deFPS matériel. Relevé de
+repos seul dans benchmarks/presence-studio-idle-linux.json :5,02s, CPU0,47% d'un
+cœur, RSSmoyen36,38MiB, aucun callback Canvas actif. Pas de comparaison globale
+ni de performance Windows/RTX/IA annoncée.
+
+La suite complète intermédiaire603tests a trouvé trois erreurs du même test
+ancien qui cherchait Fermer. Nouveau contrat Annuler dans le pied fixe : les
+trois boutons sont maintenant contrôlés dans chaque section à100/200/250%DPI,
+et la fermeture est invoquée.32tests ciblés après adaptation verts sousTk9
+etTk8.6. La démonstration démarre également au premier clic sans PRESENCE ouvert.

@@ -1,0 +1,22 @@
+{
+  "scope": "Linux real Tk Canvas, no AI or audio engines active; idle observation only, not LOT7 comparison",
+  "canvas_after_id": null,
+  "demo_active": false,
+  "process": {
+    "cpu_scope": "process_one_core_percent",
+    "cpu_average_percent": 0.47135212220846295,
+    "cpu_peak_percent": 2.2638010485161364,
+    "elapsed_seconds": 5.019696503994055,
+    "interval_seconds": 0.5,
+    "sample_count": 11,
+    "peak_sampling": "periodic_intervals_and_final_partial_interval",
+    "rss_current_bytes": 38154240,
+    "rss_average_bytes": 38142634.666666664,
+    "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+    "rss_sample_count": 12,
+    "rss_peak_bytes": 57815040,
+    "rss_peak_scope": "process_lifetime_high_water_mark",
+    "memory_source": "/proc/self/status",
+    "unavailable_reason": null
+  }
+}

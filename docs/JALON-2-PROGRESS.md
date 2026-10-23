@@ -1,3 +1,23 @@
+# Démonstration et preuves visuelles — étape D, 24 octobre 2026
+
+Studio publié c0e21c6 ; CLI run_presence_demo.py utilise uniquement un profil
+SQLite temporaire. Scénario8états réel Canvas, étiquette PCM synthétique,
+--auto-close/--reduced-motion et captures facultatives sans écrasement.
+Preuves intégrées docs/assets : Centre sombre, Studio, planche8états et MP4
+202images exportées25FPS (pas une mesureFPS matérielle). Guide CONTROL-STUDIO.md.
+Inspection visuelle : THINKING distinct, sourire reconnaissable, repos plat ;
+l'esthétique finale Windows reste à juger sur PC. Relevé limité Linux5,02s du
+processusCanvas seul : CPU0,47% d'un cœur, RSSmoyen36,38MiB, zéroafterCanvas
+au repos. Aucun moteur IA/audio actif ni comparaison globale LOT7.
+Première suite globale603tests : trois erreurs de sous-cas d'un ancien test
+cherchantFermer. Il vérifie maintenant Annuler et les3actions à100/200/250%DPI,
+avec leurs bornes absolues et fermeture effective ; aucune validation supprimée.
+32tests ciblés après adaptation réussis sousTk9 etTk8.6. Nouveau cas première
+ouvertureDémo réussi. Suite globale finale et CI à vérifier étapeE.
+Ne pas modifiermain ; LOTS4/5/7 hors mission, LOT2 non officiellementvalidé.
+
+---
+
 # PRESENCE Studio2.0 — étape C, 24 octobre 2026
 
 B publié513dc86. Nouveau Studio remplace l'atelier immédiat : un brouillon,

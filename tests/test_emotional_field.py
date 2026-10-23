@@ -246,15 +246,25 @@ class EmotionalFieldTkTests(unittest.TestCase):
                 self.view.open_settings()
                 self.root.update()
                 dialog = self.view.settings_dialog
-                close = next(widget for widget in dialog.winfo_children()
-                             if isinstance(widget, ttk.Button) and widget.cget("text") == "Fermer")
+                # The Studio now closes transactionally via Annuler. All three
+                # fixed actions must fit, including after changing sections.
+                close = self.view.studio.action_buttons["cancel"]
                 notebook = next(widget for widget in dialog.winfo_children() if isinstance(widget, ttk.Notebook))
                 self.assertLessEqual(close.winfo_rooty() + close.winfo_height(), self.root.winfo_screenheight())
                 for tab in notebook.tabs():
                     notebook.select(tab)
                     self.root.update()
                     self.assertTrue(self.root.nametowidget(tab).winfo_viewable())
-                    self.assertLessEqual(close.winfo_y() + close.winfo_height(), dialog.winfo_height())
+                    for button in self.view.studio.action_buttons.values():
+                        self.assertTrue(button.winfo_viewable())
+                        self.assertGreaterEqual(button.winfo_rootx(), dialog.winfo_rootx())
+                        self.assertGreaterEqual(button.winfo_rooty(), dialog.winfo_rooty())
+                        self.assertLessEqual(button.winfo_rootx() + button.winfo_width(),
+                                             dialog.winfo_rootx() + dialog.winfo_width())
+                        self.assertLessEqual(button.winfo_rooty() + button.winfo_height(),
+                                             dialog.winfo_rooty() + dialog.winfo_height())
+                close.invoke()
+                self.assertFalse(dialog.winfo_exists())
 
     def test_immersion_binding_hides_diagnostics_but_keeps_microphone_error_and_stop_visible(self):
         binding = self.view.window.bind("<F9>")

@@ -87,6 +87,15 @@ class StudioTkTests(unittest.TestCase):
         self.assertIs(self.view.open_settings(), self.studio.window)
         self.assertIsNone(self.view.canvas)
 
+    def test_demo_can_start_on_first_click_when_presence_has_never_been_opened(self):
+        self.assertIsNone(self.view.canvas)
+        self.assertTrue(self.studio.demo())
+        self.assertTrue(self.view._demo.active)
+        self.assertTrue(self.view._visible())
+        self.studio.cancel()
+        self.assertFalse(self.view._demo.active)
+        self.assertIsNone(self.view._demo.after_id)
+
     def test_draft_before_after_cancel_and_apply_use_one_real_renderer_and_one_preference(self):
         original = self.store.get_preference("presence")
         self.studio.change(visualizer_thickness=10, halo_diffusion=170, thinking_structure="round")
@@ -214,4 +223,3 @@ class StudioTkTests(unittest.TestCase):
         self.assertIsNone(self.view._preview_id)
         self.assertEqual(self.view.settings, baseline)
         self.assertEqual(tuple(self.root.tk.call("after", "info")), ())
-

@@ -56,10 +56,12 @@ class PresenceStudio:
         # at large DPI. No navigation item depends on a tab bar's total width.
         footer = ttk.Frame(window)
         footer.pack(side="bottom", fill="x", pady=(8, 0))
-        for column, (text, command) in enumerate((("Annuler", self.cancel), ("Restaurer", self.restore),
-                                                   ("Appliquer", self.apply))):
+        self.action_buttons = {}
+        for column, (key, text, command) in enumerate((("cancel", "Annuler", self.cancel), ("restore", "Restaurer", self.restore),
+                                                       ("apply", "Appliquer", self.apply))):
             footer.columnconfigure(column, weight=1, uniform="actions")
-            ttk.Button(footer, text=text, command=command).grid(row=0, column=column, sticky="ew", padx=2)
+            button = self.action_buttons[key] = ttk.Button(footer, name=key, text=text, command=command)
+            button.grid(row=0, column=column, sticky="ew", padx=2)
         comparison = ttk.Frame(window)
         comparison.pack(side="bottom", fill="x", pady=(6, 0))
         self.comparison = tk.StringVar(value="after")
