@@ -1,3 +1,25 @@
+# Reprise — LOT6 PRESENCE avancé, 23 octobre 2026
+
+Travail interrompu conservé, intégré après LOT3/cec390b. THINKING devient une
+lentille organique distincte du noyau PCM, même en réduction de mouvement. Vraies
+largeurs à96dpi : trait6px/halo27px au réglage6, sliders existants conservés.
+Atelier : intensité halo0–100%, taille THINKING70–130%,4ambiances et3palettes,
+microexpressions cosmétiques bornées (surprise/réconfort/enthousiasme/gravité).
+Préréglages et préférences futures préservés. Aperçus hors ligne clairement
+signalés, sans modèle/micro. La parole réelle annule l'aperçu immédiatement.
+Mini/F10 : même fenêtre, même Canvas et23objets réutilisés, redimensionnable,
+statut micro visible, retour COMMAND OS, sans always-on-top ni deuxième boucle.
+Correctif de position relative/absolue des libellés au retour Mini→normal.
+Le rendu ne change ni PCM/RMS/VAD ni TTS, inférence, permissions ou états réels.
+Silence plat, interruptions prioritaires, réduction du mouvement et suspension
+hors écran conservés. Tests ciblés Tk8.6/9 et géométrie passent ; suite intégrée et
+CI dans la progression. Captures Linux réelles d'aperçu, pas de matériel validé.
+Sur PC : THINKING/ligne/halo, atelier, Mini→normal à différentes tailles/DPI,
+écoute puis interruption d'un aperçu, trois phrases emoji et reprise vocale.
+Pas de gain CPU/RAM/latence Windows annoncé. LOTS4/5/7 non implémentés ici.
+
+---
+
 # Reprise — LOT3 Cerveau C1, 23 octobre 2026
 
 Travail interrompu conservé et finalisé, après correctif morphing cec390b.

@@ -1,5 +1,18 @@
 # Jalon 2 — progression vérifiable
 
+## Presence Evolution — LOT6 P1
+
+Travail interrompu repris après LOT3 : THINKING lenticulaire organique, trait6px
+et halo27px réels au réglage6/96dpi. Atelier et réglages persistants de halo,
+taille, palette, ambiance et microexpressions bornées. Aperçu hors ligne annulé
+par le vrai audio. Mini/F10 réutilise fenêtre/Canvas/pool23objets, sans topmost ;
+retour COMMAND OS et statut micro visibles. Correction des offsets Mini→normal.
+Pas de modification de capture/VAD/STT/PCM/TTS, des modèles ou des permissions.
+Tests ciblés Tk8.6/9, géométrie et préférences ; suite intégrée locale Tk9 :
+521tests exécutés,512réussis,9ignorés (natifs/modèles absents),70,486s. Inclut les
+LOT3/6, le correctif morphing et le retour Mini→normal. CPU/RAM/latence Windows
+et recette graphique sur PC en attente.
+
 ## Cognitive Evolution — LOT3 C1
 
 Reprise du travail interrompu : routage heuristique local avec priorité manuelle,

@@ -20,6 +20,7 @@ OPERATIONAL = {
 # Small local lexicons: an estimate of the text, never an operational status.
 # Expression mode requires an affirmed feeling; uncertain language stays cyan.
 TONES = {
+    "surprise": ("#a9e8ff", {"surprise", "surpris", "surprisee", "etonne", "etonnee", "etonnement", "stupefait", "stupefaite"}),
     "joie": ("#ffe28a", {"joie", "plaisir", "heureux", "heureuse", "ravi", "ravie", "content", "contente", "joyeux", "joyeuse"}),
     "colère": ("#ff717a", {"rage", "colere", "furieux", "furieuse", "enerve", "enervee", "enrage", "exaspere", "exasperee"}),
     "désir": ("#ffb16b", {"ambition", "desir", "ambitieux", "convoitise", "avarice", "envie", "desire"}),

@@ -13,6 +13,7 @@ from .captions import CaptionPlan, CaptionWindow, prepare_caption
 from .expressions import expression_family
 from .morphing import FAMILIES, MorphController
 from .richtext import parse_text
+from .presence_motion import MICRO_LABELS, MicroExpression
 
 
 STATES = {"silent", "listening", "user_speaking", "thinking", "jarvis_speaking", "dormant"}
@@ -35,6 +36,12 @@ MIC_LABELS = {"disabled": "MICRO DÉSACTIVÉ", "starting": "MICRO · INITIALISAT
 EXPRESSION_LABELS = dict(zip(FAMILIES, ("Sourire", "Rire", "Affection", "Tristesse",
                                        "Colère", "Surprise", "Réflexion", "Complicité")))
 MORPH_INTENSITY_LABELS = {"discreet": "Discrète", "normal": "Normale", "expressive": "Expressive"}
+AMBIENCE_LABELS = {"conversation": "Conversation", "explanation": "Explication",
+                   "story": "Récit", "focus": "Concentration"}
+PALETTE_LABELS = {"original": "Spectre original", "soft": "Pastel holographique", "warm": "Ambre holographique"}
+# Pure visual policies: pace, curvature and halo. They never affect TTS/LLM/permissions.
+AMBIENCES = {"conversation": (1., 1., 1.), "explanation": (.82, .75, .90),
+             "story": (.85, 1.12, 1.05), "focus": (.65, .55, .75)}
 _POSITIONS = tuple(i / (POINT_COUNT - 1) for i in range(POINT_COUNT))
 _ANGLES = tuple(-math.pi / 2 + math.tau * t for t in _POSITIONS)
 _WINDOW = tuple(math.sin(math.pi * t) ** 2 for t in _POSITIONS)
@@ -63,6 +70,12 @@ class PresenceSettings:
     diagnostic_mode: bool = True
     semantic_morphing: bool = True
     morph_intensity: str = "normal"
+    halo_intensity: int = 100
+    thinking_size: int = 100
+    ambience: str = "conversation"
+    emotional_palette: str = "original"
+    microexpressions: bool = True
+    mini_mode: bool = False
 
     @classmethod
     def from_dict(cls, values):
@@ -77,7 +90,7 @@ class PresenceSettings:
         if isinstance(values.get("profile"), str) and values["profile"] in PROFILES:
             valid["profile"] = values["profile"]
         for key in ("reduced_motion", "subtitles", "timing_monitor", "halos", "animations",
-                    "emotional_subtitles", "diagnostic_mode", "semantic_morphing"):
+                    "emotional_subtitles", "diagnostic_mode", "semantic_morphing", "microexpressions", "mini_mode"):
             if isinstance(values.get(key), bool):
                 valid[key] = values[key]
         if isinstance(values.get("accent_mode"), str) and values["accent_mode"] in ACCENT_LABELS:
@@ -87,7 +100,7 @@ class PresenceSettings:
             valid["fixed_color"] = color.lower()
         if isinstance(values.get("spectrum_mode"), str) and values["spectrum_mode"] in SPECTRUM_LABELS:
             valid["spectrum_mode"] = values["spectrum_mode"]
-        for key in ("wave_expressivity", "spectrum_intensity"):
+        for key in ("wave_expressivity", "spectrum_intensity", "halo_intensity"):
             value = values.get(key)
             if (isinstance(value, (int, float)) and not isinstance(value, bool)
                     and math.isfinite(value) and 0 <= value <= 100):
@@ -97,9 +110,13 @@ class PresenceSettings:
                 and math.isfinite(value) and 1 <= value <= 10):
             valid["visualizer_thickness"] = round(value)
         for key, choices in (("fluidity", FLUIDITY_LABELS), ("subtitle_coloring", COLORING_LABELS),
-                             ("morph_intensity", MORPH_INTENSITY_LABELS)):
+                             ("morph_intensity", MORPH_INTENSITY_LABELS), ("ambience", AMBIENCE_LABELS),
+                             ("emotional_palette", PALETTE_LABELS)):
             if isinstance(values.get(key), str) and values[key] in choices:
                 valid[key] = values[key]
+        value = values.get("thinking_size")
+        if type(value) is int and 70 <= value <= 130:
+            valid["thinking_size"] = value
         value = values.get("subtitle_size")
         if isinstance(value, int) and not isinstance(value, bool) and 12 <= value <= 32:
             valid["subtitle_size"] = value
@@ -185,7 +202,7 @@ def readable_accent(color, background):
 
 def core_radius(width, height):
     small = max(1.0, min(width, height))
-    # The full orbital mesh, including slow deformation, occupies 25–35%.
+    # Reference radius shared by the speaking core and the THINKING lens.
     return small * 0.145
 
 
@@ -197,9 +214,9 @@ def dpi_scale(tk_scaling):
 def stroke_widths(thickness, scale=1.0):
     """Outer halo → inner halo → envelope → clear central stroke, in pixels."""
     amount = (max(1, min(10, thickness)) - 1) / 9
-    edge = 1.5 + 3.5 * amount
-    halo = 6.0 + 9.0 * amount
-    return tuple(width * scale for width in (halo, halo * 0.73, edge + 2.6, edge))
+    edge = 2.5 + 6.3 * amount
+    halo = 15.0 + 22.0 * amount
+    return tuple(width * scale for width in (halo, halo * 0.68, edge + 6.5, edge))
 
 
 def render_quality(settings, width, height, scale=1.0, overloaded=False):
@@ -211,7 +228,7 @@ def render_quality(settings, width, height, scale=1.0, overloaded=False):
         fps, layers = min(fps, 16), min(layers, 2)
     if settings.reduced_motion or not settings.animations:
         fps = min(fps, 16)
-    if not settings.halos:
+    if not settings.halos or settings.halo_intensity == 0:
         layers = 1
     arcs = min(3, layers - 1)
     return fps, layers, arcs
@@ -295,6 +312,7 @@ class PresenceModel:
         self._signal_version = 0
         self._geometry_key = self._geometry = None
         self.emotional_inertia = self.emotional_curve = 1.0
+        self.micro = MicroExpression()
 
     @property
     def motion_allowed(self):
@@ -307,6 +325,8 @@ class PresenceModel:
         if state != self.state:
             self.state_since = now
         self.state = state
+        if state in {"silent", "listening", "user_speaking", "dormant"}:
+            self.micro.cancel()
         self.signal = _signal(signal)
         self.signal_at = now
         self._signal_version += 1
@@ -333,10 +353,15 @@ class PresenceModel:
         active = self.has_signal(now)
         orbital = self.state == "thinking" or self.state == "jarvis_speaking" and active
         moving = self.state == "thinking" and self.motion_allowed
+        micro_active = (self.settings.microexpressions and self.motion_allowed and self.micro.active(now)
+                        and (self.state == "thinking" or self.state == "jarvis_speaking" and active))
+        micro_radius, micro_curve, micro_speed = self.micro.factors(now) if micro_active else (1., 1., 1.)
+        pace, curvature, _halo = AMBIENCES[self.settings.ambience]
         key = (width, height, self.state, self.settings.wave_expressivity,
-               self.settings.reduced_motion, self.motion_allowed,
+               self.settings.reduced_motion, self.motion_allowed, self.settings.thinking_size, self.settings.ambience,
+               self.settings.mini_mode,
                self._signal_version if active and self.state in {"listening", "user_speaking", "jarvis_speaking"} else None)
-        if not moving and key == self._geometry_key:
+        if not moving and not micro_active and key == self._geometry_key:
             return self._geometry
         energy = min(1.0, math.sqrt(self.signal["rms"]) * 1.6) if active else 0.0
         expressivity = self.settings.wave_expressivity / 100
@@ -347,18 +372,26 @@ class PresenceModel:
         amplitude = min(220, height * 0.24) * (0.18 + 0.82 * expressivity) * wave_energy
         wave, wave_line = self._wave, self._wave_line
         points = []
-        phase = (now - self.state_since) * 1.35 if moving else 0.0
+        phase = (now - self.state_since) * 1.35 * pace if moving else 0.0
+        if moving and micro_active:
+            # A short bounded phase nuance, independent of how long THINKING
+            # has already lasted. Multiplying the entire age would cause jumps.
+            phase += (micro_speed - 1) * (now - self.micro.started) * 1.35
         for i, t in enumerate(_POSITIONS):
             if self.state == "dormant":
                 x, y = cx + 2.5 * math.cos(_ANGLES[i]), cy + 2.5 * math.sin(_ANGLES[i])
             elif orbital:
                 angle = _ANGLES[i]
                 radius = core_radius(width, height)
+                if self.settings.mini_mode:
+                    radius = min(radius, min(width, height) * .09)
+                if self.state == "thinking":
+                    radius *= self.settings.thinking_size / 100 * micro_radius
                 if moving:
                     # Smooth, low-frequency deformations of this same closed mesh.
                     # This indicates active processing, never fictitious audio.
                     radius *= (1 + 0.035 * math.sin(phase * 0.7)
-                               + 0.10 * self.emotional_curve * math.sin(2 * angle + phase)
+                               + 0.10 * self.emotional_curve * curvature * micro_curve * math.sin(2 * angle + phase)
                                + 0.045 * math.sin(3 * angle - phase * 0.65))
                     angle += 0.07 * math.sin(phase * 0.55)
                 elif self.state == "jarvis_speaking" and active:
@@ -366,7 +399,16 @@ class PresenceModel:
                     j = (i + (POINT_COUNT - 1) // 2) % (POINT_COUNT - 1)
                     modulation = (wave[i % (POINT_COUNT - 1)] + wave[j]) / 2
                     radius *= 1 + energy * (0.25 + 0.14 * modulation)
-                x, y = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+                    # A bounded nuance of the real speaking core, gated by PCM.
+                    # Microphone waves and zero/expired PCM are never animated.
+                    radius *= 1 + (micro_radius - 1) * energy * .5
+                if self.state == "thinking":
+                    # A lenticular, softly pinched singularity remains distinct
+                    # from the round PCM core even when motion is disabled.
+                    radius *= 1 + .055 * math.cos(4 * angle)
+                    x, y = cx + 1.08 * radius * math.cos(angle), cy + .76 * radius * math.sin(angle)
+                else:
+                    x, y = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
             else:
                 x, y = cx + (t - 0.5) * span, cy
                 if self.state in {"listening", "user_speaking"} and active:
@@ -377,7 +419,7 @@ class PresenceModel:
         if orbital or self.state == "dormant":
             points[-1] = points[0]  # Exact closure enables Tk's continuous closed spline.
         # A one-entry cache: silence and fixed forms allocate no new mesh per frame.
-        self._geometry_key, self._geometry = (None if moving else key), points
+        self._geometry_key, self._geometry = (None if moving or micro_active else key), points
         return points
 
     def frame(self, width, height, now=None):
@@ -477,6 +519,10 @@ class PresenceView:
         self._semantic_preview = False
         self._semantic_drawn = False
         self._semantic_trace = deque(maxlen=48)
+        self._workshop_preview = False
+        self._normal_geometry = None
+        self._window_mode = None
+        self._controls_layout = None
 
     @property
     def state(self):
@@ -489,6 +535,7 @@ class PresenceView:
             self._render()
             return
         window = self.window = tk.Toplevel(self.app.root)
+        self._window_mode = self._controls_layout = None
         self._overlay_key = self._timing_render_key = self._rendered_caption = None
         window.title("JARVIS · PRESENCE")
         sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
@@ -499,6 +546,7 @@ class PresenceView:
         window.bind("<F11>", self.toggle_fullscreen)
         window.bind("<Escape>", self.exit_fullscreen)
         window.bind("<F9>", self.toggle_diagnostic)
+        window.bind("<F10>", self.toggle_mini)
         window.bind("<Control-space>", lambda _event: self.toggle_listening())
         window.bind("<Map>", self._on_map)
         window.bind("<Unmap>", self._on_unmap)
@@ -531,8 +579,11 @@ class PresenceView:
         self.header_controls.place(relx=0.955, rely=0.045, anchor="ne")
         self.buttons = []
         for label, command in (("F9 · Mode", self.toggle_diagnostic), ("Fond", self.choose_background), ("Chrono", self.toggle_timing),
-                               ("Réglages", self.open_settings)):
+                               ("Atelier", self.open_settings)):
             self._button(self.header_controls, label, command).pack(side="left", padx=4)
+        self.mini_button = self._button(self.header_controls, "Mini", self.toggle_mini)
+        self.mini_button.pack(side="left", padx=4)
+        self.header_buttons = tuple(self.header_controls.winfo_children())
         self.controls = tk.Frame(window)
         self.controls.place(relx=0.5, rely=0.92, anchor="center")
         self.listen_button = self._button(self.controls, "Activer l’écoute", self.toggle_listening)
@@ -540,7 +591,9 @@ class PresenceView:
         self._button(self.controls, "Arrêt", self.emergency).pack(side="left", padx=4)
         self.sleep_button = self._button(self.controls, "Sommeil", self.toggle_sleep)
         self.sleep_button.pack(side="left", padx=4)
-        self._button(self.controls, "COMMAND OS", self.return_to_command).pack(side="left", padx=4)
+        self.command_button = self._button(self.controls, "COMMAND OS", self.return_to_command)
+        self.command_button.pack(side="left", padx=4)
+        self.control_buttons = tuple(self.controls.winfo_children())
         # Overlays use place: their requested size never participates in core layout.
         self._caption_font = tkfont.Font(root=window, family=family, size=self.settings.subtitle_size)
         self.caption_label = tk.Text(window, font=self._caption_font, wrap="word", height=2,
@@ -566,6 +619,7 @@ class PresenceView:
         self._rendered_caption = None
         self._apply_colors()
         window.update_idletasks()
+        self._apply_window_mode()
         self.canvas.focus_set()
         self._render()
 
@@ -579,6 +633,9 @@ class PresenceView:
     def update_event(self, state, signal=None, caption=None):
         if state not in STATES or self.state == "dormant" and state != "dormant":
             return
+        if self._workshop_preview:
+            self._workshop_preview = False
+            self.model.micro.cancel()
         # Actual functional events cancel the offline scenario before any drawing.
         self._cancel_scenario()
         # Repeated waiting notifications are idempotent: text may already be
@@ -642,6 +699,7 @@ class PresenceView:
 
     def begin_response(self):
         self._cancel_semantics("new_response")
+        self.model.micro.cancel()
         self.mood_tracker = MoodTracker(mode=self.settings.spectrum_mode)
         self._clear_playback()
         self._set_tone(Tone())
@@ -816,6 +874,8 @@ class PresenceView:
             self._render()
 
     def preview_expression(self, family):
+        if self._workshop_preview:
+            self.clear_preview()
         if family not in FAMILIES or self.state != "silent" or self.app.voice.listening or not self._visible():
             return False
         self.clear_preview()
@@ -837,6 +897,8 @@ class PresenceView:
         self.tone = tone
         self.dominant_tone = tone if dominant is None else dominant
         mood = self.dominant_tone.name
+        if self.settings.microexpressions and self.model.motion_allowed:
+            self.model.micro.trigger(mood, time.monotonic())
         self.model.emotional_inertia = {"colère": .85, "peur": .9, "attachement": 1.1,
                                         "apaisement": 1.2, "deuil": 1.15}.get(mood, 1.0)
         self.model.emotional_curve = {"colère": 1.12, "peur": 1.05,
@@ -946,6 +1008,8 @@ class PresenceView:
 
     def preview_text(self, text):
         """Explicit visual-only preview; never starts capture, inference or speech."""
+        if self._workshop_preview:
+            self.clear_preview()
         if self.state not in {"silent", "dormant"} or self.app.voice.listening:
             return None
         self._cancel_semantics()
@@ -964,8 +1028,10 @@ class PresenceView:
         self._cancel_scenario()
         if self._preview_text is not None:
             self._preview_text = None
-            if scenario:
+            if scenario or self._workshop_preview:
                 self.model.update_event("silent")
+            self._workshop_preview = False
+            self.model.micro.cancel()
             self._set_tone(Tone())
             if self._visible():
                 self._render()
@@ -976,8 +1042,28 @@ class PresenceView:
             self._preview_id = None
         self._scenario_index = None
 
+    def preview_workshop(self, family=None):
+        """The existing mesh previews appearance, never a fabricated audio wave."""
+        if family not in {None, "line", *MICRO_LABELS}:
+            return False
+        if self.app.voice.listening or (self.state not in {"silent", "dormant"} and not self._workshop_preview):
+            return False
+        self.clear_preview()
+        self._cancel_semantics()
+        self._workshop_preview = True
+        self._preview_text = "Noyau hors ligne" if family is None else MICRO_LABELS.get(family, "Ligne sans signal")
+        self.model.update_event("silent" if family == "line" else "thinking")
+        self._set_tone(Tone())
+        self.model.micro = MicroExpression()
+        if family in MICRO_LABELS:
+            self.model.micro.trigger(family, time.monotonic())
+        self._render()
+        return True
+
     def preview_scenario(self):
         """Offline symbolic forms/colors only. It never invents an audio signal."""
+        if self._workshop_preview:
+            self.clear_preview()
         if self.app.voice.listening or self.state not in {"silent", "dormant"}:
             return False
         self._cancel_semantics()
@@ -1015,6 +1101,10 @@ class PresenceView:
         dominant = getattr(self, "dominant_tone", self.tone)
         field_color = (dominant.color if self.tone.name == "neutralité" else
                        mix(dominant.color, self.tone.color, .22))
+        if self.settings.emotional_palette == "soft":
+            field_color = mix(field_color, "#d5efff", .18)
+        elif self.settings.emotional_palette == "warm":
+            field_color = mix(field_color, "#ffbc82", .18)
         color = (self.settings.fixed_color if mode == "fixed" else
                  CYAN if mode == "cyan" or self.settings.spectrum_mode == "neutral" else mix(CYAN, field_color,
                                                  self.settings.spectrum_intensity / 100))
@@ -1030,6 +1120,8 @@ class PresenceView:
         self.operation_detail = str(detail)
         self._operation_explicit = True
         if key in {"error", "inactive"}:
+            self._workshop_preview = False
+            self.model.micro.cancel()
             self._cancel_semantics("operation:" + key)
             self._cancel_scenario()
             self._cancel_animation()
@@ -1071,7 +1163,9 @@ class PresenceView:
         self.microphone_state, self.microphone_detail = state, str(detail)[:256]
         if state in {"disabled", "error", "starting", "voice", "stt"}:
             self._cancel_semantics("microphone:" + state)
+            self.model.micro.cancel()
         if state in {"disabled", "error"}:
+            self._workshop_preview = False
             self._cancel_scenario()
             self._preview_text = None
             self._clear_playback()
@@ -1092,7 +1186,7 @@ class PresenceView:
         if key == self._timing_render_key:
             return
         self._timing_render_key = key
-        if not self.settings.timing_monitor or not self.settings.diagnostic_mode or self.state == "dormant":
+        if self.settings.mini_mode or not self.settings.timing_monitor or not self.settings.diagnostic_mode or self.state == "dormant":
             self.timing_panel.place_forget()
             return
         # An overlay in the side gutter: never changes the canvas or mesh centre.
@@ -1168,8 +1262,10 @@ class PresenceView:
             strength = 0.9 + breath * 0.08
         # Every halo uses precisely the same coordinates, never another visualizer.
         for index, path in enumerate(self.paths):
-            opacity = min(1, (0.08, 0.13, 0.28, 0.90)[index] * strength *
+            opacity = min(1, (0.14, 0.22, 0.42, 0.96)[index] * strength *
                           (mood_halo if index != 3 else 1))
+            if index != 3:
+                opacity *= self.settings.halo_intensity / 100 * AMBIENCES[self.settings.ambience][2]
             self.canvas.coords(path, *coords)
             self.canvas.itemconfigure(path, state="normal" if index in selected else "hidden",
                                       width=widths[index],
@@ -1215,7 +1311,69 @@ class PresenceView:
         self.after_id = None
         self._render()
 
+    def toggle_mini(self, _event=None):
+        self.set_options(mini_mode=not self.settings.mini_mode)
+        return "break"
+
+    def _apply_window_mode(self):
+        if self.window is None or self._window_mode == self.settings.mini_mode:
+            return
+        mini = self.settings.mini_mode
+        self._window_mode = mini
+        self._controls_layout = self._overlay_key = self._timing_render_key = None
+        if mini:
+            self._normal_geometry = self.window.geometry()
+            self.window.attributes("-fullscreen", False)
+            self.window.minsize(320, 240)
+            self.window.geometry("420x300")
+        else:
+            self.window.minsize(min(620, max(320, self.window.winfo_screenwidth() - 80)),
+                                min(440, max(240, self.window.winfo_screenheight() - 100)))
+            if self._normal_geometry:
+                self.window.geometry(self._normal_geometry)
+
+    def _layout_controls(self, width, height):
+        key = (width, height, self.settings.mini_mode)
+        if key == self._controls_layout:
+            return
+        self._controls_layout = key
+        mini = self.settings.mini_mode
+        family = getattr(self.app, "font_family", "Segoe UI")
+        for button in self.buttons:
+            button.configure(font=(family, -12 if mini else 10), padx=8 if mini else 12,
+                             pady=6 if mini else 8)
+        for button in self.header_buttons:
+            button.pack_forget()
+            if not mini or button is self.mini_button:
+                button.pack(side="left", padx=4)
+        self.mini_button.configure(text="Étendre" if mini else "Mini")
+        for button in self.control_buttons:
+            button.pack_forget()
+            if not mini or button is not self.sleep_button:
+                button.pack(side="left", padx=3 if mini else 4)
+        self.header_controls.place(relx=.97 if mini else .955, y=10 if mini else 0,
+                                   rely=0 if mini else .045, anchor="ne")
+        self.controls.place(relx=.5, rely=.92, anchor="center")
+        if mini:
+            self.identity.place_forget()
+            self.mic_label.configure(font=(family, -12), wraplength=max(160, width - 24), justify="left")
+            self.state_label.configure(font=(family, -11))
+            self.operation_label.configure(font=(family, -11), justify="center")
+            self.mic_label.place(x=12, y=44, relx=0, rely=0, anchor="nw")
+            self.state_label.place(x=12, y=12, relx=0, rely=0, anchor="nw")
+            self.operation_label.place_forget()
+            self.tone_label.place_forget()
+        else:
+            self.identity.place(relx=.045, rely=.045, anchor="nw")
+            self.mic_label.configure(font=(family, 9), wraplength=0)
+            self.state_label.configure(font=(family, 10))
+            self.operation_label.configure(font=(family, 9), justify="right")
+            self.mic_label.place(x=0, y=0, relx=.045, rely=.15, anchor="nw")
+            self.state_label.place(x=0, y=0, relx=.045, rely=.105, anchor="nw")
+            self.operation_label.place(relx=.955, rely=.15, relwidth=.43, anchor="ne")
+
     def _update_overlays(self, width):
+        self._layout_controls(width, self.canvas.winfo_height())
         listening = bool(self.app.voice.listening)
         mic = getattr(self.app.voice, "microphone_state", self.microphone_state)
         if not isinstance(mic, str) or mic not in MIC_LABELS:
@@ -1231,27 +1389,35 @@ class PresenceView:
             self.mic_label.configure(text=MIC_LABELS[mic] + (" · écoute maintenue" if mic == "error" and listening else " · LOCAL"),
                                      fg=readable_accent(OPERATIONAL["error"]["color"], self.settings.background)
                                      if mic == "error" else palette(self.settings.background)["muted"])
-            self.listen_button.configure(text="Désactiver l’écoute" if listening else "Activer l’écoute")
+            self.listen_button.configure(text=("Couper micro" if listening else "Micro") if self.settings.mini_mode
+                                         else "Désactiver l’écoute" if listening else "Activer l’écoute")
             self.sleep_button.configure(text="Réveiller" if self.state == "dormant" else "Sommeil")
             mode = self.settings.accent_mode
             self.tone_label.configure(text=(("Aperçu local : " if self._preview_text is not None else
                                             SPECTRUM_LABELS[self.settings.spectrum_mode] + " · estimation : ")
                                            + self.dominant_tone.name if mode == "adaptive" else ACCENT_LABELS[mode]))
-            if self.settings.diagnostic_mode:
+            if self.settings.diagnostic_mode and not self.settings.mini_mode:
                 self.tone_label.place(relx=.045, rely=.195, anchor="nw")
             else:
                 self.tone_label.place_forget()
             operational = OPERATIONAL[self.operation]
             symbol = {"allowed": "✓", "info": "●", "caution": "!", "confirm": "?", "error": "!", "inactive": "○"}[self.operation]
             detail = self.operation_detail.strip()
+            if self.settings.mini_mode:
+                detail = detail[:60] if self.operation in {"error", "confirm", "caution"} else ""
             if len(detail) > 140:
                 detail = detail[:137] + "…"
             label = symbol + " " + operational["label"] + ("\n" + detail if detail else "")
-            self.operation_label.configure(text=label, wraplength=max(180, round(width * 0.40)),
+            self.operation_label.configure(text=label, wraplength=max(180, round(width * (.90 if self.settings.mini_mode else .40))),
                                            fg=readable_accent(operational["color"], self.settings.background))
+            if self.settings.mini_mode:
+                if self.operation in {"error", "confirm", "caution", "allowed"}:
+                    self.operation_label.place(relx=.5, rely=.73, relwidth=.92, anchor="center")
+                else:
+                    self.operation_label.place_forget()
         self._render_caption()
         self._render_timing(width, self.canvas.winfo_height())
-        if self.settings.subtitles and self.caption_text and self.state == "jarvis_speaking":
+        if not self.settings.mini_mode and self.settings.subtitles and self.caption_text and self.state == "jarvis_speaking":
             self.caption_label.place(relx=0.5, y=self._caption_top or self.canvas.winfo_height() * .70,
                                      relwidth=0.82, anchor="n")
             if self._caption_footer_visible:
@@ -1340,6 +1506,9 @@ class PresenceView:
         self._saved_preferences = values
         old_mode = self.settings.spectrum_mode
         self.settings = self.model.settings = candidate
+        if not candidate.microexpressions or candidate.reduced_motion or not candidate.animations:
+            self.model.micro.cancel()
+        self._apply_window_mode()
         if not candidate.semantic_morphing:
             self.semantic.cancel()
             self._semantic_cues.clear()
@@ -1385,7 +1554,7 @@ class PresenceView:
             self.settings_dialog.lift()
             return
         dialog = self.settings_dialog = tk.Toplevel(self.window)
-        dialog.title("PRESENCE · affichage")
+        dialog.title("PRESENCE · atelier")
         dialog.transient(self.window)
         colors = palette(self.settings.background)
         dialog.configure(bg=colors["background"], padx=20, pady=18)
@@ -1421,11 +1590,56 @@ class PresenceView:
             # FocusIn propagates through the toplevel bindtag; only reveal
             # descendants of this page, without changing global mouse bindings.
             dialog.bind("<FocusIn>", lambda event: reveal(event) if str(event.widget).startswith(str(inner) + ".") else None, add="+")
+            def wheel(event):
+                if (str(event.widget).startswith(str(inner))
+                        and not isinstance(event.widget, (ttk.Combobox, tk.Scale))):
+                    direction = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
+                    canvas.yview_scroll(direction * 3, "units")
+                    return "break"
+            for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+                dialog.bind(sequence, wheel, add="+")
             return inner
+        workshop = page("Atelier")
         visual = page("Visualiseur")
         spectrum_page = page("Spectre et aperçu")
         captions_page = page("Sous-titres")
         expressions_page = page("Expressions")
+        tk.Label(workshop, text="Un seul visualiseur · aperçu hors ligne sans micro ni modèle",
+                 bg=colors["background"], fg=colors["muted"], wraplength=420,
+                 justify="left").pack(anchor="w", pady=(0, 10))
+        for key, label, choices in (("ambience", "Ambiance visuelle", AMBIENCE_LABELS),
+                                     ("emotional_palette", "Palette émotionnelle", PALETTE_LABELS)):
+            tk.Label(workshop, text=label, bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
+            variable = tk.StringVar(value=choices[getattr(self.settings, key)])
+            choice = ttk.Combobox(workshop, name=key, state="readonly", textvariable=variable,
+                                  values=list(choices.values()))
+            choice.pack(fill="x", pady=(4, 10))
+            choice.bind("<<ComboboxSelected>>", lambda _event, k=key, v=variable, c=choices:
+                        self.set_options(**{k: next(option for option, label in c.items() if label == v.get())}))
+        for key, label, low, high in (("halo_intensity", "Intensité du halo (%)", 0, 100),
+                                       ("thinking_size", "Taille du noyau THINKING (%)", 70, 130)):
+            tk.Label(workshop, text=label, bg=colors["background"], fg=colors["foreground"]).pack(anchor="w")
+            variable = tk.IntVar(value=getattr(self.settings, key))
+            tk.Scale(workshop, name=key, from_=low, to=high, resolution=1, orient="horizontal", variable=variable,
+                     bg=colors["background"], fg=colors["foreground"], troughcolor=colors["button"],
+                     highlightthickness=0, command=lambda value, k=key:
+                     self.set_options(**{k: round(float(value))})).pack(fill="x", pady=(0, 10))
+        micro_enabled = tk.BooleanVar(value=self.settings.microexpressions)
+        tk.Checkbutton(workshop, text="Microexpressions contextuelles", variable=micro_enabled,
+                       bg=colors["background"], fg=colors["foreground"], selectcolor=colors["button"],
+                       command=lambda: self.set_options(microexpressions=micro_enabled.get())).pack(anchor="w", pady=6)
+        micro_family = tk.StringVar(value=MICRO_LABELS["surprise"])
+        ttk.Combobox(workshop, name="micro_family", state="readonly", textvariable=micro_family,
+                     values=list(MICRO_LABELS.values())).pack(fill="x", pady=4)
+        ttk.Button(workshop, text="Prévisualiser la microexpression", command=lambda:
+                   self.preview_workshop(next(key for key, label in MICRO_LABELS.items() if label == micro_family.get()))).pack(fill="x", pady=4)
+        ttk.Button(workshop, text="Prévisualiser le noyau THINKING", command=self.preview_workshop).pack(fill="x", pady=4)
+        ttk.Button(workshop, text="Prévisualiser la ligne sans signal", command=lambda: self.preview_workshop("line")).pack(fill="x", pady=4)
+        ttk.Button(workshop, text="Arrêter l’aperçu", command=self.clear_preview).pack(fill="x", pady=4)
+        ttk.Button(workshop, text="Mini-PRESENCE / fenêtre normale (F10)", command=self.toggle_mini).pack(fill="x", pady=(12, 4))
+        tk.Label(workshop, text="Épaisseur, fluidité et qualité : onglet Visualiseur. Morphing : Expressions.\n"
+                 "Ces ambiances sont visuelles ; elles ne modifient ni voix, ni permissions, ni capacités.",
+                 wraplength=420, justify="left", bg=colors["background"], fg=colors["muted"]).pack(anchor="w", pady=8)
         morph_enabled = tk.BooleanVar(value=self.settings.semantic_morphing)
         ttk.Checkbutton(expressions_page, text="Semantic Morphing", variable=morph_enabled,
                         command=lambda: self.set_options(semantic_morphing=morph_enabled.get())).pack(anchor="w", pady=8)
@@ -1471,7 +1685,7 @@ class PresenceView:
         tk.Label(visual, text="Expressivité de l’onde (%)", bg=colors["background"],
                  fg=colors["foreground"]).pack(anchor="w")
         expressivity = tk.IntVar(value=self.settings.wave_expressivity)
-        tk.Scale(visual, from_=0, to=100, resolution=1, orient="horizontal", variable=expressivity,
+        tk.Scale(visual, name="wave_expressivity", from_=0, to=100, resolution=1, orient="horizontal", variable=expressivity,
                  bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
                  troughcolor=colors["button"],
                  command=lambda value: self.set_options(wave_expressivity=round(float(value)))).pack(fill="x")
@@ -1516,7 +1730,7 @@ class PresenceView:
         tk.Label(spectrum_page, text="Intensité du spectre (%)", bg=colors["background"],
                  fg=colors["foreground"]).pack(anchor="w")
         intensity = tk.IntVar(value=self.settings.spectrum_intensity)
-        tk.Scale(spectrum_page, from_=0, to=100, resolution=1, orient="horizontal", variable=intensity,
+        tk.Scale(spectrum_page, name="spectrum_intensity", from_=0, to=100, resolution=1, orient="horizontal", variable=intensity,
                  bg=colors["background"], fg=colors["foreground"], highlightthickness=0,
                  troughcolor=colors["button"],
                  command=lambda value: self.set_options(spectrum_intensity=round(float(value)))).pack(fill="x")
@@ -1660,6 +1874,7 @@ class PresenceView:
         window = self.window
         self._caption_font = None
         self.window = self.canvas = None
+        self._window_mode = self._controls_layout = None
         self.settings_dialog = None
         if window is not None and window.winfo_exists():
             window.destroy()

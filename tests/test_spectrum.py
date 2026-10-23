@@ -8,6 +8,15 @@ from jarvis.spectrum import (
 
 
 class SpectrumTests(unittest.TestCase):
+    def test_surprise_uses_existing_local_scopes_and_never_changes_operational_colors(self):
+        operational = dict(OPERATIONAL)
+        self.assertEqual(ToneAnalyzer().update("Je suis vraiment surpris !").name, "surprise")
+        self.assertEqual(ToneAnalyzer().update("Je suis étonnée.").name, "surprise")
+        for text in ("Je ne suis pas surpris.", "Le mot surprise est cité.",
+                     'Il écrit « Je suis surpris ».', "Je suis surpris ?"):
+            self.assertEqual(ToneAnalyzer().update(text), Tone())
+        self.assertEqual(OPERATIONAL, operational)
+
     def test_expression_is_default_and_a_single_explicit_cue_suffices(self):
         analyzer = ToneAnalyzer()
         self.assertEqual(analyzer.mode, "expression")

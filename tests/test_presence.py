@@ -144,8 +144,8 @@ class GeometryTests(unittest.TestCase):
         self.assertTrue(all(model.target_geometry(1000, 700, now=1) ==
                             models[0].target_geometry(1000, 700, now=1) for model in models))
         widths = stroke_widths(6)
-        self.assertTrue(3 <= widths[-1] <= 4)
-        self.assertTrue(8 <= widths[0] <= 14)
+        self.assertTrue(5.5 <= widths[-1] <= 6.5)
+        self.assertTrue(25 <= widths[0] <= 30)
         self.assertAlmostEqual(dpi_scale(96 / 72), 1)
         self.assertAlmostEqual(dpi_scale(144 / 72), 1.5)
         self.assertEqual(stroke_widths(6, 1.5), tuple(width * 1.5 for width in widths))
@@ -160,7 +160,11 @@ class GeometryTests(unittest.TestCase):
             self.assertTrue(0.25 <= diameter / min(width, height) <= 0.35)
             model.update_event("jarvis_speaking", SIGNAL, now=2)
             speaking = model.frame(width, height, now=2)
-            self.assertGreater(bounds(speaking)[2] - bounds(speaking)[0], diameter)
+            # Speaking retains its real PCM expansion; THINKING is a wider,
+            # flatter lens, so compare its vertical extent rather than width.
+            self.assertGreater(bounds(speaking)[3] - bounds(speaking)[1],
+                               bounds(core)[3] - bounds(core)[1])
+            self.assertGreater(bounds(speaking)[2] - bounds(speaking)[0], 2 * core_radius(width, height))
             self.assertEqual(len(speaking), len(core))
             model.update_event("jarvis_speaking", {"rms": 0, "wave": [1, -1]}, now=2.1)
             self.assertTrue(all(y == height / 2 for _, y in model.frame(width, height, now=2.1)))
@@ -317,7 +321,7 @@ class GeometryTests(unittest.TestCase):
         model.update_event("jarvis_speaking", SIGNAL, now=6)
         self.assertNotEqual(core, model.target_geometry(1000, 700, now=6.01))
 
-    def test_core_is_circular_and_centred_in_multiple_aspect_ratios(self):
+    def test_thinking_lens_and_round_pcm_core_are_distinct_and_centred(self):
         model = PresenceModel(PresenceSettings(reduced_motion=True))
         for width, height in ((620, 440), (480, 840), (1920, 1080), (3440, 1440), (900, 600)):
             for signal in (None, SIGNAL):
@@ -325,10 +329,13 @@ class GeometryTests(unittest.TestCase):
                 points = model.frame(width, height, now=0.01)
                 self.assert_centered(points, width, height)
                 if signal is None:
-                    radius = core_radius(width, height)
-                    for x, y in points:
-                        self.assertAlmostEqual(math.hypot(x - width / 2, y - height / 2), radius, places=6)
-                    self.assertAlmostEqual(bounds(points)[2] - bounds(points)[0], 2 * radius)
+                    left, top, right, bottom = bounds(points)
+                    self.assertGreater((right - left) / (bottom - top), 1.35)
+                    thinking = points
+                else:
+                    left, top, right, bottom = bounds(points)
+                    self.assertTrue(.9 < (right - left) / (bottom - top) < 1.1)
+                    self.assertNotEqual(points, thinking)
         self.assertAlmostEqual(core_radius(1000, 700), 101.5)
 
     def test_one_mesh_morphs_reversibly_and_interrupts_without_waiting(self):
@@ -592,7 +599,10 @@ class PresenceTkTests(unittest.TestCase):
         self.store.set_preference("voice", {"vad_threshold": 0.6, "silence_ms": 800})
         self.view.show()
         self.view.open_settings()
-        slider = next(child for child in widgets(self.view.settings_dialog) if isinstance(child, tk.Scale))
+        notebook = next(widget for widget in self.view.settings_dialog.winfo_children() if isinstance(widget, ttk.Notebook))
+        notebook.select(next(tab for tab in notebook.tabs() if notebook.tab(tab, "text") == "Visualiseur"))
+        slider = next(child for child in widgets(self.view.settings_dialog)
+                      if isinstance(child, tk.Scale) and child.winfo_name() == "wave_expressivity")
         self.assertEqual(slider.get(), 75)
         self.root.update()
         slider.set(90)
@@ -609,8 +619,8 @@ class PresenceTkTests(unittest.TestCase):
         self.root.update()
         size = (self.view.canvas.winfo_width(), self.view.canvas.winfo_height())
         self.view.open_settings()
-        next(widget for widget in self.view.settings_dialog.winfo_children()
-             if isinstance(widget, ttk.Notebook)).select(1)
+        notebook = next(widget for widget in self.view.settings_dialog.winfo_children() if isinstance(widget, ttk.Notebook))
+        notebook.select(next(tab for tab in notebook.tabs() if notebook.tab(tab, "text") == "Spectre et aperçu"))
         self.root.update()
         children = widgets(self.view.settings_dialog)
         mode = next(widget for widget in children if isinstance(widget, ttk.Combobox)
@@ -618,7 +628,8 @@ class PresenceTkTests(unittest.TestCase):
         self.assertEqual(mode.get(), "Ambiance du sujet")
         mode.set("Ambiance du sujet")
         mode.event_generate("<<ComboboxSelected>>")
-        slider = [widget for widget in children if isinstance(widget, tk.Scale) and float(widget.cget("from")) == 0][1]
+        slider = next(widget for widget in children if isinstance(widget, tk.Scale)
+                      and widget.winfo_name() == "spectrum_intensity")
         self.assertEqual(slider.get(), 65)
         slider.set(85)
         entry = next(widget for widget in children if type(widget) is ttk.Entry)
@@ -726,7 +737,7 @@ class PresenceTkTests(unittest.TestCase):
             left, top, right, bottom = bounds(self.view.model.points)
             self.assertAlmostEqual((left + right) / 2, actual_width / 2)
             self.assertAlmostEqual((top + bottom) / 2, actual_height / 2)
-            self.assertAlmostEqual(right - left, bottom - top)
+            self.assertAlmostEqual((right - left) / (bottom - top), 1.08 / .76)
             self.assertIsNone(self.view.after_id)
 
     def test_emotional_modes_persist_and_never_recolor_operational_controls(self):
