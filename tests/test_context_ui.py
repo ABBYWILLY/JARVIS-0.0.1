@@ -136,12 +136,10 @@ class ContextDesktopTests(unittest.TestCase):
     def test_settings_persist_targeting_and_retrieval_budget(self):
         self.app.open_settings()
         dialog = next(widget for widget in self.root.winfo_children() if isinstance(widget, tk.Toplevel))
-        dialog.nametowidget("targeted_context").invoke()
-        entry = dialog.nametowidget("retrieval_budget")
+        dialog.controls["targeted_context"].invoke()
+        entry = dialog.controls["retrieval_budget"]
         self.root.setvar(entry.cget("textvariable"), "1024")
-        save = next(widget for widget in dialog.winfo_children()
-                    if isinstance(widget, ttk.Button) and widget.cget("text") == "Enregistrer")
-        save.invoke()
+        dialog.save_button.invoke()
         self.assertFalse(self.store.settings().targeted_context)
         self.assertEqual(self.store.settings().retrieval_budget, 1024)
         self.assertEqual(self.store.settings().reasoning_mode, "fast")

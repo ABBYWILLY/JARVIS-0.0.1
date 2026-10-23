@@ -605,14 +605,11 @@ class VoiceFlowTests(unittest.TestCase):
         from jarvis.voice_config import PERSONALITY_PROMPTS
         endpoint = self.app.settings.endpoint
         with patch("jarvis.audio.device_inventory", return_value={"input": [], "output": []}):
-            self.voice.open_settings()
-        dialog = next(child for child in self.root.winfo_children() if isinstance(child, tk.Toplevel))
-        choice = next(child for child in dialog.winfo_children()
-                      if child.winfo_class() == "TCombobox" and "UNHINGED" in child.cget("values"))
+            dialog = self.voice.open_settings()
+        choice = dialog.controls["personality"]
+        self.assertIn("UNHINGED", choice.cget("values"))
         choice.set("UNHINGED")
-        save = next(child for child in dialog.winfo_children()
-                    if child.winfo_class() == "TButton" and child.cget("text") == "Enregistrer")
-        save.invoke()
+        dialog.save_button.invoke()
         self.assertEqual(self.app.settings.system_prompt, PERSONALITY_PROMPTS["UNHINGED"])
         self.assertEqual(self.app.settings.endpoint, endpoint)
         self.assertFalse(self.voice.listening)

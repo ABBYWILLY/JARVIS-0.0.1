@@ -76,3 +76,19 @@ Le repos dessine une frame puis attend. Voir `PRESENCE-GPU-BENCHMARKS.md` et
 **Validation matérielle en attente** : Windows11/RTX3070, micro/VAD/Whisper,
 Piper audible, Qwen réel, interruptions et coexistence des charges, rendu à
 différents DPI et appréciation des captures/animations par l'utilisateur.
+
+## Étape B — Centre de contrôle livré
+
+Cinq familles et recherche globale insensible aux accents ; les résultats ouvrent
+les éditeurs existants, sans nouvelle table ni copie des valeurs. Avancé est
+replié par défaut, révélé par une recherche. Ctrl+, ouvre le Centre, Ctrl+F
+recherche, flèche bas/Entrée choisissent, Escape ferme. Les formulaires modèle
+et Voix ont un corps défilant et des actions fixes. Seuil VAD et threads CPU
+existants sont désormais exposés dans Avancé, sans modification automatique.
+Mémoire reste son éditeur existant : sa largeur minimale820px est une limite
+connue, pas une conformité responsive annoncée pour tous les écrans.
+
+24tests intégrés Tk9 réussis ; 7tests Voix ciblés Tk8.6 réussis. Fenêtres
+360×340/620×380/380×640, DPI100/250% testés pour le Centre ; clavier, fermeture
+sans callbacks et source de préférences unique vérifiés. CI de cette étape :
+voir le commit et le dernier run Actions, résultat à confirmer après push.

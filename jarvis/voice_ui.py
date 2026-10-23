@@ -51,6 +51,7 @@ class VoiceControls:
         self.diagnostics = {}
         self.diagnostic_events = deque(maxlen=32)
         self.diagnostic_window = None
+        self.settings_dialog = None
         self.last_capture_event = "aucun"
         self.last_capture_event_at = self.last_pcm_at = None
         self.diagnostic_failure = ""
@@ -796,7 +797,14 @@ class VoiceControls:
             else:
                 self.set_mic_state("error", "Suspension du microphone impossible")
 
-    def open_settings(self):
+    def open_settings(self, focus_key=None):
+        """One scrollable editor; the profile remains the sole saved voice state."""
+        existing = getattr(self, "settings_dialog", None)
+        if existing is not None and existing.winfo_exists():
+            existing.lift()
+            if focus_key is not None:
+                existing.focus_control(focus_key)
+            return existing
         if self.listening or self.app.operation:
             messagebox.showinfo("Voix", "Désactivez l’écoute et terminez la génération avant de changer les périphériques.", parent=self.app.root)
             return
@@ -806,12 +814,64 @@ class VoiceControls:
         except Exception as exc:
             devices = {"input": [], "output": []}
             self.status.set(audio_error(exc))
-        dialog = tk.Toplevel(self.app.root)
+        dialog = self.settings_dialog = tk.Toplevel(self.app.root)
         dialog.title("Voix locale · microphone désactivé")
-        dialog.configure(bg="#121c29", padx=18, pady=18)
+        dialog.configure(bg="#121c29", padx=14, pady=12)
         dialog.transient(self.app.root)
+        width = min(660, max(280, dialog.winfo_screenwidth() - 60))
+        height = min(720, max(300, dialog.winfo_screenheight() - 100))
+        dialog.geometry(f"{width}x{height}")
+        dialog.minsize(280, 280)
         dialog.grab_set()
-        values = {}
+        footer = ttk.Frame(dialog)
+        footer.pack(side="bottom", fill="x", pady=(10, 0))
+        body = tk.Frame(dialog, bg="#121c29")
+        body.pack(fill="both", expand=True)
+        canvas = dialog.settings_canvas = tk.Canvas(body, bg="#121c29", highlightthickness=0)
+        scroll = ttk.Scrollbar(body, command=canvas.yview)
+        scroll.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        canvas.configure(yscrollcommand=scroll.set)
+        content = tk.Frame(canvas, bg="#121c29", padx=2)
+        item = canvas.create_window(0, 0, anchor="nw", window=content)
+        labels = []
+
+        def note(parent, text, muted=False):
+            label = tk.Label(parent, text=text, bg="#121c29", fg="#a6b8cb" if muted else "#e4edf6",
+                             justify="left", anchor="w", wraplength=width - 65)
+            label.pack(fill="x", pady=(7, 3))
+            labels.append(label)
+            return label
+
+        def resize(event):
+            canvas.itemconfigure(item, width=event.width)
+            for label in labels:
+                label.configure(wraplength=max(100, event.width - 12))
+
+        canvas.bind("<Configure>", resize)
+        content.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        def reveal(widget):
+            if not str(widget).startswith(str(content) + ".") or not widget.winfo_viewable():
+                return
+            y = widget.winfo_rooty() - content.winfo_rooty()
+            bottom = y + widget.winfo_height()
+            top = canvas.canvasy(0)
+            if y < top or bottom > top + canvas.winfo_height():
+                canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, content.winfo_height()))
+
+        dialog.bind("<FocusIn>", lambda event: reveal(event.widget), add="+")
+
+        def wheel(event):
+            if str(event.widget).startswith(str(content)) and not isinstance(event.widget, ttk.Combobox):
+                direction = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
+                canvas.yview_scroll(direction * 3, "units")
+                return "break"
+
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            dialog.bind(sequence, wheel, add="+")
+        values, controls = {}, {}
+        dialog.controls = controls
         options = {"input_device": [""] + [d["key"] for d in devices["input"]],
                    "output_device": [""] + [d["key"] for d in devices["output"]],
                    "voice": list(VOICES), "acoustic_mode": ["speakers", "headphones"],
@@ -821,23 +881,60 @@ class VoiceControls:
                   ("acoustic_mode", "speakers = haut-parleurs / headphones = casque"),
                   ("silence_ms", "Silence de fin de tour (300–2500 ms)"), ("models_dir", "Dossier modèles (vide = profil local)"),
                   ("personality", "Profil (changer remplace l’instruction système)")]
-        for row, (key, label) in enumerate(fields):
-            tk.Label(dialog, text=label, bg="#121c29", fg="#e4edf6").grid(row=row, column=0, sticky="w", pady=5)
-            values[key] = tk.StringVar(value=str(getattr(self.settings, key)))
+        def field(parent, key, label):
+            note(parent, label)
+            values[key] = tk.StringVar(dialog, value=str(getattr(self.settings, key)))
             if key in options:
-                widget = ttk.Combobox(dialog, textvariable=values[key], values=options[key], state="readonly", width=45)
+                widget = ttk.Combobox(parent, name=key, textvariable=values[key], values=options[key], state="readonly", width=1)
             else:
-                widget = ttk.Entry(dialog, textvariable=values[key], width=48)
-            widget.grid(row=row, column=1, sticky="ew", padx=8)
-        ttk.Button(dialog, text="Choisir dossier…", command=lambda: values["models_dir"].set(filedialog.askdirectory(parent=dialog) or values["models_dir"].get())).grid(row=8, column=1, sticky="e")
-        speak_code = tk.BooleanVar(value=self.settings.speak_code)
-        ttk.Checkbutton(dialog, text="Lire le contenu des blocs de code (sinon : « Bloc de code non lu »)",
-                        variable=speak_code).grid(row=9, column=0, columnspan=2, sticky="w")
+                widget = ttk.Entry(parent, name=key, textvariable=values[key], width=1)
+            widget.pack(fill="x", pady=(0, 4))
+            controls[key] = widget
+
+        for key, label in fields:
+            field(content, key, label)
+        ttk.Button(content, text="Choisir dossier…", command=lambda: values["models_dir"].set(filedialog.askdirectory(parent=dialog) or values["models_dir"].get())).pack(fill="x", pady=4)
+        speak_code = tk.BooleanVar(dialog, value=self.settings.speak_code)
+        controls["speak_code"] = ttk.Checkbutton(content, name="speak_code", text="Lire les blocs de code", variable=speak_code)
+        controls["speak_code"].pack(anchor="w", pady=(10, 0))
+        note(content, "Sinon, la voix annonce « Bloc de code non lu ».", muted=True)
+        advanced = tk.Frame(content, bg="#121c29")
+        advanced_open = False
+
+        def toggle_advanced(opened=None):
+            nonlocal advanced_open
+            advanced_open = not advanced_open if opened is None else bool(opened)
+            advanced_button.configure(text=("▾" if advanced_open else "▸") + " Réglages avancés")
+            if advanced_open:
+                advanced.pack(fill="x", after=advanced_button)
+            else:
+                advanced.pack_forget()
+
+        advanced_button = ttk.Button(content, name="advanced", text="▸ Réglages avancés", command=toggle_advanced)
+        advanced_button.pack(fill="x", pady=(12, 4))
+        field(advanced, "vad_threshold", "Seuil de détection vocale (0.3–0.95)")
+        note(advanced, "Valeur conservée tant que vous ne la changez pas. Un seuil plus bas peut détecter davantage de bruit ; consultez le diagnostic avant de l’ajuster.", muted=True)
+        field(advanced, "cpu_threads", "Threads CPU audio (1–8)")
+        note(advanced, "Un nombre élevé peut concurrencer les autres traitements locaux. Ce réglage ne change pas le moteur vocal.", muted=True)
+
+        def focus_control(key):
+            widget = controls.get(key)
+            if widget is None:
+                return False
+            if key in {"vad_threshold", "cpu_threads"}:
+                toggle_advanced(True)
+            dialog.update_idletasks()
+            widget.focus_set()
+            reveal(widget)
+            return True
+
+        dialog.focus_control = focus_control
 
         def save(close=True):
             try:
-                candidate = replace(self.settings, **{k: v.get() for k, v in values.items() if k not in {"speed", "silence_ms"}},
+                candidate = replace(self.settings, **{k: v.get() for k, v in values.items() if k not in {"speed", "silence_ms", "vad_threshold", "cpu_threads"}},
                                     speed=float(values["speed"].get()), silence_ms=int(values["silence_ms"].get()),
+                                    vad_threshold=float(values["vad_threshold"].get()), cpu_threads=int(values["cpu_threads"].get()),
                                     speak_code=speak_code.get()).validate()
                 if candidate.personality != self.settings.personality and candidate.personality in PERSONALITY_PROMPTS:
                     model_settings = replace(self.app.settings, system_prompt=PERSONALITY_PROMPTS[candidate.personality])
@@ -846,7 +943,7 @@ class VoiceControls:
                 self.app.store.set_preference("voice", candidate.to_dict())
                 self.cancel_speech()
                 self.settings = candidate
-            except (ValueError, OSError, sqlite3.Error) as exc:
+            except (ValueError, OSError, sqlite3.Error, tk.TclError) as exc:
                 messagebox.showerror("Voix", str(exc), parent=dialog)
                 return
             if close:
@@ -854,7 +951,21 @@ class VoiceControls:
             else:
                 self.preview()
 
-        tk.Label(dialog, text="Modèles à installer séparément (guide docs/VOICE.md). Aucun téléchargement automatique.\nCasque requis pour interrompre par la voix pendant la lecture. Aucun AEC haut-parleurs annoncé.",
-                 bg="#121c29", fg="#a6b8cb", wraplength=700, justify="left").grid(row=10, column=0, columnspan=2, pady=12, sticky="w")
-        ttk.Button(dialog, text="Préécoute réelle", command=lambda: save(False)).grid(row=11, column=0, sticky="w")
-        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=11, column=1, sticky="e")
+        note(content, "Modèles à installer séparément (guide docs/VOICE.md). Aucun téléchargement automatique.\nCasque requis pour interrompre par la voix pendant la lecture. Aucun AEC haut-parleurs annoncé.", muted=True)
+        note(content, "La préécoute réelle enregistre d’abord vos réglages, puis utilise Piper local.", muted=True)
+        ttk.Button(content, name="preview_voice", text="Préécoute réelle", command=lambda: save(False)).pack(fill="x", pady=8)
+        dialog.save_button = ttk.Button(footer, name="save_voice", text="Enregistrer", command=save)
+        dialog.save_button.pack(fill="x", pady=(0, 4))
+        dialog.cancel_button = ttk.Button(footer, name="cancel_voice", text="Annuler", command=dialog.destroy)
+        dialog.cancel_button.pack(fill="x")
+
+        def closed(event):
+            if event.widget is dialog:
+                self.settings_dialog = None
+
+        dialog.bind("<Destroy>", closed, add="+")
+        dialog.bind("<Escape>", lambda _event: (dialog.destroy(), "break")[-1])
+        dialog.bind("<Control-s>", lambda _event: (save(), "break")[-1])
+        if focus_key is not None:
+            focus_control(focus_key)
+        return dialog

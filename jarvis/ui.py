@@ -184,8 +184,9 @@ class App:
         preferences.pack(fill="x", pady=(6, 8))
         tk.Label(preferences, text="PRÉFÉRENCES", bg=PANEL, fg=MUTED,
                  font=(self.font_family, 9)).pack(anchor="w", pady=(0, 6))
-        self.settings_button = ttk.Button(preferences, text="Paramètres", command=self.open_settings)
+        self.settings_button = ttk.Button(preferences, text="Centre de contrôle", command=self.open_control_center)
         self.settings_button.pack(fill="x")
+        root.bind("<Control-comma>", self.open_control_center)
         ttk.Button(preferences, text="Lecture et typographie", command=self.open_conversation_settings).pack(fill="x", pady=4)
         tk.Label(sidebar, text="VOIX LOCALE", bg=PANEL, fg=MUTED,
                  font=(self.font_family, 9)).pack(anchor="w", pady=(12, 0))
@@ -430,7 +431,7 @@ class App:
         from .markdown_view import ConversationTypography, MarkdownView
         if self.conversation_dialog is not None and self.conversation_dialog.winfo_exists():
             self.conversation_dialog.lift()
-            return
+            return self.conversation_dialog
         dialog = self.conversation_dialog = tk.Toplevel(self.root)
         dialog.title("COMMAND OS · lecture")
         dialog.transient(self.root)
@@ -603,6 +604,18 @@ class App:
         dialog.bind("<Destroy>", closed)
         ttk.Button(footer, text="Enregistrer", command=save).pack(side="right")
         ttk.Button(footer, text="Fermer", command=dialog.destroy).pack(side="left")
+        return dialog
+
+    def open_control_center(self, _event=None):
+        from .control_center import ControlCenter
+        current = getattr(self, "control_center", None)
+        if current is None or not current.window.winfo_exists():
+            self.control_center = ControlCenter(self)
+        else:
+            current.window.deiconify()
+            current.window.lift()
+            current.focus_search()
+        return self.control_center
 
     def set_status(self, text, error=False):
         from .spectrum import OPERATIONAL
@@ -1018,20 +1031,29 @@ class App:
     def open_settings(self):
         if self.operation:
             return
-        dialog = tk.Toplevel(self.root)
+        current = getattr(self, "model_dialog", None)
+        if current is not None and current.winfo_exists():
+            current.lift()
+            return current
+        dialog = self.model_dialog = tk.Toplevel(self.root)
         dialog.title("Paramètres locaux")
         dialog.configure(bg=PANEL, padx=20, pady=14)
         dialog.transient(self.root)
         dialog.grab_set()
+        from .settings_form import SettingsForm
+        shell = SettingsForm(dialog, background=PANEL)
+        form, footer = shell.content, shell.footer
+        dialog.controls = controls = {}
         variables = {}
         fields = [("endpoint", "Adresse Ollama locale"), ("temperature", "Température (0–2)"),
                   ("context", "Contexte total (tokens)"), ("max_tokens", "Budget discussion (tokens)"),
                   ("voice_tokens", "Budget réponse vocale (tokens)"),
                   ("mission_tokens", "Budget mission complexe (tokens)")]
         for i, (key, label) in enumerate(fields):
-            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=i, column=0, sticky="w", pady=3, padx=(0, 16))
+            tk.Label(form, text=label, bg=PANEL, fg=TEXT).grid(row=i * 2, column=0, sticky="w", pady=3)
             variables[key] = tk.StringVar(value=str(getattr(self.settings, key)))
-            ttk.Entry(dialog, textvariable=variables[key], width=34).grid(row=i, column=1, sticky="ew")
+            controls[key] = ttk.Entry(form, name=key, textvariable=variables[key], width=16)
+            controls[key].grid(row=i * 2 + 1, column=0, sticky="ew")
         choices = {
             "reasoning_mode": {"Rapide": "fast", "Automatique": "auto", "Approfondi": "deep"},
             "usage": {"Discussion": "chat", "Réponse vocale": "voice", "Mission complexe": "mission"},
@@ -1039,28 +1061,31 @@ class App:
         for row, (key, label) in enumerate((("reasoning_mode", "Raisonnement"), ("usage", "Utilisation")), start=len(fields)):
             values = choices[key]
             variables[key] = tk.StringVar(value=next(name for name, value in values.items() if value == getattr(self.settings, key)))
-            tk.Label(dialog, text=label, bg=PANEL, fg=TEXT).grid(row=row, column=0, sticky="w", pady=3, padx=(0, 16))
-            ttk.Combobox(dialog, textvariable=variables[key], values=list(values), state="readonly", width=32).grid(row=row, column=1, sticky="ew")
-        context_row = len(fields) + len(choices)
+            tk.Label(form, text=label, bg=PANEL, fg=TEXT).grid(row=row * 2, column=0, sticky="w", pady=3)
+            controls[key] = ttk.Combobox(form, name=key, textvariable=variables[key], values=list(values), state="readonly", width=16)
+            controls[key].grid(row=row * 2 + 1, column=0, sticky="ew")
+        context_row = (len(fields) + len(choices)) * 2
         variables["targeted_context"] = tk.BooleanVar(value=self.settings.targeted_context)
-        ttk.Checkbutton(dialog, name="targeted_context", text="Contexte ciblé et rappel lexical des anciens échanges",
-            variable=variables["targeted_context"]).grid(row=context_row, column=0, columnspan=2, sticky="w", pady=3)
+        controls["targeted_context"] = ttk.Checkbutton(form, name="targeted_context", text="Contexte ciblé et rappel lexical",
+            variable=variables["targeted_context"])
+        controls["targeted_context"].grid(row=context_row, column=0, sticky="w", pady=3)
         variables["retrieval_budget"] = tk.StringVar(value=str(self.settings.retrieval_budget))
-        tk.Label(dialog, text="Budget des rappels ciblés (tokens estimés)", bg=PANEL, fg=TEXT).grid(
-            row=context_row + 1, column=0, sticky="w", pady=3, padx=(0, 16))
-        ttk.Entry(dialog, name="retrieval_budget", textvariable=variables["retrieval_budget"], width=34).grid(
-            row=context_row + 1, column=1, sticky="ew")
-        prompt_row = context_row + 2
-        tk.Label(dialog, text="Instruction système (facultative)", bg=PANEL, fg=TEXT).grid(row=prompt_row, column=0, columnspan=2, sticky="w", pady=(6, 4))
-        prompt = tk.Text(dialog, height=4, width=58, bg=FIELD, fg=TEXT, insertbackground=CYAN, wrap="word", font=(self.font_family, 10))
+        tk.Label(form, text="Budget des rappels ciblés (tokens estimés)", bg=PANEL, fg=TEXT).grid(
+            row=context_row + 1, column=0, sticky="w", pady=3)
+        controls["retrieval_budget"] = ttk.Entry(form, name="retrieval_budget", textvariable=variables["retrieval_budget"], width=16)
+        controls["retrieval_budget"].grid(row=context_row + 2, column=0, sticky="ew")
+        prompt_row = context_row + 3
+        tk.Label(form, text="Instruction système (facultative)", bg=PANEL, fg=TEXT).grid(row=prompt_row, column=0, columnspan=2, sticky="w", pady=(6, 4))
+        prompt = tk.Text(form, height=4, width=20, bg=FIELD, fg=TEXT, insertbackground=CYAN, wrap="word", font=(self.font_family, 10))
         prompt.grid(row=prompt_row + 1, column=0, columnspan=2, sticky="ew")
         prompt.insert("1.0", self.settings.system_prompt)
-        tk.Label(dialog, text="Historique et paramètres : " + str(self.store.db.execute("PRAGMA database_list").fetchone()[2]) +
+        controls["system_prompt"] = prompt
+        tk.Label(form, text="Historique et paramètres : " + str(self.store.db.execute("PRAGMA database_list").fetchone()[2]) +
                  "\nStockage local non chiffré ; aucun accès système accordé au modèle."
                  "\nRapide : think:false · Approfondi : think:true · Automatique : choix du modèle."
                  "\nMicrophone : budget vocal. Budgets effectifs plafonnés à la moitié du contexte."
                  "\nTTFT : envoi HTTP → texte visible. Les tokens de génération peuvent inclure la pensée interne.",
-                 bg=PANEL, fg=MUTED, wraplength=620, justify="left", font=(self.font_family, 9)).grid(row=prompt_row + 2, column=0, columnspan=2, pady=12, sticky="w")
+                 bg=PANEL, fg=MUTED, wraplength=300, justify="left", font=(self.font_family, 9)).grid(row=prompt_row + 2, column=0, columnspan=2, pady=12, sticky="w")
 
         def save():
             try:
@@ -1088,8 +1113,17 @@ class App:
             dialog.destroy()
             self.refresh_models()
 
-        ttk.Button(dialog, text="Enregistrer", command=save).grid(row=prompt_row + 3, column=1, sticky="e")
-        ttk.Button(dialog, text="Annuler", command=dialog.destroy).grid(row=prompt_row + 3, column=0, sticky="w")
+        dialog.save_button = ttk.Button(footer, text="Enregistrer", command=save)
+        dialog.save_button.pack(side="right")
+        ttk.Button(footer, text="Annuler", command=dialog.destroy).pack(side="left")
+        dialog.bind("<Control-s>", lambda _event: save())
+        def fit_labels(event):
+            if event.widget is form:
+                for widget in form.winfo_children():
+                    if isinstance(widget, tk.Label):
+                        widget.configure(wraplength=max(160, event.width - 12))
+        form.bind("<Configure>", fit_labels, add="+")
+        return dialog
 
     def callback_error(self, _kind, exc, _trace):
         self.voice.halt_without_persistence()

@@ -1,3 +1,20 @@
+# UX Master Control — étape B, 24 octobre 2026
+
+Inventaire A publié e2f8b27, deux CI Windows vertes (40039278838 application,
+40039278787 prototype). Centre de contrôle : cinq familles, recherche locale
+insensible aux accents, recherche globale incluant les réglages avancés,
+Ctrl+, depuis COMMAND OS, Ctrl+F/Entrée/Escape. Il ouvre les éditeurs canoniques,
+sans recopier les préférences. Paramètres modèle et Voix désormais défilants,
+actions fixes, champs atteignables au clavier ; Voix expose les seuils/threads
+existants dans Avancé sans changer leurs valeurs. Préécoute conserve son contrat
+d'enregistrement préalable, explicitement indiqué. 24tests ciblés intégrés Tk9
+réussis (4,249s), 7Voix Tk8.6 réussis. Petites fenêtres paysage/portrait et
+DPI100/250% automatisés sous Linux, pas recette Windows matérielle.
+Étapes C Studio transactionnel puis D démonstration/preuves en préparation.
+LOT2 reste non officiellement validé ; LOTS4/5/7 hors mission.
+
+---
+
 # Jalon 2 — progression vérifiable
 
 ## PRESENCE GPU — prototype optionnel

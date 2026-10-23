@@ -119,14 +119,10 @@ class ReasoningDesktopTests(unittest.TestCase):
     def test_settings_dialog_persists_reasoning_usage_and_three_budgets(self):
         self.app.open_settings()
         dialog = next(child for child in self.root.winfo_children() if isinstance(child, tk.Toplevel))
-        by_row = {int(widget.grid_info()["row"]): widget for widget in dialog.winfo_children()
-                  if isinstance(widget, (ttk.Entry, ttk.Combobox))}
-        for row, value in ((3, "800"), (4, "180"), (5, "3000"),
-                           (6, "Approfondi"), (7, "Mission complexe")):
-            self.root.setvar(by_row[row].cget("textvariable"), value)
-        save = next(widget for widget in dialog.winfo_children()
-                    if isinstance(widget, ttk.Button) and widget.cget("text") == "Enregistrer")
-        save.invoke()
+        for key, value in (("max_tokens", "800"), ("voice_tokens", "180"), ("mission_tokens", "3000"),
+                           ("reasoning_mode", "Approfondi"), ("usage", "Mission complexe")):
+            self.root.setvar(dialog.controls[key].cget("textvariable"), value)
+        dialog.save_button.invoke()
         saved = self.store.settings()
         self.assertEqual((saved.reasoning_mode, saved.usage), ("deep", "mission"))
         self.assertEqual((saved.max_tokens, saved.voice_tokens, saved.mission_tokens), (800, 180, 3000))
