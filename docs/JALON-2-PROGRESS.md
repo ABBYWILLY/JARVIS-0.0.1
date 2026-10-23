@@ -1,5 +1,19 @@
 # Jalon 2 — progression vérifiable
 
+## Cognitive Evolution — LOT3 C1
+
+Reprise du travail interrompu : routage heuristique local avec priorité manuelle,
+budgets J2.8 conservés et provenance du choix persistée ; Créatif documenté comme
+politique de génération. Continuer épingle objectif/passages originaux dans le
+contexte existant, chaîne complète si possible sinon extraits déclarés ; archive,
+brouillon et interruptions préservés. Pas de résumé LLM systématique.
+Mémoire/Contexte expose les inclusions enregistrées, distingue souvenirs approuvés,
+historique, demande utilisateur et texte généré non vérifié. Pas de migration ni
+de mémorisation implicite, garanties de sauvegarde inchangées.
+91tests backend +27interfaceTk9 +41interfaceTk8.6 réussis ; tests à doublures
+Ollama, sans prétendre avoir mesuré la qualité narrative ou le matériel Windows.
+LOT6 et dernière suite intégrée/CI : sections suivantes et dernier run Actions.
+
 ## Reprise du23octobre — Semantic Morphing
 
 Correctif ciblé : attente THINKING idempotente, statuts STT tardifs non

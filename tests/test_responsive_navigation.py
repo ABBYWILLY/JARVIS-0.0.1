@@ -58,7 +58,7 @@ class ResponsiveNavigationTests(unittest.TestCase):
                     self.root.update()
                     for button in (self.app.sidebar_button, self.app.conversation_button,
                                    self.app.presence_button, self.app.emergency_button,
-                                   self.app.send_button, self.app.stop_button):
+                                   self.app.send_button, self.app.continue_button, self.app.stop_button):
                         self.assert_in_client(button)
                     self.assertGreater(self.app.chat.winfo_height(), 0)
                     self.assertIs(self.app.presence_button.master, self.app.navigation)
@@ -226,7 +226,7 @@ class ResponsiveNavigationTests(unittest.TestCase):
                 self.app.set_conversation_typography(size=24, scale=175)
                 self.root.geometry("560x400")
                 self.root.update()
-                for button in (self.app.presence_button, self.app.send_button, self.app.stop_button):
+                for button in (self.app.presence_button, self.app.send_button, self.app.continue_button, self.app.stop_button):
                     self.assert_in_client(button)
                 self.assertGreater(self.app.chat.winfo_height(), 0)
                 self.assertEqual(self.app.markdown.body_font.actual("size"), 42)

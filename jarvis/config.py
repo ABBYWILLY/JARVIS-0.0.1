@@ -19,6 +19,7 @@ class Settings:
     mission_tokens: int = 4096
     targeted_context: bool = True
     retrieval_budget: int = 768
+    cognitive_mode: str = "manual"
 
     def validate(self):
         try:
@@ -40,6 +41,8 @@ class Settings:
             raise ValueError("L’instruction système est trop longue pour ce contexte.")
         if self.reasoning_mode not in {"fast", "auto", "deep"}:
             raise ValueError("Choisissez un raisonnement Rapide, Automatique ou Approfondi.")
+        if self.cognitive_mode not in {"manual", "auto", "fast", "deep", "creative"}:
+            raise ValueError("Choisissez une politique cognitive manuelle, automatique, rapide, approfondie ou créative.")
         if self.usage not in {"voice", "chat", "mission"}:
             raise ValueError("Choisissez un budget vocal, discussion ou mission.")
         for value in (self.voice_tokens, self.mission_tokens):

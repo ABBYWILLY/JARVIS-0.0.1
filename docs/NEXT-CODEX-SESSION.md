@@ -1,3 +1,28 @@
+# Reprise — LOT3 Cerveau C1, 23 octobre 2026
+
+Travail interrompu conservé et finalisé, après correctif morphing cec390b.
+Menu Conversation : politique persistante ManuelJ2.8/Automatique local/Rapide/
+Approfondi/Créatif. Heuristiques conservatrices sur la demande, sans appel LLM
+additionnel ; citations/code/négations exclus. Manuel reste prioritaire, anciens
+profils inchangés. Créatif = température minimale0,9 et think:false, pas une
+capacité de raisonnement distincte. Budgets voix/chat/mission J2.8 conservés.
+Continuer/Suite poursuit la dernière réponse finalisée non vide, même coupée à
+la limite : requête initiale et passages originaux épinglés, chaîne complète si
+elle tient, sinon extraits début/fin explicitement non exhaustifs. Contexte borné,
+erreurs visibles, brouillon et archive intacts ; aucune garantie LLM inventée.
+Mémoire : onglets Souvenirs/Historique/Contexte, approbation et sauvegardes
+existantes réutilisées. Trace limitée aux100dernières réponses de la conversation,
+inclusion inspectable, aucune mémorisation implicite. Inspecteur distingue donnée
+utilisateur/réponse générée non vérifiée/mémoire/extraits ; ne prétend ni savoir
+ce que le modèle a utilisé ni mesurer la vérité. Mode/budget/origine archivés.
+Tests ciblés :91backend,27interfaceTk9 et41interfaceTk8.6 réussis, sans Ollama
+ou microphone. Suite globale et CI : voir progression/Actions après intégration.
+Sur PC : choix modes et budgets, récit tronqué→Continuer→interrompre→Continuer,
+inspection mémoire/contexte. Qualité narrative réelle à vérifier avec Qwen.
+LOT6 et aperçu RichText finalisés séparément ; ne pas refaire les LOTS1–3.
+
+---
+
 # Reprise — correctif Semantic Morphing, 23 octobre 2026
 
 Priorité traitée avant publication des LOTS 3/6. Les trois phrases « Heureux de

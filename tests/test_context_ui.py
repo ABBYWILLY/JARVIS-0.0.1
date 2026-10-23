@@ -75,7 +75,11 @@ class ContextDesktopTests(unittest.TestCase):
         rows = self.store.messages(self.app.session_id)
         self.assertEqual([dict(row) for row in rows[:2]], originals)
         self.assertEqual(json.loads(rows[-2]["metadata"]), {"final_transcript": "Question ciblée"})
-        self.assertEqual(json.loads(rows[-1]["metadata"]), {"final_transcript": "Question ciblée", "context": record})
+        metadata = json.loads(rows[-1]["metadata"])
+        decision = metadata.pop("cognition")
+        self.assertEqual(metadata, {"final_transcript": "Question ciblée", "context": record})
+        self.assertEqual((decision["mode"], decision["origin"], decision["budget"], decision["usage"]),
+                         ("fast", "manual", self.app.settings.voice_tokens, "voice"))
         self.assertEqual(self.app.worker.calls[-1][2], outgoing)
 
     def test_real_builder_sources_link_archived_messages_without_mutation(self):
@@ -153,7 +157,7 @@ class ContextDesktopTests(unittest.TestCase):
         self.store.update_message_metadata(last, {"context": record})
         dialog = self.open_inspector()
         text = dialog.nametowidget("detail.details").get("1.0", "end")
-        self.assertIn("injecté intégralement", text)
+        self.assertIn("Original archivé :", text)
         self.assertIn(original, text)
 
     def test_legacy_history_without_context_metadata_remains_readable(self):

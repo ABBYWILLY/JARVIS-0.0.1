@@ -20,6 +20,7 @@ class MemoryDialog:
         self.selected_id = None
         self.provenance = {}
         self.rows, self.message_rows = [], []
+        self.context_records, self.context_warnings = [], []
         self.window = tk.Toplevel(app.root)
         self.window.title("Mémoire locale")
         self.window.configure(bg=PANEL, padx=14, pady=12)
@@ -28,7 +29,7 @@ class MemoryDialog:
         self.window.minsize(820, 540)
         self.window.columnconfigure(1, weight=1)
         self.window.rowconfigure(2, weight=1)
-        tk.Label(self.window, text="Ajouts en attente jusqu’à votre approbation. Aucune phrase n’est mémorisée automatiquement.",
+        tk.Label(self.window, text="Souvenirs explicites : enregistrer puis approuver. Historique et contexte de requête restent distincts.",
                  bg=PANEL, fg=MUTED, anchor="w").grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
         search = tk.Frame(self.window, bg=PANEL)
         search.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 8))
@@ -45,8 +46,10 @@ class MemoryDialog:
         tabs.grid(row=2, column=0, sticky="nsew", padx=(0, 12))
         memories = tk.Frame(tabs, bg=PANEL)
         messages = tk.Frame(tabs, bg=PANEL)
-        tabs.add(memories, text="Mémoires")
-        tabs.add(messages, text="Conversations")
+        contexts = tk.Frame(tabs, bg=PANEL)
+        tabs.add(memories, text="Souvenirs")
+        tabs.add(messages, text="Historique")
+        tabs.add(contexts, text="Contexte")
         self.memory_list = tk.Listbox(memories, width=32, bg=FIELD, fg=TEXT,
             selectbackground="#244055", selectforeground=CYAN, exportselection=False)
         self.memory_list.pack(fill="both", expand=True)
@@ -55,6 +58,11 @@ class MemoryDialog:
             selectbackground="#244055", selectforeground=CYAN, exportselection=False)
         self.message_list.pack(fill="both", expand=True)
         self.message_list.bind("<<ListboxSelect>>", self.select_message)
+        self.context_info = tk.Text(contexts, bg=FIELD, fg=TEXT, wrap="word", width=32,
+                                    state="disabled", font=(app.font_family, 10))
+        self.context_info.pack(fill="both", expand=True)
+        ttk.Button(contexts, text="Actualiser la trace", command=self.refresh_context).pack(fill="x", pady=3)
+        ttk.Button(contexts, text="Inspecter le contexte envoyé", command=app.open_context).pack(fill="x", pady=3)
         editor = tk.Frame(self.window, bg=PANEL)
         editor.grid(row=2, column=1, sticky="nsew")
         editor.columnconfigure(1, weight=1)
@@ -124,6 +132,7 @@ class MemoryDialog:
             self.rows = list(self.repo.list())
             self.message_rows = []
             self.message_list.delete(0, "end")
+            self.refresh_context()
             self.render_list(selected)
         except (ValueError, sqlite3.Error, OSError) as exc:
             self.report_error(exc)
@@ -150,7 +159,13 @@ class MemoryDialog:
         self.topic.set(row["topic"])
         self.provenance = json.loads(row["provenance"])
         self.fill(row["content"])
-        self.display_info(f"#{row['id']} · {STATUSES.get(row['status'], row['status'])}\nCréation : {row['created']}\nMise à jour : {row['updated']}\nProvenance : " + json.dumps(self.provenance, ensure_ascii=False, indent=2))
+        self.display_info(self.memory_info(row))
+
+    def memory_info(self, row):
+        return (f"Souvenir explicite #{row['id']} · {STATUSES.get(row['status'], row['status'])}\n"
+                f"Création : {row['created']}\nMise à jour : {row['updated']}\n"
+                + self.inclusion_summary(row["id"]) + "\nProvenance : "
+                + json.dumps(json.loads(row["provenance"]), ensure_ascii=False, indent=2))
 
     def select_message(self, _event=None):
         indices = self.message_list.curselection()
@@ -166,6 +181,81 @@ class MemoryDialog:
             "sources": [{"message_id": row["id"], "session_id": row["session_id"], "created": row["created"]}]}
         self.display_info(f"Consultation seule · Message #{row['id']} · {row['role']} · {row['created']}\nConversation : {row['session_id']}")
         self.status.set("Original archivé en lecture seule. Nouveau permet de rédiger une mémoire distincte.")
+
+    def refresh_context(self):
+        """Inspect recorded prompt selection, never infer a model's hidden use.
+
+        Scan at most 100 response metadata records in the active conversation;
+        no model call, new memory, migration or additional persistent cache.
+        """
+        try:
+            records = self.app.store.db.execute(
+                "SELECT id,created,metadata FROM messages WHERE session_id=? AND role='assistant' ORDER BY id DESC LIMIT 100",
+                (self.app.session_id,)).fetchall()
+            self.context_records, self.context_warnings = [], []
+            for row in records:
+                try:
+                    metadata = json.loads(row["metadata"])
+                    if not isinstance(metadata, dict):
+                        raise ValueError("métadonnées non structurées")
+                    context = metadata.get("context")
+                    if context is None:
+                        continue
+                    if not isinstance(context, dict) or not isinstance(context.get("sources", []), list):
+                        raise ValueError("trace de contexte non structurée")
+                    if any(not isinstance(source, dict) for source in context.get("sources", [])):
+                        raise ValueError("source de contexte non structurée")
+                except ValueError:
+                    self.context_warnings.append(f"Réponse #{row['id']} : trace illisible, non interprétée.")
+                    continue
+                self.context_records.append({"id": row["id"], "created": row["created"], "context": context})
+            text = ("Sélection temporaire de requête\n\n"
+                    "Trace conservée dans l’historique, distincte des souvenirs durables. "
+                    "L’inclusion dans le contexte ne prouve pas que le modèle s’en est servi, ni que l’information est vraie.\n\n")
+            if self.context_records:
+                latest = self.context_records[0]
+                sources = latest["context"].get("sources", [])
+                memories = [source for source in sources if source.get("method") == "memory"]
+                history = [source for source in sources if source.get("method") != "memory"]
+                text += (f"Dernière trace : réponse #{latest['id']} · {latest['created']}\n"
+                         f"Souvenirs explicitement rappelés : {len(memories)}\n"
+                         f"Références historiques : {len(history)}\n\n")
+                for source in sources[:32]:
+                    if source.get("method") == "memory":
+                        text += (f"Souvenir #{source.get('memory_id', '—')} · état enregistré : "
+                                 f"{STATUSES.get(source.get('status'), source.get('status', 'non précisé'))}\n")
+                    else:
+                        origin = {"user": "message utilisateur", "assistant": "réponse générée, non vérifiée"}.get(
+                            source.get("role"), "origine non précisée")
+                        text += f"Archive #{source.get('message_id', '—')} · {origin}\n"
+                if len(sources) > 32:
+                    text += "Aperçu limité à 32 références ; ouvrir l’inspection pour le détail.\n"
+                text += "\nOuvrir Contexte envoyé pour consulter les extraits et leurs originaux."
+            else:
+                text += "Aucun contexte instrumenté dans les 100 dernières réponses de cette conversation."
+            text += "\n\nContrôle limité aux 100 dernières réponses de la conversation active."
+            if self.context_warnings:
+                text += "\n\n" + "\n".join(self.context_warnings)
+            self.context_info.configure(state="normal")
+            self.context_info.delete("1.0", "end")
+            self.context_info.insert("1.0", text)
+            self.context_info.configure(state="disabled")
+            if self.selected_id is not None:
+                selected = next((row for row in self.rows if row["id"] == self.selected_id), None)
+                if selected is not None:
+                    self.display_info(self.memory_info(selected))  # Preserve unsaved editor text.
+        except (ValueError, sqlite3.Error, OSError) as exc:
+            self.report_error(exc)
+
+    def inclusion_summary(self, mid):
+        included = [row["id"] for row in self.context_records if any(
+            source.get("method") == "memory" and type(source.get("memory_id")) is int
+            and source["memory_id"] == mid for source in row["context"].get("sources", []))]
+        if not included:
+            return "Aucune inclusion enregistrée parmi les 100 dernières réponses de cette conversation."
+        ids = ", ".join(f"#{rid}" for rid in included[:3]) + ("…" if len(included) > 3 else "")
+        return (f"Inclus dans {len(included)} contexte(s) enregistré(s) : {ids}. "
+                "Inspecter l’extrait envoyé ; ces traces ne valident pas la version actuelle du souvenir.")
 
     def save(self):
         if str(self.content.cget("state")) == "disabled":

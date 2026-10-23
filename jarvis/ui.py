@@ -13,6 +13,18 @@ from .worker import Worker
 BG, PANEL, FIELD = "#0b1019", "#121c29", "#192638"
 TEXT, MUTED, CYAN, RED = "#e4edf6", "#a6b8cb", "#65e0ef", "#ff9c9c"
 SURFACE, BORDER = "#101925", "#2b4053"
+COGNITIVE_LABELS = {"manual": "Manuel · profil J2.8", "auto": "Automatique local",
+                    "fast": "Rapide", "deep": "Approfondi", "creative": "Créatif"}
+
+
+def cognitive_label(record):
+    """The selected application policy, not a claim about model intelligence."""
+    if not isinstance(record, dict) or not record:
+        return "Politique non enregistrée pour cette réponse ancienne."
+    mode = {"fast": "Rapide", "deep": "Approfondi", "creative": "Créatif",
+            "model_default": "Choix du modèle"}.get(record.get("mode"), "—")
+    origin = "heuristique locale" if record.get("origin") == "local_heuristic" else "réglage manuel"
+    return f"Mode choisi : {mode} · {record.get('budget', '—')} tokens maximum · {origin}"
 
 
 class RoundedSurface(tk.Canvas):
@@ -49,6 +61,7 @@ class App:
         self.message_id = None
         self.response = ""
         self.response_metrics = {}
+        self.continuation_id = None
         self.models = []
         self.dead_polls = 0
         self.closed = False
@@ -156,6 +169,11 @@ class App:
         tools.pack(fill="x", pady=(12, 8))
         tk.Label(tools, text="CONVERSATION", bg=PANEL, fg=MUTED,
                  font=(self.font_family, 9)).pack(anchor="w", pady=(0, 6))
+        self.cognitive_var = tk.StringVar(value=COGNITIVE_LABELS[getattr(self.settings, "cognitive_mode", "manual")])
+        self.cognitive_combo = ttk.Combobox(tools, name="cognitive_mode", textvariable=self.cognitive_var,
+                                          values=list(COGNITIVE_LABELS.values()), state="readonly", width=1)
+        self.cognitive_combo.pack(fill="x", pady=(0, 6))
+        self.cognitive_combo.bind("<<ComboboxSelected>>", self.change_cognitive_mode)
         preferences = tk.Frame(sidebar, bg=PANEL)
         preferences.pack(fill="x", pady=(6, 8))
         tk.Label(preferences, text="PRÉFÉRENCES", bg=PANEL, fg=MUTED,
@@ -214,6 +232,7 @@ class App:
                                 rmargin=14, spacing1=8, spacing3=10)
         self.chat.tag_configure("welcome", foreground=TEXT, font=(self.font_family, 20, "bold"), spacing1=24, spacing3=12)
         self.chat.tag_configure("meta", foreground=MUTED, font=(self.font_family, 9), spacing3=10)
+        self.chat.tag_configure("policy", foreground=MUTED, font=(self.font_family, 9), spacing3=6)
         self.metrics_visible = tk.BooleanVar(value=store.get_preference("show_generation_metrics", False) is True)
         self.chat.tag_configure("metrics", foreground=MUTED, font=(self.font_family, 9),
                                 spacing3=10, elide=not self.metrics_visible.get())
@@ -257,6 +276,9 @@ class App:
         self.send_button.pack(side="right")
         self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled", width=0, style="Danger.TButton")
         self.stop_button.pack(side="right", padx=8)
+        self.continue_button = ttk.Button(actions, name="continue_response", text="Continuer", width=0,
+                                         command=self.continue_response, style="Quiet.TButton", state="disabled")
+        self.continue_button.pack(side="right")
         self.compose_hint.pack(side="left")
         root.rowconfigure(2, weight=1)
         root.columnconfigure(1, weight=1)
@@ -353,6 +375,7 @@ class App:
                 self.sidebar.lift()
         self.navigation.lift()
         self.conversation_button.configure(text="Chat" if compact else "Conversation")
+        self.continue_button.configure(text="Suite" if compact else "Continuer")
         # Fit the essential labels even on a physically small high-DPI window.
         self.navigation_font.configure(size=9)
         self.navigation.update_idletasks()
@@ -390,7 +413,7 @@ class App:
         self.markdown.configure_typography(validated)
         # Reading fonts are reused; the composer adapts in compact windows.
         # Controls and PRESENCE retain their own geometry and preferences.
-        for tag, base in (("speaker", 10), ("speaker_user", 10), ("meta", 9), ("metrics", 9), ("welcome", 20)):
+        for tag, base in (("speaker", 10), ("speaker_user", 10), ("meta", 9), ("metrics", 9), ("policy", 9), ("welcome", 20)):
             size = max(8, round((base + validated.size - 12) * validated.scale / 100))
             self.chat.tag_configure(tag, font=(validated.family or self.font_family, size,
                                               "bold" if tag in {"speaker", "speaker_user", "welcome"} else "normal"))
@@ -550,6 +573,10 @@ class App:
         self.chat.delete("1.0", "end")
         self.chat.configure(state="disabled")
         rows = self.store.messages(self.session_id)
+        last = rows[-1] if rows else None
+        self.continuation_id = (last["id"] if last is not None and last["role"] == "assistant"
+                                and last["status"] != "streaming" and last["content"].strip() else None)
+        self.update_continue_button()
         if not rows:
             self.append("Que souhaitez-vous explorer ?\n", "welcome")
             self.append("Choisissez un modèle local, puis partagez une question, une idée ou un projet.\n", "meta")
@@ -557,6 +584,9 @@ class App:
             self.append(("VOUS" if row["role"] == "user" else "JARVIS · " + row["model"]) + "\n",
                         "speaker_user" if row["role"] == "user" else "speaker")
             if row["role"] == "assistant":
+                metadata = json.loads(row["metadata"])
+                if metadata.get("cognition"):
+                    self.append(cognitive_label(metadata["cognition"]) + "\n", "policy")
                 region = self.markdown.append(row["content"], final=row["status"] != "streaming")
                 if row["status"] == "streaming":
                     self.assistant_region = region
@@ -569,6 +599,7 @@ class App:
                              "interrupted": "Interrompue à la fermeture"}[row["status"]] + "\n", "meta")
             if row["role"] == "assistant" and row["status"] != "streaming":
                 metadata = json.loads(row["metadata"])
+                self.append("Texte généré non vérifié · Contexte / provenance dans le menu.\n", "policy")
                 self.append(metrics_label(metadata.get("generation_metrics")) + "\n", "metrics")
         self.chat.see("end")
 
@@ -602,12 +633,33 @@ class App:
         self.settings = replace(self.settings, model=self.model_var.get())
         self.store.save_settings(self.settings)
 
+    def change_cognitive_mode(self, _event=None):
+        mode = next((key for key, label in COGNITIVE_LABELS.items() if label == self.cognitive_var.get()), None)
+        if self.operation or mode is None:
+            self.cognitive_var.set(COGNITIVE_LABELS[self.settings.cognitive_mode])
+            return
+        settings = replace(self.settings, cognitive_mode=mode).validate()
+        self.store.save_settings(settings)
+        self.settings = settings
+        self.set_status("Politique de conversation : " + COGNITIVE_LABELS[mode])
+
+    def update_continue_button(self):
+        self.continue_button.configure(state="normal" if self.continuation_id and not self.operation else "disabled")
+
+    def continue_response(self):
+        if self.operation or not self.continuation_id:
+            return
+        from .cognition import CONTINUE_PROMPT
+        self.send(text=CONTINUE_PROMPT, continuation=self.continuation_id)
+
     def busy(self, operation):
         self.operation = operation
         state = "disabled" if operation else "normal"
         for widget in (self.new_button, self.delete_button, self.settings_button, self.refresh_button, self.send_button, self.history):
             widget.configure(state=state)
         self.model_combo.configure(state="disabled" if operation else "readonly")
+        self.cognitive_combo.configure(state="disabled" if operation else "readonly")
+        self.update_continue_button()
         speech_active = hasattr(self, "voice") and self.voice.tts_active
         self.stop_button.configure(state="normal" if operation or speech_active else "disabled")
         self.dead_polls = 0
@@ -619,7 +671,7 @@ class App:
         self.busy("models")
         self.set_status("Connexion à Ollama…")
 
-    def send(self, source="text", text=None):
+    def send(self, source="text", text=None, continuation=None):
         if self.operation:
             return
         from_input = text is None
@@ -633,16 +685,28 @@ class App:
             self.set_status("Choisissez un modèle installé. Cliquez sur Actualiser ; si la liste est vide, utilisez « ollama pull qwen2.5:3b ».", True)
             return
         try:
-            request_settings = self.settings.for_request(source)
-            memories = self.store.memory.search(text, approved_only=True) if request_settings.targeted_context else []
-            context = ContextBuilder(request_settings).build(
-                self.store.context_records(self.session_id) + [{"role": "user", "content": text}], memories=memories)
+            from .cognition import build_continuation, continuation_origin, route_request
+            records = self.store.messages(self.session_id) if continuation is not None else None
+            if continuation is not None:
+                if not records or records[-1]["id"] != continuation:
+                    raise ValueError("La réponse à poursuivre n’est plus la dernière de cette conversation.")
+                prompt = continuation_origin(records, records[-1])["content"]
+            else:
+                prompt = text
+            request_settings, decision = route_request(self.settings, prompt, source, continuation=continuation is not None)
+            memories = self.store.memory.search(prompt, approved_only=True) if request_settings.targeted_context else []
+            context = (build_continuation(request_settings, records, records[-1], memories=memories)
+                       if continuation is not None else ContextBuilder(request_settings).build(
+                           self.store.context_records(self.session_id) + [{"role": "user", "content": text}], memories=memories))
         except ValueError as exc:
             self.set_status(str(exc), True)
             return
         metadata = {"final_transcript": text} if source == "voice" else None
         self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model, source=source, metadata=metadata)
-        self.store.update_message_metadata(self.message_id, {"context": {**context.stats, "sources": context.sources}})
+        details = {"context": {**context.stats, "sources": context.sources}, "cognition": decision}
+        if continuation is not None:
+            details["continuation"] = context.stats["continuation"]
+        self.store.update_message_metadata(self.message_id, details)
         self.voice.begin_turn(self.message_id, source)
         self.response = ""
         self.response_metrics = {}
@@ -671,7 +735,10 @@ class App:
         dialog.transient(self.root)
         dialog.geometry("820x660")
         dialog.minsize(600, 480)
-        rows = [row for row in self.store.messages(self.session_id) if row["role"] == "assistant"]
+        archive = list(self.store.messages(self.session_id))
+        user_inputs = {row["id"]: archive[index - 1] for index, row in enumerate(archive)
+                       if index and row["role"] == "assistant" and archive[index - 1]["role"] == "user"}
+        rows = [row for row in archive if row["role"] == "assistant"]
         recorded = [(row, json.loads(row["metadata"])) for row in rows]
         recorded = [(row, metadata) for row, metadata in recorded if isinstance(metadata.get("context"), dict)]
         if not recorded:
@@ -733,11 +800,15 @@ class App:
             if original is not None and (original["session_id"] != source.get("session_id")
                                          or original["created"] != source.get("created")):
                 original = None
-            heading = (f"Message #{mid if mid is not None else '—'} · {source.get('role', '—')} · "
+            category = {"user_input": "Donnée fournie par l’utilisateur", "generated_output": "Contenu généré non vérifié",
+                        "continuation_original": "Passage original à continuer",
+                        "continuation_extract": "Extrait original non exhaustif à continuer",
+                        "extractive": "Extrait historique ciblé", "recent": "Échange historique récent"}.get(source.get("method"), "Source historique")
+            heading = (f"{category}\nMessage #{mid if mid is not None else '—'} · {source.get('role', '—')} · "
                        f"{source.get('created', '—')}\nConversation : {source.get('session_id', '—')}\n"
                        f"Sélection : {'extrait ciblé' if source.get('method') == 'extractive' else 'échange récent'}\n")
-            if source.get("method") == "recent":
-                text = heading + ("\nOriginal archivé et injecté intégralement :\n" + original["content"]
+            if source.get("method") in {"recent", "user_input", "continuation_original", "generated_output"}:
+                text = heading + ("\nOriginal archivé :\n" + original["content"]
                                   if original is not None else "\nAperçu conservé (original indisponible) :\n" + source.get("excerpt", ""))
             else:
                 text = heading + "\nPassage injecté :\n" + source.get("excerpt", "")
@@ -745,7 +816,7 @@ class App:
             write_details(text)
 
         def show_response(_event=None):
-            _, metadata = recorded[picker.current()]
+            response_row, metadata = recorded[picker.current()]
             context = metadata["context"]
             metrics = generation_metrics(metadata.get("generation_metrics"))
             duration = metrics.get("prompt_eval_duration")
@@ -753,17 +824,29 @@ class App:
             memory_warnings = context.get("memory_warnings", [])
             warning_text = "\nMémoire : " + " ; ".join(memory_warnings) if memory_warnings else ""
             summary.set(
-                f"Estimation prudente UTF-8, pas un comptage exact : {context.get('context_estimate_tokens', '—')} tokens.\n"
+                cognitive_label(metadata.get("cognition")) + "\n"
+                + (str(metadata["cognition"].get("reason", "")) + "\n" if metadata.get("cognition") else "")
+                + f"Estimation prudente UTF-8, pas un comptage exact : {context.get('context_estimate_tokens', '—')} tokens.\n"
                 f"Contexte total : {context.get('context_limit_tokens', '—')} · Réserve réponse : {context.get('output_reserved_tokens', '—')} · "
                 f"Stratégie : {context.get('context_strategy', '—')}\n"
                 f"Messages récents : {context.get('recent_messages', '—')} · Rappels ciblés : {context.get('retrieved_messages', '—')} · "
                 f"Résumés extractifs : {context.get('summary_messages', '—')} · Souvenirs : {context.get('memory_count', 0)} · Hors contexte : {context.get('omitted_messages', '—')}\n"
                 f"Prompt réellement évalué par Ollama : {metrics.get('prompt_eval_count', '—')} tokens · Traitement : {prompt_time}\n"
-                "Le rappel lexical et les extraits sélectionnés ne constituent pas une compréhension sémantique complète." + warning_text)
+                "Les références indiquent le contexte préparé pour l'appel ; elles ne prouvent ni sa réception ni l'utilisation ou la vérité de chaque phrase.\n"
+                "Réponse, hypothèses et estimations du modèle non vérifiées." + warning_text
+                + ("\nContinuation : " + " ".join(metadata["continuation"].get("limitations", []))
+                   if isinstance(metadata.get("continuation"), dict) else ""))
             sources[:] = [source for source in context.get("sources", []) if isinstance(source, dict)]
+            current_user = user_inputs.get(response_row["id"])
+            for row, method in ((current_user, "user_input"), (response_row, "generated_output")):
+                if row is not None:
+                    sources.append({"message_id": row["id"], "session_id": row["session_id"], "created": row["created"],
+                                    "role": row["role"], "method": method, "excerpt": row["content"][:240]})
             source_list.delete(0, "end")
             for source in sources:
-                label = {"extractive": "Extrait", "memory": "Mémoire"}.get(source.get("method"), "Récent")
+                label = {"extractive": "Extrait", "memory": "Mémoire approuvée", "user_input": "Votre demande",
+                         "generated_output": "Réponse non vérifiée", "continuation_original": "Continuation",
+                         "continuation_extract": "Continuation · extrait"}.get(source.get("method"), "Récent")
                 source_id = source.get("memory_id") if source.get("method") == "memory" else source.get("message_id", "—")
                 source_list.insert("end", f"{label} · #{source_id} · {source.get('role', '—')} · {source.get('excerpt', '')[:85]}")
             if sources:
@@ -782,12 +865,14 @@ class App:
                 status, error = "error", True
                 text = "Aucun texte visible reçu. Le modèle a terminé sans réponse ; consultez les statistiques de raisonnement et la limite de génération."
             self.store.update_response(self.message_id, self.response, status)
+            self.continuation_id = self.message_id if self.response.strip() else None
             if self.assistant_region is not None:
                 self.markdown.update(self.assistant_region, self.response, final=True)
             # Finish playback of the visible fragment, while its archive remains
             # explicitly incomplete. Manual cancellation still stops audio.
             self.voice.finish_turn("complete" if read_partial and self.response.strip() else status)
             self.append("\n", "meta")
+            self.append("Texte généré non vérifié · Contexte / provenance dans le menu.\n", "policy")
             self.append(metrics_label(self.response_metrics) + "\n", "metrics")
         self.worker.stop()
         self.busy(None)
@@ -915,6 +1000,8 @@ class App:
                     targeted_context=variables["targeted_context"].get(),
                     retrieval_budget=int(variables["retrieval_budget"].get()),
                     system_prompt=prompt.get("1.0", "end-1c")).validate()
+                if settings.reasoning_mode != self.settings.reasoning_mode:
+                    settings = replace(settings, cognitive_mode="manual")
                 self.store.save_settings(settings)
                 if settings.system_prompt != self.settings.system_prompt:
                     voice_settings = replace(self.voice.settings, personality="Personnalisé")
@@ -924,6 +1011,7 @@ class App:
                 messagebox.showerror("Paramètres invalides", str(exc), parent=dialog)
                 return
             self.settings = settings
+            self.cognitive_var.set(COGNITIVE_LABELS[settings.cognitive_mode])
             dialog.destroy()
             self.refresh_models()
 
@@ -933,6 +1021,7 @@ class App:
     def callback_error(self, _kind, exc, _trace):
         self.voice.halt_without_persistence()
         self.worker.stop()
+        self.continuation_id = None
         self.busy(None)
         self.set_status("Erreur de stockage local : vérifiez l’espace libre et les droits du dossier de données. Redémarrez JARVIS." if isinstance(exc, (sqlite3.Error, OSError)) else "Erreur interne de l’interface. Redémarrez JARVIS ; les données déjà enregistrées sont conservées.", True)
 

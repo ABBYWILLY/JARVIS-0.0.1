@@ -218,6 +218,72 @@ class MemoryDesktopTests(unittest.TestCase):
         self.assertIn("Original indisponible", text)
         self.assertNotIn("NOUVEL_ORIGINAL_DIFFERENT", text)
 
+    def test_memory_context_trace_distinguishes_explicit_memories_and_history_without_claiming_truth(self):
+        memory = self.draft()
+        self.store.memory.approve(memory, confirmed=True)
+        response = self.store.begin_turn(self.app.session_id, "Question Atlas", "local")
+        self.store.update_response(response, "Réponse", "complete")
+        sources = [
+            {"method": "memory", "memory_id": memory, "status": "approved", "excerpt": "Version transmise"},
+            {"method": "recent", "message_id": memory, "role": "user", "excerpt": "Donnée utilisateur"},
+            {"method": "extractive", "message_id": 88, "role": "assistant", "excerpt": "Texte généré"},
+        ]
+        self.store.update_message_metadata(response, {"context": {"sources": sources}})
+        self.dialog.refresh(memory)
+        trace = self.dialog.context_info.get("1.0", "end")
+        self.assertIn("Sélection temporaire de requête", trace)
+        self.assertIn("Souvenirs explicitement rappelés : 1", trace)
+        self.assertIn("Références historiques : 2", trace)
+        self.assertIn("message utilisateur", trace)
+        self.assertIn("réponse générée, non vérifiée", trace)
+        self.assertIn("ne prouve pas que le modèle", trace)
+        self.assertEqual(str(self.dialog.context_info.cget("state")), "disabled")
+        info = self.dialog.info.get("1.0", "end")
+        self.assertIn(f"Souvenir explicite #{memory}", info)
+        self.assertIn(f"Inclus dans 1 contexte(s) enregistré(s) : #{response}", info)
+        self.assertIn("manual", info)
+        self.assertEqual(len(self.store.memory.list()), 1)
+        self.assertEqual(json.loads(self.store.message(response)["metadata"])["context"]["sources"], sources)
+
+    def test_memory_usage_window_is_bounded_scoped_and_reports_invalid_trace(self):
+        memory = self.draft()
+        for index in range(101):
+            response = self.store.begin_turn(self.app.session_id, f"Question {index}", "local")
+            self.store.update_response(response, "Réponse", "complete")
+            self.store.update_message_metadata(response, {"context": {"sources": [
+                {"method": "memory", "memory_id": memory}] if index == 0 else []}})
+        other = self.store.begin_turn(self.store.new_session(), "Autre conversation", "local")
+        self.store.update_message_metadata(other, {"context": {"sources": [{"method": "memory", "memory_id": memory}]}})
+        self.dialog.refresh(memory)
+        self.assertEqual(len(self.dialog.context_records), 100)
+        self.assertIn("Aucune inclusion enregistrée parmi les 100 dernières", self.dialog.info.get("1.0", "end"))
+        self.store.update_message_metadata(response, {"context": {"sources": ["trace invalide"]}})
+        self.dialog.refresh_context()
+        trace = self.dialog.context_info.get("1.0", "end")
+        self.assertIn(f"Réponse #{response} : trace illisible", trace)
+        self.assertEqual(len(self.store.memory.list()), 1)
+
+    def test_refreshing_prompt_trace_preserves_unsaved_memory_edits_and_uses_existing_inspector(self):
+        memory = self.draft()
+        self.dialog.refresh(memory)
+        edited = "Brouillon non sauvegardé : été 😊."
+        self.dialog.fill(edited)
+        self.dialog.title.set("Titre non sauvegardé")
+        self.dialog.refresh_context()
+        self.assertEqual(self.dialog.content.get("1.0", "end-1c"), edited)
+        self.assertEqual(self.dialog.title.get(), "Titre non sauvegardé")
+        self.assertNotEqual(self.store.memory.get(memory)["content"], edited)
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+        inspector = next(widget for widget in descendants(self.dialog.window)
+                         if getattr(widget, "cget", None) and widget.winfo_class() == "TButton"
+                         and widget.cget("text") == "Inspecter le contexte envoyé")
+        inspector.invoke()
+        self.assertTrue(any(isinstance(widget, tk.Toplevel) and widget.title() == "Contexte envoyé à Ollama"
+                            for widget in self.root.winfo_children()))
+
 
 if __name__ == "__main__":
     unittest.main()
