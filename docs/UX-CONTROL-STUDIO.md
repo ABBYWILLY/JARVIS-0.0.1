@@ -135,3 +135,22 @@ ancien qui cherchait Fermer. Nouveau contrat Annuler dans le pied fixe : les
 trois boutons sont maintenant contrôlés dans chaque section à100/200/250%DPI,
 et la fermeture est invoquée.32tests ciblés après adaptation verts sousTk9
 etTk8.6. La démonstration démarre également au premier clic sans PRESENCE ouvert.
+
+## Étape E — Validation intégrée et CI
+
+Suite globale LinuxTk9/EGL réel logiciel :604tests,595réussis,9ignorés en
+76,079s. Les comptes ciblés ne s'additionnent pas. Les ignorés couvrent six
+dépendances/modèles locaux absents et trois essais réels opt-in.
+
+CIWindows B40039808068 puisC40040103974 : le test du pied de sous-titres révèle
+une pollution des nouvelles fixtures DPI, qui conservaient250% après leur fin.
+Reproduction Linux : un nouvel interpréteur Tk conserve3,3366 au lieu de1,3333.
+Les trois nouvelles campagnes DPI restaurent désormais leur échelle initiale.
+Le pied réactif ne change pas, la synchronisation/limite deux lignes/accents
+restent contrôlés ; aucun test désactivé. C contenait aussi l'ancien test
+Fermer, déjà adapté dansD au nouveau contrat avec contrôles renforcés.
+
+RésultatsCI finaux : consulter le dernier commit de cette branche et Actions ;
+la livraison n'est pas une validation matérielle. Les limites et la recette
+utilisateur sont dans CONTROL-STUDIO.md. Aucun nouvel appel IA par réglage ou
+frame ; pas de moteur graphique obligatoire, de modèle téléchargé ou effacé.

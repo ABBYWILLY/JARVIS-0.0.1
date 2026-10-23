@@ -67,6 +67,8 @@ class VoiceSettingsDesktopTests(unittest.TestCase):
         self.assertIsNone(self.store.get_preference("voice"))
 
     def test_fixed_actions_and_keyboard_target_remain_accessible_at_small_sizes_and_dpi(self):
+        original_scaling = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", original_scaling))
         for scaling in (1., 2.5):
             with self.subTest(scaling=scaling):
                 self.root.tk.call("tk", "scaling", 96 / 72 * scaling)

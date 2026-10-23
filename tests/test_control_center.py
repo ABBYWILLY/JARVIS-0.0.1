@@ -94,6 +94,8 @@ class ControlCenterTkTests(unittest.TestCase):
         self.assertEqual(tuple(self.root.tk.call("after", "info")), (self.app.poll_id,))
 
     def test_center_small_landscape_portrait_and_dpi(self):
+        original_scaling = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", original_scaling))
         for dpi in (1., 2.5):
             self.root.tk.call("tk", "scaling", 96 / 72 * dpi)
             center = self.app.open_control_center()

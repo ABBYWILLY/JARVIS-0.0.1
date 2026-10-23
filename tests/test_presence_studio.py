@@ -175,6 +175,8 @@ class StudioTkTests(unittest.TestCase):
         self.assertEqual(self.view.state, "listening")
 
     def test_small_window_large_dpi_fixed_actions_keyboard_scroll_and_cleanup(self):
+        original_scaling = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", original_scaling))
         for scale in (1., 2.5):
             self.root.tk.call("tk", "scaling", 96 / 72 * scale)
             self.studio.window.geometry("440x390")

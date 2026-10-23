@@ -1,3 +1,26 @@
+# Validation Centre / Studio — étape E, 24 octobre 2026
+
+A e2f8b27, B513dc86, C c0e21c6, D426e270 publiés. Livraison fonctionnelle :
+Centre recherché à5familles, éditeurs canoniques, Studio transactionnel et
+4réglages visuels rendus, démonstration8états/CLI/profiltemporaire, captures/MP4.
+Suite intégréeLinux Tk9+EGLréel logiciel :604tests,595réussis,9ignorés,
+76,079s.39tests ciblésTk8.6 puis32ciblésaprèsadaptationontégalementréussi.
+Les9ignorés concernentdépendances/modèlesnatifs absents et3essaisréelsopt-in.
+CI Averte40039278838 ; GPU A/B/C/Dverts. Build B40039808068 etC40040103974
+échoués : testsDPIlaissaient250%global (confirmé entre deuxinterpréteursTk),
+donc le pied de sous-titres se masquait correctement faute de place. Lesnouveaux
+testsrestaurentmaintenantl'échelleinitiale. Cavait aussil'anciencontratFermer,
+adaptéenD àAnnuler+vérificationrenforcéedes3actions. AucuneassertionPCM/caption
+supprimée ; aucunrendu métier modifié pour contourner les échecs. DernièreCI
+àsuivresurlecommitE, sansdéclarerverteavant lerésultat. Guideetpreuves :
+docs/CONTROL-STUDIO.md. ReposCanvasLinuxobservé5,02s :0,47%CPUuncoeur,
+36,38MiBRSSmoyen,aucunafterCanvas ; pasunecomparaisonglobaleLOT7.
+Reste : recetteutilisateurWindows/DPI/esthétique/microPiperQwen, paletteslibres
+nonajoutées, mémoireanciennefenêtre820px, intégrationGPUconditionnelleauxmesures
+RTX3070. LOT2nonofficiellementvalidé ; LOTS4/5/7noncommencés. mainpréservée.
+
+---
+
 # Démonstration et preuves visuelles — étape D, 24 octobre 2026
 
 Studio publié c0e21c6 ; CLI run_presence_demo.py utilise uniquement un profil
