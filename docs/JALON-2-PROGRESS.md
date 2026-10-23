@@ -629,3 +629,39 @@ se terminant par :) ou ❤️, une expression au milieu, une queue emoji après 
 puis interrompre/reprendre la parole. Contrôler glyphes français, Bluetooth,
 synchronisation approximative et priorité de la capture réelle. Cette recette
 matérielle n'a pas été exécutée ici. La bibliothèque100emojis reste différée.
+
+## Cognitive & Presence Evolution — LOT 1 logiciel, 23 octobre 2026
+
+Causes vérifiées : le résumé PCM était remplacé par zéro avant confirmation VAD,
+l'état écoute ne dessinait aucune onde, et la moyenne par buckets pouvait annuler
+des fréquences réellement présentes. Le microphone reste distinct de la parole :
+RMS exact et extrema PCM réels maintenant transmis/dessinés, sans signal inventé,
+changement de sensibilité, gain, VAD ou moteur. Ces défauts visuels ne démontrent
+pas la cause de l'absence de transcription constatée sur le PC Windows.
+
+Diagnostic renforcé : périphérique sélectionné/réel/API, fréquence native, PCM,
+vu-mètre RMS, VAD, tour/STT, statut PortAudio, pertes, étape et erreurs conservées.
+Sans PCM, mesure inconnue plutôt que zéro ; ancienneté du PCM distincte de celle
+du heartbeat, actualisée même sans événement. Une exception dans le callback est
+remontée et le stream reste fermé si collecte métadonnées/abort échoue. Les
+événements anciens/pendant suspension/après arrêt ne ravivent pas la parole.
+Le PCM calme reprend aussi après un speech_start rejeté pendant suspension, sans
+accepter la transcription de ce tour rejeté. La réactivation efface l'ancien STT.
+
+COMMAND OS : navigation essentielle fixe, menu rétractable persistant, secondaires
+défilants/clavier et overlay étroit ; statut complet consultable. F6 menu, F7
+PRESENCE, F8 conversation. Pas de refonte esthétique ou de nouveau moteur.
+
+Tests : suite locale Tk9, 460 exécutés, 451 réussis et 9 ignorés (dépendances natives
+et modèles absents). Tk8.6 : 90 tests ciblés réussis, avec doublures PCM/STT
+explicites, jamais le micro du PC. Navigation vérifiée aux quatre tailles
+1100×620/620×900/640×480/560×400 et
+échelles100/150/200/250 %, boutons essentiels entièrement visibles sous Tk8.6/9.
+Source --smoke-test réussie sous Tk8.6 et Tk9 avec profils isolés. Aucun modèle téléchargé, donnée
+utilisateur effacée ou benchmark matériel annoncé. CI du SHA courant à consulter
+dans le workflow Windows Jarvis (tests, compilation PyInstaller et démarrages EXE).
+
+**Validation matérielle en attente**. Recette guidée dans `docs/VOICE.md` : RMS
+silence/parole/silence réel, onde, VAD→Whisper→Ollama, erreur/reprise, Windows/DPI.
+LOT 1 non déclaré entièrement validé ; LOTS 2–7 non commencés avant cette recette.
+Demande globale conservée dans `docs/COGNITIVE-PRESENCE-SPEC.md`.

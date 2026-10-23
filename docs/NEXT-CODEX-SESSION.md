@@ -1,3 +1,31 @@
+# Cognitive & Presence Evolution — LOT 1, 23 octobre 2026
+
+Demande complète : `docs/COGNITIVE-PRESENCE-SPEC.md` ; branche uniquement
+`feat/jalon-2-voice-presence`. Préserver J2.8, voix, mémoire et PRESENCE 3.2.
+Le LOT 1 logiciel corrige le RMS/onde effacés lorsque le VAD n'a pas confirmé de
+parole et la géométrie toujours plate de l'état écoute. Résumé visuel par extrema
+PCM réels ordonnés, sans porteuse inventée ; RMS exact, aucun seuil VAD modifié.
+Cela explique l'absence de réaction visuelle, pas la cause matérielle d'une absence
+de transcription Windows. Le pipeline VAD/Whisper existant est conservé.
+Diagnostic : micro sélectionné/ouvert/API/fréquence, RMS/vu-mètre, VAD, étapes,
+fin de tour, STT, erreurs PortAudio et pertes. Heartbeat sans PCM = mesure inconnue,
+jamais faux zéro ; âge PCM distinct du dernier événement, même si le worker se tait.
+Erreurs détaillées conservées. Notifications suspendues/arrêtées/anciennes ne
+réactivent pas l'onde. Stream fermé même si collecte métadonnées/abort échoue.
+Navigation fixe Menu/Conversation/PRESENCE/Arrêt, sidebar rétractable/défilante,
+overlay étroit, statut complet accessible et F6/F7/F8 ; aucune refonte LOT 2.
+Tests de capture avec doublures explicites, signal faible/bruit/silence, routage
+PRESENCE, fin de tour/STT/reprise, erreurs et absence de PCM. Navigation Tk8.6/9 :
+16 configurations 560×400 à 1100×620/620×900 et DPI100–250 %.
+Résultats finaux et SHA : voir `docs/JALON-2-PROGRESS.md` et `git log -1`.
+**Validation matérielle en attente** : recette simple dans `docs/VOICE.md`, section
+LOT 1. Vérifier sur le PC USB réel RMS silence/parole/silence, onde, VAD→Whisper→
+Ollama, erreurs et navigation Windows/DPI. Ni microphone physique ni latence/CPU
+Windows mesurés ici. Ne pas annoncer le LOT 1 entièrement validé. LOTS 2–7 non
+commencés : attendre la recette matérielle, ne pas redévelopper les acquis.
+
+---
+
 # Reprise PRESENCE 3.2 — 22 octobre 2026
 
 Demande complète : `docs/PRESENCE-3.2-SPEC.md`. Branche `feat/jalon-2-voice-presence`.

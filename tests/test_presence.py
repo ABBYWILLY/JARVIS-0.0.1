@@ -279,10 +279,10 @@ class GeometryTests(unittest.TestCase):
         self.assertGreaterEqual(top, 0)
         self.assertLessEqual(bottom, height)
 
-    def test_silent_and_listening_are_exact_flat_lines_without_fake_motion(self):
+    def test_silent_and_zero_pcm_listening_are_flat_without_fake_motion(self):
         model = PresenceModel()
-        for state in ("silent", "listening"):
-            model.update_event(state, SIGNAL, now=0)
+        for state, signal in (("silent", SIGNAL), ("listening", {"rms": 0., "wave": [1., -1.]})):
+            model.update_event(state, signal, now=0)
             first = model.frame(1000, 700, now=0.01)
             self.assertTrue(all(y == 350 for _, y in first))
             self.assertGreater(first[-1][0] - first[0][0], 800)

@@ -1,4 +1,5 @@
 """Voice orchestration on Tk's thread; capture, STT and playback run elsewhere."""
+import math
 import time
 import sqlite3
 import tkinter as tk
@@ -50,6 +51,11 @@ class VoiceControls:
         self.diagnostics = {}
         self.diagnostic_events = deque(maxlen=32)
         self.diagnostic_window = None
+        self.last_capture_event = "aucun"
+        self.last_capture_event_at = self.last_pcm_at = None
+        self.diagnostic_failure = ""
+        self._diagnostic_refreshed_at = 0.0
+        self._diagnostic_body = None
         self.reset_turn_latency()
         self.status = tk.StringVar(value=initial_status)
         self.listen_button = ttk.Button(parent, text="Activer l’écoute", command=self.toggle)
@@ -89,6 +95,12 @@ class VoiceControls:
         self.transcribing = False
         self.diagnostics = {}
         self.diagnostic_events.clear()
+        self.last_capture_event = "démarrage demandé"
+        self.last_capture_event_at = time.monotonic()
+        self.last_pcm_at = None
+        self.diagnostic_failure = ""
+        self.stt_details = {}
+        self.reference_result = ""
         self.reset_turn_latency()
         self.heard = 0
         self.listen_button.configure(text="Désactiver l’écoute")
@@ -322,9 +334,17 @@ class VoiceControls:
     def poll(self):
         now = time.monotonic()
         for event in self.capture.poll():
+            if not self.listening:
+                continue  # Queued notifications cannot reactivate a stopped microphone.
             self.last_capture = now
-            if event.kind == "diagnostic":
-                self.diagnostics = event.payload
+            self.last_capture_event, self.last_capture_event_at = event.kind, now
+            if event.kind in {"diagnostic", "capture_stage"}:
+                self.diagnostics.update(event.payload)
+                if event.payload.get("last_frame_at") is not None:
+                    self.last_pcm_at = event.payload["last_frame_at"]
+                if event.kind == "capture_stage":
+                    self.status.set(str(event.payload.get("stage", "Initialisation audio locale…")))
+                    self.record_diagnostic(event.kind, event.payload)
                 self.refresh_diagnostics()
             elif event.kind in {"sample_armed", "sample_saved", "sample_error"}:
                 self.record_diagnostic(event.kind, event.payload)
@@ -336,6 +356,8 @@ class VoiceControls:
             elif event.kind in {"turn_end", "stt_complete", "capture_error", "stt_superseded"}:
                 self.record_diagnostic(event.kind, event.payload)
                 if event.kind == "capture_error":
+                    self.diagnostics.update(event.payload)
+                    self.diagnostic_failure = "Capture : " + str(event.payload.get("error", "Capture indisponible"))
                     self.set_mic_state("error", event.payload.get("error", "Capture indisponible"))
                 if event.generation == self.heard:
                     if event.kind == "turn_end":
@@ -356,6 +378,7 @@ class VoiceControls:
                 self.record_diagnostic(event.kind, event.payload)
                 if event.generation == self.heard:
                     self.transcribing = False
+                    self.diagnostic_failure = "STT : " + str(event.payload.get("error", "Transcription impossible"))
                     self.stt_latency(event.payload)
                     self.status.set("Échec STT ; écoute maintenue. Détails dans Diagnostic micro / STT.")
                     if self.listening:
@@ -363,6 +386,8 @@ class VoiceControls:
                     if not self.app.operation:
                         self.notify_presence("listening")
             elif event.kind == "speech_start":
+                if self.microphone_state == "suspended" or event.generation <= self.heard:
+                    continue
                 self.record_diagnostic(event.kind, {"tour": event.generation})
                 self.heard = event.generation
                 self.cancel_speech()
@@ -386,6 +411,7 @@ class VoiceControls:
                         self.set_mic_state("stt", "Transcription locale" if event.kind == "transcribing" else "Attente du STT local")
                     self.notify_presence("thinking")
             elif event.kind == "transcript" and event.generation == self.heard:
+                self.record_diagnostic("transcript", str(event.payload)[:2000])
                 self.transcribing = False
                 if self.listening and self.microphone_state != "suspended":
                     self.set_mic_state("open")
@@ -401,6 +427,13 @@ class VoiceControls:
                     self.status.set("Aucune parole transcrite ; écoute active")
                     self.notify_presence("listening")
             elif event.kind == "mic_level":
+                if (self.microphone_state == "suspended" or event.generation < self.heard
+                        or event.generation > self.heard and event.payload.get("speaking")):
+                    continue
+                # A speech_start discarded during suspension may have advanced
+                # the worker epoch. Quiet PCM after resume is still observable,
+                # without accepting that discarded turn's speech or transcript.
+                self.last_pcm_at = event.payload.get("captured_at", now)
                 if self.listening and not self.transcribing and self.microphone_state != "suspended":
                     self.set_mic_state("voice" if event.payload.get("speaking") else "open")
                 if event.payload.get("speaking"):
@@ -409,18 +442,22 @@ class VoiceControls:
                     self.notify_presence("listening", signal=event.payload)
             elif event.kind == "listening":
                 if event.payload:
+                    self.diagnostics.update(event.payload)
                     self.record_diagnostic("capture_ready", event.payload)
                 self.status.set("Écoute locale active")
                 if self.listening and self.microphone_state != "suspended":
                     self.set_mic_state("open")
                 self.notify_presence("listening")
             elif event.kind == "error":
+                if not self.diagnostic_failure:
+                    self.diagnostic_failure = str(event.payload)
                 self.stop_listening()
                 self.status.set(str(event.payload))
                 self.set_mic_state("error", event.payload)
             elif event.kind == "warning":
                 self.status.set(str(event.payload))
         if self.listening and not self.capture.alive() and now - self.last_capture > 0.5:
+            self.diagnostic_failure = self.diagnostic_failure or "Processus micro arrêté sans notification ; réactivez l’écoute après vérification audio."
             self.stop_listening()
             self.status.set("Processus micro arrêté. Réactivez l’écoute après vérification audio.")
             self.set_mic_state("error", "Processus micro arrêté")
@@ -488,6 +525,9 @@ class VoiceControls:
         if self.speech.process is not None and not self.speech.alive() and now - self.last_speech > 0.5:
             self.cancel_speech(status="error")
             self.status.set("Processus de lecture arrêté ; texte conservé.")
+        # Ages must advance even when a worker stops emitting notifications.
+        if now < self._diagnostic_refreshed_at or now - self._diagnostic_refreshed_at >= .25:
+            self.refresh_diagnostics()
 
     def _drain_visuals(self, now):
         """Deliver final PCM, segment boundaries, then the final functional state."""
@@ -546,16 +586,66 @@ class VoiceControls:
         if "queue_ms" in payload:
             self.set_latency("Whisper : attente en file", payload["queue_ms"])
 
+    def capture_assessment(self, now):
+        """Describe the observed boundary, without inferring hardware success."""
+        values = self.diagnostics
+        if not self.listening:
+            return self.status.get()
+        if self.microphone_state == "suspended":
+            return "Capture suspendue pendant la lecture ; reprise après la sortie audio."
+        if values.get("capture_status") in {"loading_stt", "loading_vad", "opening_microphone"}:
+            return str(values.get("stage", "Initialisation locale en cours")) + " ; microphone pas encore confirmé ouvert."
+        if self.last_pcm_at is None:
+            return "Aucune trame PCM reçue. Vérifiez le micro réellement ouvert, Confidentialité > Microphone Windows et le périphérique MME/WASAPI sélectionné."
+        if now - self.last_pcm_at > 1.0:
+            return "PCM interrompu ou ancien. Vérifiez le périphérique, les erreurs PortAudio et réactivez l’écoute."
+        if self.transcribing:
+            return "Voix transmise à Whisper ; transcription locale en cours ou en attente du STT."
+        if self.microphone_state == "voice":
+            return "Voix détectée ; attente de fin de tour. Après un vrai silence, vérifiez fin de tour puis STT dans la trace."
+        if self.app.operation == "chat":
+            return "Génération Ollama en cours ; le microphone reste diagnostiqué séparément."
+        if self.stt_details.get("result"):
+            return "Transcription reçue. Si aucune réponse : vérifiez le modèle Ollama, le message d’état et la saisie conservée."
+        if values.get("rms") == 0:
+            return "Microphone ouvert, PCM nul. Vérifiez mute matériel, niveau d’entrée Windows et autorisations."
+        return "Signal PCM reçu sans parole VAD confirmée. Parlez puis comparez RMS, probabilité VAD et trace ; aucun seuil n’est modifié automatiquement."
+
     def refresh_diagnostics(self):
         if self.diagnostic_window is None or not self.diagnostic_window.winfo_exists():
             return
+        now = time.monotonic()
+        self._diagnostic_refreshed_at = now
         values = self.diagnostics
         probability = values.get("vad")
-        text = (f"RMS micro : {values.get('rms', 0):.5f}   |   Probabilité VAD : "
-                + (f"{probability:.3f}" if probability is not None else "—")
+        rms = values.get("rms")
+        fresh_pcm = self.last_pcm_at is not None and now - self.last_pcm_at <= 1.0
+        rms_text = f"{rms:.5f}" if rms is not None and math.isfinite(rms) else "—"
+        vad_text = f"{probability:.3f}" if probability is not None else "—"
+        pcm_age = f"{max(0, now - self.last_pcm_at):.1f} s" if self.last_pcm_at is not None else "aucune trame"
+        event_age = f"{max(0, now - self.last_capture_event_at):.1f} s" if self.last_capture_event_at is not None else "—"
+        opened = values.get("opened_device")
+        opened_text = (f"{opened.get('name', '—')} · {opened.get('hostapi', '—')} · index {opened.get('index', '—')}"
+                       if opened else "non confirmé")
+        selected = values.get("selected_device", self.settings.input_device or "Par défaut Windows")
+        measurements = (f"RMS micro : {rms_text}   |   Probabilité VAD : {vad_text}"
                 + f"\nÉtat : {values.get('state', 'en attente')}   |   Tour : {values.get('turn_seconds', 0):.2f} s"
                 + f"\nPCM : {values.get('native_rate', '—')} → {values.get('rate', '—')} Hz ; trames : {values.get('frame_samples', '—')}"
-                + f"\nDernière fin : {values.get('end_reason', '') or 'aucune'}"
+                + f"\nDernière fin : {values.get('end_reason', '') or 'aucune'}")
+        self.diagnostic_summary.set(
+            f"Sélectionné : {selected}\nOuvert : {opened_text}"
+            + f"\nRMS : {rms_text}{' (ancien)' if rms is not None and not fresh_pcm else ''} · VAD : {vad_text}"
+            + f" · PCM : {pcm_age} · Dernier événement : {self.last_capture_event} ({event_age})"
+            + f"\n{self.capture_assessment(now)}"
+            + (f"\nDernière erreur conservée : {self.diagnostic_failure}" if self.diagnostic_failure else ""))
+        meter_value = max(0., min(80., 80 + 20 * math.log10(rms))) if fresh_pcm and rms is not None and rms > 0 else 0.
+        self.rms_meter.configure(value=meter_value)
+        self.rms_meter.state(["!disabled"] if fresh_pcm and rms is not None else ["disabled"])
+        text = (measurements
+                + f"\nCapture : {values.get('capture_status', '—')} ; étape : {values.get('stage', '—')}"
+                + f"\nTrames 16 kHz reçues : {values.get('frames_received', '—')} ; trames natives : {values.get('native_frames_received', '—')}"
+                + f"\nPortAudio : {values.get('callback_status') or 'aucun statut signalé'} ; pertes PCM : {values.get('dropped_frames', 0)} ; événements perdus : {values.get('event_drops', 0)}"
+                + f"\nDernière erreur conservée : {self.diagnostic_failure or 'aucune'}"
                 + f"\nSTT : {values.get('last_stt', 'en attente')}\n\n"
                 + "Latences du dernier tour (ms) :\n"
                 + ("\n".join(f"{label} : {value}" for label, value in self.latencies.items()) or "En attente de mesures")
@@ -566,11 +656,17 @@ class VoiceControls:
                 + (f"Qualité du dernier WAV : {self.last_sample.get('quality', {})} ; fin : {self.last_sample.get('end_reason', '—')}\n" if self.last_sample else "")
                 + self.reference_result + "\n\n"
                 + "\n".join(self.diagnostic_events))
-        self.diagnostic_text.configure(state="normal")
-        self.diagnostic_text.delete("1.0", "end")
-        self.diagnostic_text.insert("1.0", text)
-        self.diagnostic_text.configure(state="disabled")
-        self.diagnostic_text.see("end")
+        if text != self._diagnostic_body:
+            position = self.diagnostic_text.yview()[0]
+            selection = self.diagnostic_text.tag_ranges("sel")
+            self.diagnostic_text.configure(state="normal")
+            self.diagnostic_text.delete("1.0", "end")
+            self.diagnostic_text.insert("1.0", text)
+            if selection:
+                self.diagnostic_text.tag_add("sel", *selection)
+            self.diagnostic_text.configure(state="disabled")
+            self.diagnostic_text.yview_moveto(position)
+            self._diagnostic_body = text
 
     def open_diagnostics(self):
         if self.diagnostic_window is not None and self.diagnostic_window.winfo_exists():
@@ -582,9 +678,19 @@ class VoiceControls:
         dialog.configure(bg="#121c29", padx=12, pady=12)
         tk.Label(dialog, text="Mesures réelles, actualisées 4 fois/s. Trace en mémoire ; WAV uniquement sur demande explicite. Aucun envoi réseau.",
                  bg="#121c29", fg="#e4edf6", wraplength=720, justify="left").pack(anchor="w")
+        self.diagnostic_summary = tk.StringVar()
+        summary = tk.Label(dialog, textvariable=self.diagnostic_summary, bg="#121c29", fg="#e4edf6",
+                           justify="left", anchor="w", wraplength=780)
+        summary.pack(fill="x", pady=5)
+        summary.bind("<Configure>", lambda event: summary.configure(wraplength=max(200, event.width)))
+        tk.Label(dialog, text="Vu-mètre PCM RMS logarithmique : −80 à 0 dBFS (— = aucune mesure actuelle)",
+                 bg="#121c29", fg="#a6b8cb", anchor="w").pack(fill="x")
+        self.rms_meter = ttk.Progressbar(dialog, maximum=80, mode="determinate")
+        self.rms_meter.pack(fill="x", pady=3)
         from tkinter.scrolledtext import ScrolledText
         self.diagnostic_text = ScrolledText(dialog, wrap="word", bg="#0b1019", fg="#e4edf6", height=14)
         self.diagnostic_text.pack(fill="both", expand=True, pady=8)
+        self._diagnostic_body = None
         ttk.Button(dialog, text="Terminer le tour courant (si VAD reste actif)",
                    command=lambda: self.capture.send({"kind": "finish_turn"})).pack(anchor="w")
         ttk.Button(dialog, text="Enregistrer le prochain tour en WAV… (sur demande)",

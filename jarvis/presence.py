@@ -335,7 +335,7 @@ class PresenceModel:
         moving = self.state == "thinking" and self.motion_allowed
         key = (width, height, self.state, self.settings.wave_expressivity,
                self.settings.reduced_motion, self.motion_allowed,
-               self._signal_version if active and self.state.endswith("speaking") else None)
+               self._signal_version if active and self.state in {"listening", "user_speaking", "jarvis_speaking"} else None)
         if not moving and key == self._geometry_key:
             return self._geometry
         energy = min(1.0, math.sqrt(self.signal["rms"]) * 1.6) if active else 0.0
@@ -369,7 +369,7 @@ class PresenceModel:
                 x, y = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
             else:
                 x, y = cx + (t - 0.5) * span, cy
-                if self.state == "user_speaking" and active:
+                if self.state in {"listening", "user_speaking"} and active:
                     # The sine is an endpoint window, never an invented audio carrier.
                     y += wave_line[i] * amplitude * (0.55 if self.settings.reduced_motion else 1)
             points.append((x, y))
@@ -383,15 +383,15 @@ class PresenceModel:
     def frame(self, width, height, now=None):
         now = time.monotonic() if now is None else now
         target = self.target_geometry(width, height, now)
-        speaking_without_signal = self.state in {"user_speaking", "jarvis_speaking"} and not self.has_signal(now)
+        speaking_without_signal = self.state in {"listening", "user_speaking", "jarvis_speaking"} and not self.has_signal(now)
         if (not self.points or self.size != (width, height) or not self.motion_allowed
-                or self.state in {"dormant", "silent", "listening"} or speaking_without_signal):
+                or self.state in {"dormant", "silent"} or speaking_without_signal):
             self.points = target
         else:
             delta = max(0, min(0.1, now - self.last_frame))
             duration = {"reactive": 0.045, "cinematic": 0.065, "calm": 0.11}[self.settings.fluidity]
             duration *= self.emotional_inertia
-            if self.state == "user_speaking":
+            if self.state in {"listening", "user_speaking"}:
                 extent = lambda points: max(y for _, y in points) - min(y for _, y in points)
                 duration = 0.022 if extent(target) >= extent(self.points) else 0.095
             amount = 1 - math.exp(-delta / duration)
@@ -411,7 +411,7 @@ class PresenceModel:
         if self.state == "dormant":
             return False
         return (self.morphing and self.motion_allowed or self.state == "thinking" and self.motion_allowed
-                or self.state in {"user_speaking", "jarvis_speaking"} and self.has_signal(now))
+                or self.state in {"listening", "user_speaking", "jarvis_speaking"} and self.has_signal(now))
 
 
 class PresenceView:

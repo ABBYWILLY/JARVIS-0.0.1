@@ -182,6 +182,46 @@ ni du PC cible : **un artefact vert ne valide pas la qualité vocale ou le barge
 
 ## Recette réelle sur votre Windows
 
+### LOT 1 Cognitive & Presence — validation matérielle en attente
+
+La CI et les tests PCM de laboratoire ne valident pas votre microphone physique.
+Ne pas poursuivre le LOT 2 avant cette recette. Ne changer ni seuil VAD ni modèle
+pour masquer un problème de capture. Aucun enregistrement audio automatique.
+
+1. Dans Windows 11, vérifier **Paramètres → Confidentialité et sécurité →
+   Microphone → Autoriser les applications de bureau** et le niveau/mute du micro.
+2. Dans JARVIS, **Menu → Voix / périphériques**, sélectionner explicitement votre
+   USB Condenser et son API (MME si c'est votre configuration). Garder votre modèle
+   Ollama et vos modèles Whisper/Piper installés. Activer l'écoute en l'autorisant,
+   puis **Diagnostic micro / STT**. Aucun téléchargement n'est lancé.
+3. Vérifier **Sélectionné / Ouvert**, API, index et fréquence native → 16000 Hz.
+   L'étape d'initialisation STT/VAD n'est pas une ouverture confirmée du micro.
+   Le compteur de trames doit augmenter et l'âge PCM rester récent. `—` signifie
+   aucune mesure actuelle ; `0.00000` signifie de vrais échantillons PCM nuls.
+4. Rester silencieux cinq secondes, parler trois secondes, rester silencieux.
+   Noter les trois RMS : ils doivent monter pendant la parole et revenir au bruit
+   ambiant, pas nécessairement à zéro. Dans PRESENCE, l'onde doit suivre ces mêmes
+   variations même sous le seuil VAD. Aucun mouvement n'est synthétisé au repos.
+5. Lire « Bonjour JARVIS, quelle heure est-il ? », puis attendre en silence.
+   Vérifier dans la trace **speech_start → turn_end → transcribing → stt_complete
+   → transcript**, le résultat français, puis la réponse Ollama dans COMMAND OS.
+   Tester aussi une phrase longue et une seconde phrase après une erreur éventuelle.
+   Si le modèle est absent/occupé, la transcription est conservée dans la saisie.
+6. En cas d'échec, relever Sélectionné/Ouvert, RMS silencieux/parole, VAD, âge PCM,
+   étape, fin de tour et dernière erreur conservée. Le diagnostic distingue absence
+   de PCM, PCM nul, signal sans VAD, attente de fin de tour, STT et transcription
+   reçue sans réponse. « Terminer le tour courant » sert au diagnostic d'un VAD
+   bloqué ; cela ne prouve pas que sa fin de tour automatique fonctionne.
+   L'export du prochain tour WAV reste facultatif et nécessite votre accord.
+7. Vérifier **Menu / Chat / PRESENCE / Arrêt** à 1100×620 (paysage), 620×900
+   (portrait), 640×480 et 560×400, puis DPI Windows 100/150/200/250 %. Tester F6
+   (menu), F7 (PRESENCE), F8 (conversation), Tab, défilement et barre rétractable.
+   Pendant Piper en mode speakers, aucun événement micro ancien ne doit réactiver
+   l'onde ; au casque, l'interruption vocale réelle doit rester prioritaire.
+
+Consigner le résultat et les erreurs avant de déclarer ce LOT 1 validé sur matériel.
+Compilation verte et démarrage de l'EXE en CI ne remplacent pas cette recette.
+
 Tester d’abord le texte, le redémarrage et votre Qwen abliterated. Ensuite :
 
 ```powershell

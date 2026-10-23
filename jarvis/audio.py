@@ -1,6 +1,7 @@
 """Local audio adapters, imported lazily so the text application stays independent."""
 import math
 import queue
+import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,13 +19,23 @@ class AudioEvent:
 
 
 def signal_view(samples, points=48):
-    """Bucket means of actual PCM, with a real RMS. Never generate a fake wave."""
+    """Ordered sample extrema and exact PCM RMS, without a generated carrier.
+
+    Bucket means can cancel real periodic audio at certain frequencies. Keep
+    two real extrema per bucket, in their original temporal order, instead.
+    """
     if len(samples) == 0:
         return {"rms": 0.0, "wave": [0.0] * points}
     rms = math.sqrt(sum(float(x) ** 2 for x in samples) / len(samples))
-    step = max(1, len(samples) // points)
-    wave = [sum(float(x) for x in samples[i:i + step]) / len(samples[i:i + step])
-            for i in range(0, len(samples), step)][:points]
+    if points <= 1:
+        return {"rms": rms, "wave": [float(samples[0])]}
+    buckets = min(len(samples), max(1, points // 2))
+    wave = []
+    for bucket in range(buckets):
+        start, end = bucket * len(samples) // buckets, (bucket + 1) * len(samples) // buckets
+        low = min(range(start, end), key=lambda index: samples[index])
+        high = max(range(start, end), key=lambda index: samples[index])
+        wave.extend(float(samples[index]) for index in sorted({low, high}))
     return {"rms": rms, "wave": wave}
 
 
@@ -167,24 +178,65 @@ class Microphone:
         import sounddevice as sd
         import soxr
         self.np = np
+        self.selected_device = device_key or "Par défaut Windows"
         self.device = resolve_device(device_key, "input")
-        native_rate = int(sd.query_devices(self.device, "input")["default_samplerate"])
+        device_info = sd.query_devices(self.device, "input")
+        native_rate = int(device_info["default_samplerate"])
         self.native_rate = native_rate
         self.resampler = soxr.ResampleStream(native_rate, RATE, 1, dtype="float32", quality="HQ")
         self.pending = np.empty(0, dtype="float32")
         self.inbox = queue.Queue(maxsize=64)
         self.failed = False
+        self.callback_status = ""
+        self.dropped_frames = 0
+        self.native_frames_received = 0
+        self.last_callback_at = None
+        self.capture_status = "opening_microphone"
 
         def capture(data, frames, timing, status):
+            self.last_callback_at = time.monotonic()
+            self.native_frames_received += frames
             if status:
                 self.failed = True
+                self.callback_status = str(status)[:400]
             try:
                 self.inbox.put_nowait(np.frombuffer(data, dtype="float32").copy())
             except queue.Full:
                 self.failed = True
+                self.dropped_frames += frames
+                self.callback_status = "File PCM native saturée"
+            except Exception as exc:
+                # Exceptions escaping a PortAudio callback otherwise stop it
+                # without reaching the normal capture-worker error boundary.
+                self.failed = True
+                self.callback_status = f"{type(exc).__name__}: {str(exc)[:300]}"
 
         self.stream = sd.RawInputStream(device=self.device, samplerate=native_rate,
             channels=1, dtype="float32", blocksize=max(128, round(native_rate * 0.032)), callback=capture)
+        try:
+            opened_index = getattr(self.stream, "device", self.device)
+            if not isinstance(opened_index, int) or isinstance(opened_index, bool):
+                opened_index = self.device
+            if isinstance(opened_index, int):
+                device_info = sd.query_devices(opened_index, "input")
+            host_index = device_info.get("hostapi")
+            host = sd.query_hostapis(host_index) if isinstance(host_index, int) else {}
+            self.opened_device = {"index": opened_index, "name": device_info.get("name", "Inconnu"),
+                "hostapi": host.get("name", "Inconnu") if isinstance(host, dict) else "Inconnu",
+                "channels": 1, "dtype": "float32", "native_rate": native_rate}
+        except BaseException:
+            # __enter__ is never reached if a device disappears during metadata
+            # lookup; the already allocated PortAudio stream must still close.
+            self.stream.close()
+            raise
+
+    def diagnostic_info(self):
+        """Bounded callback health; no device query or audio synthesis here."""
+        return {"selected_device": self.selected_device, "opened_device": dict(self.opened_device),
+                "native_rate": self.native_rate, "capture_status": self.capture_status,
+                "last_callback_at": self.last_callback_at,
+                "native_frames_received": self.native_frames_received,
+                "callback_status": self.callback_status, "dropped_frames": self.dropped_frames}
 
     def __enter__(self):
         try:
@@ -192,11 +244,13 @@ class Microphone:
         except BaseException:
             self.stream.close()
             raise
+        self.capture_status = "open"
         return self
 
     def read(self, timeout=0.1):
         if self.failed:
-            raise RuntimeError("Capture audio interrompue ou saturée. Vérifiez le périphérique et réactivez l’écoute.")
+            raise RuntimeError("Capture audio interrompue ou saturée : " + self.callback_status
+                               + ". Réduisez la charge, vérifiez le périphérique et réactivez l’écoute.")
         if not self.stream.active:
             raise RuntimeError("Microphone déconnecté. Choisissez un périphérique puis réactivez l’écoute.")
         native = self.inbox.get(timeout=timeout)
@@ -209,5 +263,8 @@ class Microphone:
         return frames
 
     def __exit__(self, *args):
-        self.stream.abort()
-        self.stream.close()
+        self.capture_status = "closed"
+        try:
+            self.stream.abort()
+        finally:
+            self.stream.close()

@@ -30,7 +30,7 @@ class App:
         self.font_family = next((families[name] for name in ("segoe ui", "dejavu sans", "helvetica") if name in families), "TkDefaultFont")
         root.title("JARVIS UNHINGED NEXT · 0.0.1")
         root.geometry("1100x760")
-        root.minsize(900, 600)
+        root.minsize(560, 400)
         root.configure(bg=BG)
         root.protocol("WM_DELETE_WINDOW", self.close)
         root.report_callback_exception = self.callback_error
@@ -46,8 +46,45 @@ class App:
         root.option_add("*TCombobox*Listbox.background", FIELD)
         root.option_add("*TCombobox*Listbox.foreground", TEXT)
 
-        sidebar = tk.Frame(root, bg=PANEL, padx=14, pady=18)
-        sidebar.grid(row=0, column=0, rowspan=3, sticky="nsew")
+        # Essential navigation never competes with history or audio diagnostics
+        # for the sidebar's height. Secondary controls scroll independently.
+        self.navigation = tk.Frame(root, bg=PANEL, padx=8, pady=5)
+        self.navigation.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.navigation_font = font.Font(root=root, family=self.font_family, size=9)
+        style.configure("Navigation.TButton", font=self.navigation_font, padding=(8, 5))
+        self.sidebar_button = ttk.Button(self.navigation, text="Menu", style="Navigation.TButton",
+                                         command=self.toggle_sidebar, width=0)
+        self.conversation_button = ttk.Button(self.navigation, text="Conversation", style="Navigation.TButton",
+                                              command=self.focus_conversation, width=0)
+        self.presence_button = ttk.Button(self.navigation, text="PRESENCE", style="Navigation.TButton",
+                                          command=lambda: self.presence.show(), width=0)
+        self.emergency_button = ttk.Button(self.navigation, text="Arrêt", style="Navigation.TButton",
+                                           command=lambda: self.voice.emergency(), width=0)
+        for button in (self.sidebar_button, self.conversation_button, self.presence_button, self.emergency_button):
+            button.pack(side="left", padx=2)
+        self.sidebar_collapsed = store.get_preference("sidebar_collapsed", False) is True
+        self._sidebar_manual = None
+        self._navigation_layout = None
+        self.sidebar = tk.Frame(root, bg=PANEL)
+        self.sidebar_canvas = tk.Canvas(self.sidebar, bg=PANEL, highlightthickness=0, width=270, height=1)
+        sidebar_scroll = ttk.Scrollbar(self.sidebar, command=self.sidebar_canvas.yview)
+        sidebar_scroll.pack(side="right", fill="y")
+        self.sidebar_canvas.pack(side="left", fill="both", expand=True)
+        self.sidebar_canvas.configure(yscrollcommand=sidebar_scroll.set)
+        sidebar = tk.Frame(self.sidebar_canvas, bg=PANEL, padx=14, pady=12)
+        self.sidebar_content = sidebar
+        sidebar_item = self.sidebar_canvas.create_window(0, 0, anchor="nw", window=sidebar)
+        sidebar.bind("<Configure>", lambda _event: self.sidebar_canvas.configure(
+            scrollregion=self.sidebar_canvas.bbox("all")))
+        self.sidebar_canvas.bind("<Configure>", lambda event: self.sidebar_canvas.itemconfigure(
+            sidebar_item, width=event.width))
+        root.bind("<FocusIn>", self._reveal_sidebar_focus, add="+")
+        root.bind("<MouseWheel>", self._sidebar_wheel, add="+")
+        root.bind("<Button-4>", self._sidebar_wheel, add="+")
+        root.bind("<Button-5>", self._sidebar_wheel, add="+")
+        self.sidebar_canvas.bind("<MouseWheel>", self._scroll_sidebar)
+        self.sidebar_canvas.bind("<Button-4>", lambda _event: self.sidebar_canvas.yview_scroll(-3, "units"))
+        self.sidebar_canvas.bind("<Button-5>", lambda _event: self.sidebar_canvas.yview_scroll(3, "units"))
         tk.Label(sidebar, text="J A R V I S", bg=PANEL, fg=CYAN,
                  font=(self.font_family, 21, "bold")).pack(anchor="w")
         tk.Label(sidebar, text="COMMAND OS  /  LOCAL", bg=PANEL, fg=MUTED,
@@ -60,7 +97,7 @@ class App:
         history_frame.pack(fill="both", expand=True)
         self.history = tk.Listbox(history_frame, bg=PANEL, fg=TEXT, selectbackground="#244055",
             selectforeground=CYAN, borderwidth=0, highlightthickness=1, highlightcolor=CYAN,
-            highlightbackground=FIELD, font=(self.font_family, 10), width=26, activestyle="dotbox", exportselection=False)
+            highlightbackground=FIELD, font=(self.font_family, 10), width=20, height=8, activestyle="dotbox", exportselection=False)
         history_scroll = ttk.Scrollbar(history_frame, command=self.history.yview)
         self.history.configure(yscrollcommand=history_scroll.set)
         self.history.pack(side="left", fill="both", expand=True)
@@ -75,29 +112,32 @@ class App:
         self.voice = VoiceControls(self, sidebar)
         from .presence import PresenceView
         self.presence = PresenceView(self)
-        ttk.Button(sidebar, text="PRESENCE", command=self.presence.show).pack(fill="x", pady=4)
         tk.Label(sidebar, text="Outils système : désactivés",
                  justify="left", bg=PANEL, fg=MUTED, font=(self.font_family, 9)).pack(anchor="w", pady=(16, 0))
 
-        top = tk.Frame(root, bg=BG, padx=20, pady=15)
-        top.grid(row=0, column=1, sticky="ew")
-        tk.Label(top, text="MODÈLE LOCAL", bg=BG, fg=MUTED, font=(self.font_family, 9)).pack(anchor="w")
-        model_row = tk.Frame(top, bg=BG)
+        top = self.model_panel = tk.Frame(root, bg=BG, padx=20, pady=15)
+        top.grid(row=1, column=1, sticky="ew")
+        self.model_heading = tk.Label(top, text="MODÈLE LOCAL", bg=BG, fg=MUTED, font=(self.font_family, 9))
+        self.model_heading.pack(anchor="w")
+        model_row = self.model_row = tk.Frame(top, bg=BG)
         model_row.pack(fill="x", pady=(6, 0))
         self.model_var = tk.StringVar(value=self.settings.model)
-        self.model_combo = ttk.Combobox(model_row, textvariable=self.model_var, state="readonly")
-        self.model_combo.pack(side="left", fill="x", expand=True)
+        self.model_combo = ttk.Combobox(model_row, textvariable=self.model_var, state="readonly", width=1)
         self.model_combo.bind("<<ComboboxSelected>>", self.change_model)
         self.refresh_button = ttk.Button(model_row, text="Actualiser", command=self.refresh_models)
-        self.refresh_button.pack(side="left", padx=(10, 0))
+        self.refresh_button.pack(side="right", padx=(10, 0))
+        self.model_combo.pack(side="left", fill="x", expand=True)
         self.status = tk.StringVar(value="Prêt. Sélectionnez un modèle Ollama local.")
         self.status_label = tk.Label(top, textvariable=self.status, bg=BG, fg=CYAN,
             justify="left", anchor="w", wraplength=650, font=(self.font_family, 10))
         self.status_label.pack(fill="x", pady=(12, 0))
+        self.status_label.configure(takefocus=True, cursor="hand2")
+        self.status_label.bind("<Button-1>", self.show_status)
+        self.status_label.bind("<Return>", self.show_status)
         top.bind("<Configure>", lambda e: self.status_label.configure(wraplength=max(200, e.width - 40)))
 
         chat_frame = tk.Frame(root, bg=BG, padx=20)
-        chat_frame.grid(row=1, column=1, sticky="nsew")
+        chat_frame.grid(row=2, column=1, sticky="nsew")
         self.chat = tk.Text(chat_frame, bg=BG, fg=TEXT, wrap="word", state="disabled",
             font=(self.font_family, 12), padx=14, pady=14, borderwidth=0,
             highlightthickness=1, highlightbackground=FIELD, highlightcolor=CYAN,
@@ -119,8 +159,8 @@ class App:
         self._apply_conversation_typography(self.typography)
         self.conversation_dialog = None
         self.assistant_region = None
-        compose = tk.Frame(root, bg=BG, padx=20, pady=14)
-        compose.grid(row=2, column=1, sticky="ew")
+        compose = self.compose_panel = tk.Frame(root, bg=BG, padx=20, pady=14)
+        compose.grid(row=3, column=1, sticky="ew")
         self.input = tk.Text(compose, height=4, bg=FIELD, fg=TEXT, insertbackground=CYAN,
             wrap="word", font=(self.font_family, 11), padx=10, pady=8, borderwidth=0,
             highlightthickness=1, highlightcolor=CYAN, highlightbackground=FIELD)
@@ -129,22 +169,23 @@ class App:
         self.input.configure(font=self.markdown.body_font)
         actions = tk.Frame(compose, bg=BG)
         actions.pack(fill="x", pady=(10, 0))
-        tk.Label(actions, text="Ctrl + Entrée : envoyer · Entrée : nouvelle ligne",
-                 bg=BG, fg=MUTED, font=(self.font_family, 9)).pack(side="left")
+        self.compose_hint = tk.Label(actions, text="Ctrl + Entrée : envoyer · Entrée : nouvelle ligne",
+                 bg=BG, fg=MUTED, font=(self.font_family, 9))
         style.configure("Metrics.TCheckbutton", background=BG, foreground=MUTED,
                         font=(self.font_family, 9))
-        self.metrics_toggle = ttk.Checkbutton(model_row, text="Métriques", variable=self.metrics_visible,
+        self.metrics_toggle = ttk.Checkbutton(sidebar, text="Métriques de génération", variable=self.metrics_visible,
             command=self.toggle_metrics, style="Metrics.TCheckbutton")
-        self.metrics_toggle.pack(side="right", padx=(10, 0))
-        self.context_button = ttk.Button(model_row, text="Contexte", command=self.open_context)
-        self.context_button.pack(side="right", padx=(10, 0))
-        self.memory_button = ttk.Button(model_row, text="Mémoire", command=self.open_memory)
-        self.memory_button.pack(side="right", padx=(8, 0))
-        self.send_button = ttk.Button(actions, text="Envoyer", command=self.send)
+        self.metrics_toggle.pack(fill="x", pady=3)
+        self.context_button = ttk.Button(sidebar, text="Contexte", command=self.open_context)
+        self.context_button.pack(fill="x", pady=3)
+        self.memory_button = ttk.Button(sidebar, text="Mémoire", command=self.open_memory)
+        self.memory_button.pack(fill="x", pady=3)
+        self.send_button = ttk.Button(actions, text="Envoyer", command=self.send, width=0)
         self.send_button.pack(side="right")
-        self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled")
+        self.stop_button = ttk.Button(actions, text="Arrêter", command=self.cancel, state="disabled", width=0)
         self.stop_button.pack(side="right", padx=8)
-        root.rowconfigure(1, weight=1)
+        self.compose_hint.pack(side="left")
+        root.rowconfigure(2, weight=1)
         root.columnconfigure(1, weight=1)
         self.session_id = None
         self.reload_history()
@@ -155,9 +196,108 @@ class App:
         self.reload_history()
         self.render_session()
         self.input.focus_set()
+        root.bind("<F6>", self.toggle_sidebar)
+        root.bind("<F7>", lambda _event: self.presence.show() or "break")
+        root.bind("<F8>", self.focus_conversation)
+        root.bind("<Configure>", self._responsive_navigation, add="+")
+        root.update_idletasks()
+        self._responsive_navigation()
         self.poll_id = root.after(40, self.poll)
         if refresh:
             self.refresh_models()
+
+    def toggle_sidebar(self, _event=None):
+        visible = bool(self.sidebar.winfo_manager())
+        self.sidebar_collapsed = visible
+        self._sidebar_manual = not visible
+        self.store.set_preference("sidebar_collapsed", self.sidebar_collapsed)
+        self._responsive_navigation()
+        if self._sidebar_manual:
+            self.new_button.focus_set()
+        else:
+            self.sidebar_button.focus_set()
+        return "break"
+
+    def focus_conversation(self, _event=None):
+        if self.sidebar.winfo_manager() == "place":
+            self._sidebar_manual = False
+            self._responsive_navigation()
+        if self.presence.window is not None and self.presence.window.winfo_exists():
+            self.presence.return_to_command()
+        self.root.deiconify()
+        self.root.lift()
+        self.input.focus_set()
+        return "break"
+
+    def _scroll_sidebar(self, event):
+        self.sidebar_canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+        return "break"
+
+    def _sidebar_wheel(self, event):
+        if (str(event.widget).startswith(str(self.sidebar_content) + ".")
+                and not isinstance(event.widget, (tk.Listbox, tk.Text, ttk.Combobox))):
+            amount = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
+            self.sidebar_canvas.yview_scroll(amount * 3, "units")
+            return "break"
+
+    def show_status(self, _event=None):
+        messagebox.showinfo("Statut complet de JARVIS", self.status.get(), parent=self.root)
+        return "break"
+
+    def _reveal_sidebar_focus(self, event):
+        if not str(event.widget).startswith(str(self.sidebar_content) + "."):
+            return
+        self.sidebar_content.update_idletasks()
+        y = event.widget.winfo_rooty() - self.sidebar_content.winfo_rooty()
+        bottom = y + event.widget.winfo_height()
+        top = self.sidebar_canvas.canvasy(0)
+        if y < top or bottom > top + self.sidebar_canvas.winfo_height():
+            self.sidebar_canvas.yview_moveto(max(0, bottom - self.sidebar_canvas.winfo_height())
+                                            / max(1, self.sidebar_content.winfo_height()))
+
+    def _responsive_navigation(self, event=None):
+        if event is not None and event.widget is not self.root:
+            return
+        width, height = self.root.winfo_width(), self.root.winfo_height()
+        scale = max(.75, float(self.root.tk.call("tk", "scaling")) / (96 / 72))
+        compact = width < round(980 * scale) or height < round(680 * scale)
+        wide = width >= round(980 * scale)
+        show_sidebar = self._sidebar_manual if self._sidebar_manual is not None else not self.sidebar_collapsed and wide
+        layout = (width, height, scale, show_sidebar, compact)
+        if layout == self._navigation_layout:
+            return
+        self._navigation_layout = layout
+        self.sidebar.grid_forget()
+        self.sidebar.place_forget()
+        if show_sidebar:
+            if wide:
+                self.sidebar_canvas.configure(width=round(270 * scale))
+                self.sidebar.grid(row=1, column=0, rowspan=3, sticky="nsew")
+            else:
+                self.sidebar.place(x=0, y=self.navigation.winfo_reqheight(),
+                    width=min(width - 24, round(290 * scale)),
+                    height=max(80, height - self.navigation.winfo_reqheight()))
+                self.sidebar.lift()
+        self.navigation.lift()
+        self.conversation_button.configure(text="Chat" if compact else "Conversation")
+        # Fit the essential labels even on a physically small high-DPI window.
+        self.navigation_font.configure(size=9)
+        self.navigation.update_idletasks()
+        requested = sum(button.winfo_reqwidth() + 4 for button in
+                        (self.sidebar_button, self.conversation_button, self.presence_button, self.emergency_button)) + 16
+        if requested > width:
+            pixels = max(12, round(9 * (96 / 72) * scale * width / requested))
+            self.navigation_font.configure(size=-pixels)
+        self.model_panel.configure(padx=10 if compact else 20, pady=5 if compact else 15)
+        self.compose_panel.configure(padx=10 if compact else 20, pady=5 if compact else 14)
+        self.input.configure(height=1 if compact else 4)
+        self.status_label.configure(height=(1 if height < max(500, round(240 * scale)) else 2) if compact else 0)
+        if compact:
+            self.model_heading.pack_forget()
+            self.compose_hint.pack_forget()
+        else:
+            self.model_heading.pack(anchor="w", before=self.model_row)
+            self.compose_hint.pack(side="left")
 
     def set_conversation_typography(self, **changes):
         from .markdown_view import ConversationTypography
@@ -692,4 +832,5 @@ class App:
             self.root.after_cancel(self.poll_id)
             self.markdown.close()
             self.store.close()
+            self.navigation_font = None
             self.root.destroy()

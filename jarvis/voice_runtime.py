@@ -23,9 +23,11 @@ def emit_event(outbox, event):
             outbox.put_nowait(event)  # Never block an audio callback on the UI.
         else:
             outbox.put(event, timeout=1)
+        return True
     except queue.Full:
         if event.kind not in {"mic_level", "played", "diagnostic"}:
             raise RuntimeError("File d’événements vocaux saturée ; redémarrez l’écoute.")
+        return False
 
 
 def capture_worker(outbox, commands, profile):
@@ -33,16 +35,42 @@ def capture_worker(outbox, commands, profile):
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
     startup_at = time.monotonic()
     stage = "initialisation STT"
+    microphone = None
+    generation = 0
+    event_drops = 0
+    selected_device = profile.get("input_device") or "Par défaut Windows"
+
+    def emit(event):
+        nonlocal event_drops
+        if emit_event(outbox, event) is False:
+            event_drops += 1
+
+    def startup(status):
+        emit(AudioEvent("capture_stage", {"stage": stage, "capture_status": status,
+             "selected_device": selected_device, "opened_device": None,
+             "started_at": startup_at}))
+
     try:
         from .audio import FrenchWhisper, Microphone, SileroFrames, TurnDetector, signal_view
         settings = VoiceSettings(**profile).validate()
+        startup("loading_stt")
         stt = FrenchWhisper(settings.model_root / "whisper", settings.cpu_threads)
         stage = "initialisation VAD"
+        startup("loading_vad")
         vad = SileroFrames()
         detector = TurnDetector(settings.vad_threshold, settings.silence_ms)
         stage = "ouverture microphone"
+        startup("opening_microphone")
         with Microphone(settings.input_device) as microphone, ThreadPoolExecutor(max_workers=1) as executor:
-            emit_event(outbox, AudioEvent("listening", {"startup_ms": round((time.monotonic() - startup_at) * 1000)}))
+            def device_health():
+                info = getattr(microphone, "diagnostic_info", None)
+                return info() if callable(info) else {"selected_device": selected_device,
+                    "opened_device": None, "native_rate": getattr(microphone, "native_rate", None),
+                    "callback_status": "", "dropped_frames": 0}
+
+            emit(AudioEvent("listening", {**device_health(),
+                "startup_ms": round((time.monotonic() - startup_at) * 1000),
+                "capture_status": "open", "rate": 16000}))
             future = None
             future_generation = 0
             active_job = pending_job = None
@@ -52,6 +80,26 @@ def capture_worker(outbox, commands, profile):
             last_diagnostic = 0.0
             last_stt = "Aucun segment soumis"
             sample_path = None
+            frames_received = 0
+            last_frame_at = None
+            last_rms = None
+
+            def diagnostic(status, now, *, frame=None, probability=None):
+                nonlocal last_diagnostic
+                if now - last_diagnostic <= .25:
+                    return
+                phase = ("suspendu pendant la lecture" if muted else "attente de silence"
+                         if detector.waiting_for_quiet else "parole" if detector.speaking else "silence")
+                emit(AudioEvent("diagnostic", {**device_health(),
+                    "rms": signal_view(frame, points=1)["rms"] if frame is not None else None,
+                    "last_rms": last_rms, "vad": probability,
+                    "state": phase, "capture_status": status, "stage": stage,
+                    "turn_seconds": detector.duration, "end_reason": detector.last_end_reason,
+                    "last_stt": last_stt, "rate": 16000,
+                    "frame_samples": len(frame) if frame is not None else 0,
+                    "frames_received": frames_received, "last_frame_at": last_frame_at,
+                    "event_drops": event_drops}, generation))
+                last_diagnostic = now
 
             def transcribe(job):
                 if job.get("sample_path"):
@@ -75,17 +123,17 @@ def capture_worker(outbox, commands, profile):
                 future_generation = job["generation"]
                 last_stt = "STT démarré"
                 future = executor.submit(transcribe, job)
-                emit_event(outbox, AudioEvent("transcribing", generation=future_generation))
+                emit(AudioEvent("transcribing", generation=future_generation))
 
             def submit(event):
                 nonlocal pending_job, last_stt, sample_path
                 ended_at = time.monotonic()
-                emit_event(outbox, AudioEvent("turn_end", {
+                emit(AudioEvent("turn_end", {
                     "reason": detector.last_end_reason, "duration": detector.last_duration,
                     "samples": len(event.payload), "ended_at": ended_at,
                     "silence_ms": detector.last_silence_ms}, generation))
                 if detector.last_end_reason == "max_duration":
-                    emit_event(outbox, AudioEvent("warning", "Tour limité à 20 s : segment envoyé au STT. Attendez un silence avant de reprendre.", generation))
+                    emit(AudioEvent("warning", "Tour limité à 20 s : segment envoyé au STT. Attendez un silence avant de reprendre.", generation))
                     vad.reset()
                 job = {"samples": event.payload, "generation": generation, "ended_at": ended_at}
                 if sample_path:
@@ -95,7 +143,7 @@ def capture_worker(outbox, commands, profile):
                     # One bounded latest-turn slot, never an unbounded stale backlog.
                     pending_job = job
                     last_stt = "Tour conservé en attente du STT"
-                    emit_event(outbox, AudioEvent("stt_queued", generation=generation))
+                    emit(AudioEvent("stt_queued", generation=generation))
                 else:
                     start_job(job)
             while True:
@@ -111,16 +159,16 @@ def capture_worker(outbox, commands, profile):
                                 detector.reset()
                                 vad.reset()
                                 if pending_job is not None:
-                                    emit_event(outbox, AudioEvent("stt_superseded", "Microphone suspendu", pending_job["generation"]))
+                                    emit(AudioEvent("stt_superseded", "Microphone suspendu", pending_job["generation"]))
                                     if pending_job.get("sample_path"):
-                                        emit_event(outbox, AudioEvent("sample_error", "Demande WAV annulée : microphone suspendu.", pending_job["generation"]))
+                                        emit(AudioEvent("sample_error", "Demande WAV annulée : microphone suspendu.", pending_job["generation"]))
                                     pending_job = None
                         elif command["kind"] == "finish_turn" and not muted:
                             for event in detector.finish():
                                 submit(event)
                         elif command["kind"] == "sample_next":
                             sample_path = command["path"]
-                            emit_event(outbox, AudioEvent("sample_armed", sample_path))
+                            emit(AudioEvent("sample_armed", sample_path))
                 except queue.Empty:
                     pass
                 if future is not None and future.done():
@@ -129,20 +177,20 @@ def capture_worker(outbox, commands, profile):
                     timing = {"elapsed_ms": round((active_job["finished_at"] - active_job["started_at"]) * 1000),
                               "queue_ms": round((active_job["started_at"] - active_job["ended_at"]) * 1000)}
                     if "sample_result" in active_job:
-                        emit_event(outbox, AudioEvent("sample_saved", active_job["sample_result"], future_generation))
+                        emit(AudioEvent("sample_saved", active_job["sample_result"], future_generation))
                     elif "sample_error" in active_job:
-                        emit_event(outbox, AudioEvent("sample_error", active_job["sample_error"], future_generation))
+                        emit(AudioEvent("sample_error", active_job["sample_error"], future_generation))
                     try:
                         text = completed.result()
                     except Exception as exc:
                         last_stt = f"{type(exc).__name__}: {str(exc)[:400]}"
-                        emit_event(outbox, AudioEvent("stt_error", {"error": last_stt, **timing}, future_generation))
+                        emit(AudioEvent("stt_error", {"error": last_stt, **timing}, future_generation))
                     else:
                         last_stt = "Terminé : " + (text[:400] if text else "aucun texte reconnu")
                         detail = getattr(stt, "last_result", {})
                         detail = {**detail, "raw_result": detail.get("raw_result", "")[:2000]}
-                        emit_event(outbox, AudioEvent("stt_complete", {"result": text[:2000], **detail, **timing}, future_generation))
-                        emit_event(outbox, AudioEvent("transcript", text, future_generation))
+                        emit(AudioEvent("stt_complete", {"result": text[:2000], **detail, **timing}, future_generation))
+                        emit(AudioEvent("transcript", text, future_generation))
                     active_job = None
                     if pending_job is not None:
                         job, pending_job = pending_job, None
@@ -151,17 +199,16 @@ def capture_worker(outbox, commands, profile):
                     stage = "capture / rééchantillonnage PCM"
                     frames = microphone.read()
                 except queue.Empty:
+                    diagnostic("suspended" if muted else "waiting_for_pcm", time.monotonic())
                     continue
+                if not frames:
+                    diagnostic("suspended" if muted else "waiting_for_pcm", time.monotonic())
+                    continue
+                frames_received += len(frames)
+                last_frame_at = time.monotonic()
+                last_rms = signal_view(frames[-1], points=1)["rms"]
                 if muted:
-                    now = time.monotonic()
-                    if frames and now - last_diagnostic > 0.25:
-                        emit_event(outbox, AudioEvent("diagnostic", {
-                            "rms": signal_view(frames[-1], points=1)["rms"], "vad": None,
-                            "state": "suspendu pendant la lecture", "turn_seconds": 0,
-                            "end_reason": detector.last_end_reason, "last_stt": last_stt,
-                            "native_rate": getattr(microphone, "native_rate", None),
-                            "rate": 16000, "frame_samples": len(frames[-1])}, generation))
-                        last_diagnostic = now
+                    diagnostic("suspended", time.monotonic(), frame=frames[-1])
                     continue
                 for frame in frames:
                     stage = "VAD / détection de fin de tour"
@@ -170,32 +217,29 @@ def capture_worker(outbox, commands, profile):
                         if event.kind == "speech_start":
                             generation += 1
                             if pending_job is not None:
-                                emit_event(outbox, AudioEvent("stt_superseded", "Nouvelle prise de parole", pending_job["generation"]))
+                                emit(AudioEvent("stt_superseded", "Nouvelle prise de parole", pending_job["generation"]))
                                 if pending_job.get("sample_path"):
-                                    emit_event(outbox, AudioEvent("sample_error", "Demande WAV annulée : tour remplacé par une nouvelle prise de parole.", pending_job["generation"]))
+                                    emit(AudioEvent("sample_error", "Demande WAV annulée : tour remplacé par une nouvelle prise de parole.", pending_job["generation"]))
                                 pending_job = None
-                            emit_event(outbox, AudioEvent("speech_start", generation=generation))
+                            emit(AudioEvent("speech_start", generation=generation))
                         elif event.kind == "utterance":
                             submit(event)
                     now = time.monotonic()
                     if now - last_level > 0.05:
-                        view = signal_view(frame if detector.speaking and probability >= settings.vad_threshold else [0.0])
-                        view["speaking"] = detector.speaking
-                        emit_event(outbox, AudioEvent("mic_level", view, generation))
+                        view = signal_view(frame)
+                        view.update(speaking=detector.speaking, vad=probability,
+                                    frames_received=frames_received, captured_at=last_frame_at)
+                        emit(AudioEvent("mic_level", view, generation))
                         last_level = now
-                    if now - last_diagnostic > 0.25:
-                        rms = signal_view(frame, points=1)["rms"]
-                        phase = "suspendu" if muted else "attente de silence" if detector.waiting_for_quiet else "parole" if detector.speaking else "silence"
-                        emit_event(outbox, AudioEvent("diagnostic", {"rms": rms, "vad": probability,
-                            "state": phase, "turn_seconds": detector.duration,
-                            "end_reason": detector.last_end_reason, "last_stt": last_stt,
-                            "native_rate": getattr(microphone, "native_rate", None),
-                            "rate": 16000, "frame_samples": len(frame)}, generation))
-                        last_diagnostic = now
+                    diagnostic("receiving_pcm", now, frame=frame, probability=probability)
+
     except Exception as exc:
-        emit_event(outbox, AudioEvent("capture_error", {"stage": stage,
+        info = getattr(microphone, "diagnostic_info", None)
+        detail = info() if callable(info) else {"selected_device": selected_device, "opened_device": None}
+        emit(AudioEvent("capture_error", {**detail, "capture_status": "error", "stage": stage,
+                   "event_drops": event_drops,
                    "error": f"{type(exc).__name__}: {str(exc)[:400]}"}))
-        emit_event(outbox, AudioEvent("error", audio_error(exc)))
+        emit(AudioEvent("error", audio_error(exc)))
 
 
 def speech_worker(outbox, commands, profile, generation, persistent=False):
