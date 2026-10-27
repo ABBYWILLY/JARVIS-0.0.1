@@ -263,12 +263,15 @@ class GpuRenderer:
         self.ctx.blend_func = self._gl.ONE, self._gl.ONE
         self._curve_vao.render(mode=self._gl.TRIANGLE_STRIP, vertices=4, instances=segments)
         if reactor > 0:
-            self._filament_vao.render(mode=self._gl.TRIANGLE_STRIP, vertices=4,
-                                      instances=144 * (6 if self._quality == "cinematic" else 4))
+            # Sparse accents require actual supplied audio energy; the stable
+            # THINKING core is not buried under a permanent filament cage.
+            if rms > 0:
+                self._filament_vao.render(mode=self._gl.TRIANGLE_STRIP, vertices=4,
+                                          instances=72 * 2)
             if self.particles:
                 self.ctx.enable(self._gl.PROGRAM_POINT_SIZE)
                 self._particle_vao.render(mode=self._gl.POINTS,
-                                          vertices=1536 if self._quality == "cinematic" else 768)
+                                          vertices=36 if self._quality == "cinematic" else 24)
                 self.ctx.disable(self._gl.PROGRAM_POINT_SIZE)
         self.ctx.disable(self._gl.BLEND)
         if self.bloom:

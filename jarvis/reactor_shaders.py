@@ -14,7 +14,7 @@ void main() {
 # and the near sphere hit determines whether a world-space stroke is in front.
 SPACE_GLSL = """
 const float CAMERA_Z = 2.6;
-const float CORE_RADIUS = .205;
+const float CORE_RADIUS = .30;
 vec2 project_world(vec3 p) { return p.xy * CAMERA_Z / (CAMERA_Z-p.z); }
 vec2 scene_plane(vec2 ndc, vec2 size) {
     float aspect = size.x/size.y;
@@ -30,6 +30,14 @@ float core_front(vec2 p) {
     float c = CAMERA_Z*CAMERA_Z-CORE_RADIUS*CORE_RADIUS;
     float discriminant = b*b-a*c;
     return discriminant >= 0.0 ? (-b-sqrt(max(0.0,discriminant)))/a : 10000.0;
+}
+// Three related, separated orbital planes replace the crowded cage.
+void orbit_axes(float ring, float time_s, out vec3 axis_u, out vec3 axis_v) {
+    float rot = -.34+ring*.13+.055*sin(time_s*.16+ring);
+    float cosine = .30+ring*.11+.018*sin(time_s*.19+ring*1.7);
+    float sine = sqrt(1.0-cosine*cosine);
+    axis_u = vec3(cos(rot),sin(rot),0.0);
+    axis_v = vec3(-sin(rot)*cosine,cos(rot)*cosine,sine);
 }
 float visible_depth(float near_hit, float world_z, float activation) {
     if (activation <= 0.0 || near_hit > 2.0) return 1.0;
@@ -49,7 +57,8 @@ uniform float u_time, u_reactor, u_rms;
 const float TAU = 6.28318530718;
 float lineGlow(float d, float width) { return exp(-d*d/(width*width)); }
 void main() {
-    vec3 light = vec3(.0013,.0024,.0042);
+    // Object light is added onto exact black, never an ambient background.
+    vec3 light = vec3(0.0);
     if (u_reactor <= 0.0) { frag = vec4(light,1.0); return; }
     vec2 p = scene_plane(uv*2.0-1.0,u_size);
     float r = length(p), t = u_time;
@@ -57,11 +66,10 @@ void main() {
     float px = 2.0/min(u_size.x,u_size.y);
     float near_hit = core_front(p);
     vec3 cold = mix(u_color,vec3(.53,.83,1.0),.12);
-    vec3 warm = mix(u_color,vec3(1.0,.49,.20),.86);
     float breath = 1.0+.035*sin(t*1.7)+.10*u_rms;
     // A directional, emissive surface gives the same core material and volume.
     // Three bounded sine fields form flowing energy veins, without textures.
-    light += cold*(.032*exp(-r*r/.25)+.055*exp(-r*r/.024))*activation;
+    light += cold*.045*exp(-r*r/.065)*(1.0-smoothstep(.42,.76,r))*activation;
     if (near_hit < 2.0) {
         vec3 surface = vec3(p*near_hit,CAMERA_Z*(1.0-near_hit));
         vec3 normal = surface/CORE_RADIUS;
@@ -73,7 +81,7 @@ void main() {
         float scan = .82+.18*cos(normal.y*76.0-t*.8);
         float glint = pow(max(0.0,dot(reflect(normalize(vec3(.45,-.6,-1.0)),normal),
                                       vec3(0.0,0.0,1.0))),18.0);
-        light += cold*(.045+.16*lit+.62*veins+.30*rim)*scan*breath*activation;
+        light += cold*(.035+.14*lit+.18*veins+.32*rim)*scan*breath*activation;
         light += mix(cold,vec3(.8,.96,1.0),.5)*glint*.22*activation;
     }
     float angle = atan(p.y,p.x);
@@ -82,13 +90,10 @@ void main() {
     vec3 ray = vec3(p,-CAMERA_Z);
     // Exact ray/plane intersection: every circle has a world-space depth and
     // perspective foreshortening. Rear portions disappear behind the core.
-    for (int i=0;i<5;++i) {
+    for (int i=0;i<3;++i) {
         float fi = float(i);
-        float rot = fi*1.117+.10*sin(t*.19+fi);
-        float cosine = .27+.125*fi+.025*sin(t*.23+fi*2.0);
-        float sine = sqrt(1.0-cosine*cosine);
-        vec3 axis_u = vec3(cos(rot),sin(rot),0.0);
-        vec3 axis_v = vec3(-sin(rot)*cosine,cos(rot)*cosine,sine);
+        vec3 axis_u, axis_v;
+        orbit_axes(fi,t,axis_u,axis_v);
         vec3 normal = cross(axis_u,axis_v);
         float denominator = dot(normal,ray);
         if (abs(denominator)<.015) continue;
@@ -97,23 +102,22 @@ void main() {
         vec3 world = vec3(p*hit,CAMERA_Z*(1.0-hit));
         vec2 q = vec2(dot(world,axis_u),dot(world,axis_v));
         float a = atan(q.y,q.x);
-        float radius = .33+fi*.093;
-        float d = length(q)-radius-.0018*sin(a*13.0+t*.7+fi);
-        float pixel_width = max(fwidth(length(q)),px*.42);
+        float radius = .48+fi*.11;
+        float d = length(q)-radius;
+        // Bound derivatives at grazing ray/plane intersections: the
+        // singularity must not paint a false halo into empty black space.
+        float pixel_width = clamp(fwidth(length(q)),px*.42,px*2.5);
         float depth = clamp(.5+.5*world.z/radius,0.0,1.0);
         float phase = a+t*(.12+fi*.035)*(mod(fi,2.0)*2.0-1.0)+fi;
-        float sectors = .5+.5*sin(phase*(9.0+fi*2.0));
-        float segment = smoothstep(.20,.31,sectors);
+        float segment = .62+.38*pow(.5+.5*cos(phase),3.0);
         float width = .0008+pixel_width*(.48+depth*.18);
         float rail = lineGlow(d,width)*segment;
-        float outer = lineGlow(abs(d)-.007,width*.64)*smoothstep(.58,.71,sectors);
         float halo = lineGlow(d,.010+pixel_width)*.055*segment;
         float highlight = pow(max(0.0,cos(phase*2.0+fi)),18.0);
         float packet = pow(max(0.0,cos(phase*3.0+fi)),95.0);
         float visible = visible_depth(near_hit,world.z,u_reactor);
-        vec3 tint = mix(cold,warm,float(i==3)*.68);
-        light += tint*(rail*(.40+depth*1.35+highlight*.9)+outer*.28+halo
-                       +lineGlow(d,.004+pixel_width)*packet*(.3+depth))
+        light += cold*(rail*(.18+depth*.68+highlight*.28)+halo*.45
+                       +lineGlow(d,.004+pixel_width)*packet*(.10+depth*.25))
                       *activation*visible;
     }
     frag = vec4(light,1.0);
@@ -151,7 +155,10 @@ void main() {
     v_local = vec2(along,side*10.0);
     v_length = length_;
     v_depth = (first.z+last.z)*.5;
-    v_strength = a_main>.5 ? 1.0 : (1.0-smoothstep(0.0,.8,u_reactor))*u_detail_opacity;
+    // The supplied PCM/symbol stays authoritative outside the reactor.
+    // Its transitional spiral fades away before the sphere takes prominence.
+    v_strength = a_main>.5 ? (1.0-smoothstep(.15,.85,u_reactor))
+                          : (1.0-smoothstep(0.0,.8,u_reactor))*u_detail_opacity;
 }
 """
 
@@ -177,11 +184,11 @@ void main() {
 
 FILAMENT_VERTEX = """#version 330
 uniform vec2 u_size;
-uniform float u_time, u_reactor;
+uniform float u_time, u_reactor, u_rms;
 out vec2 v_local;
 flat out float v_length, v_strength, v_depth;
 """ + SPACE_GLSL + """
-const int STEPS = 144;
+const int STEPS = 72;
 vec3 path(float u,float strand) {
     float t = u_time;
     float theta = u*6.2831853+strand*1.04719755;
@@ -209,7 +216,7 @@ void main() {
     v_local = vec2(along,side*5.0);
     v_length = length_;
     v_depth = (first.z+last.z)*.5;
-    v_strength = u_reactor*.32*(.4+.6*pow(.5+.5*sin(u*31.4159-u_time*.7+strand),2.0));
+    v_strength = u_reactor*u_rms*.08*(.4+.6*pow(.5+.5*sin(u*31.4159-u_time*.7+strand),2.0));
 }
 """
 
@@ -222,17 +229,18 @@ flat out float v_depth;
 float hash(float n) { return fract(sin(n*127.1+311.7)*43758.5453); }
 void main() {
     float id = float(gl_VertexID), seed = hash(id+1.0);
-    float radius = .17+pow(hash(id+11.0),.7)*.60;
-    float a = seed*6.2831853+u_time*(.035+hash(id+3.0)*.12)*(mod(id,2.0)*2.0-1.0);
-    float latitude = (hash(id+91.0)-.5)*1.8;
-    vec3 p = vec3(cos(a)*radius,sin(a)*radius*.67,sin(a+latitude)*radius*.43);
-    p.xy += vec2(sin(a*3.0+latitude),cos(a*2.0+latitude))*.012;
+    float ring = mod(id,3.0);
+    float radius = .48+ring*.11;
+    float a = seed*6.2831853+u_time*(.05+ring*.025);
+    vec3 axis_u, axis_v;
+    orbit_axes(ring,u_time,axis_u,axis_v);
+    vec3 p = radius*(cos(a)*axis_u+sin(a)*axis_v);
     vec2 projected = plane_ndc(project_world(p),u_size);
     gl_Position = vec4(projected,0.0,1.0);
     float twinkle = pow(.5+.5*sin(u_time*(.5+seed)+id),5.0);
-    gl_PointSize = (1.8+hash(id+6.0)*3.5)*(1.0+u_rms*.3)*CAMERA_Z/(CAMERA_Z-p.z);
-    v_power = (.08+.6*twinkle)*u_reactor*(.65+p.z);
-    v_warm = step(.91,hash(id+17.0));
+    gl_PointSize = (1.5+hash(id+6.0)*1.3)*(1.0+u_rms*.3)*CAMERA_Z/(CAMERA_Z-p.z);
+    v_power = (.10+.22*twinkle)*u_reactor*(.65+p.z);
+    v_warm = 0.0;
     v_depth = p.z;
 }
 """

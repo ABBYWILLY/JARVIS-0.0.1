@@ -1,6 +1,8 @@
 # PRESENCE GPU — prototype autonome
 
 Ce programme expérimental accompagne JARVIS, sans remplacer son moteur Canvas.
+La revue artistique [GPU 3.0 — A + B](PRESENCE-GPU-3.0.md) conserve ce statut
+autonome et impose un arrêt pour avis utilisateur avant les autres sous-lots.
 La phase [GPU2.5D](UX-POLISH-PRESENCE-25D.md) ajoute perspective, occlusion et
 matière énergétique légère. Ce document contient la comparaison réelle
 avant/après, la vidéo et les mesures logicielles ; aucune validation RTX n'est

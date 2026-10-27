@@ -78,13 +78,38 @@ class GpuRendererTests(unittest.TestCase):
         self.assertLess(abs(sum(rows) / len(rows) - height / 2), 2)
         self.assertLess(max(first[:width * 3 * (height // 4)]), 45)
 
+    def test_background_is_exact_black_beyond_object_halos_with_or_without_bloom(self):
+        # Check real resolved RGB, not the framebuffer clear colour: an ambient
+        # term or a tone-mapping offset must not tint the empty composition.
+        for bloom in (False, True):
+            self.renderer.bloom = bloom
+            for reactor, time_s in ((0., 0.), (1., 0.), (1., 7.)):
+                with self.subTest(bloom=bloom, reactor=reactor, time_s=time_s):
+                    raw = self.frame(time_s, reactor)
+                    width, height = self.renderer.size
+                    margin = min(width, height) // 20
+                    for x0, y0 in ((0, 0), (width-margin, 0),
+                                   (0, height-margin), (width-margin, height-margin)):
+                        for y in range(y0, y0+margin):
+                            start = (y*width+x0)*3
+                            self.assertEqual(raw[start:start+margin*3], bytes(margin*3))
+                    # Black is empty space, not a hidden or disabled renderer.
+                    self.assertGreater(max(raw), 170)
+
     def test_reactor_animates_and_reduced_motion_freezes_every_gpu_layer(self):
         first = self.frame(1, 1)
         self.assertNotEqual(first, self.frame(8, 1))
         self.assertEqual(self.frame(1, 1, reduced_motion=True),
                          self.frame(140, 1, reduced_motion=True))
         width, height = self.renderer.size
-        self.assertGreater(sum(value > 100 for value in first[:width * 3 * (height // 3)]), 60)
+        # The simplified composition is centred, rather than required to fill
+        # the upper third. It must still form a visible two-dimensional core
+        # and orbits, never collapse into the idle horizontal line.
+        lit_rows = [y for y in range(height)
+                    if max(first[y*width*3:(y+1)*width*3]) > 100]
+        self.assertGreater(len(lit_rows), height*.15)
+        self.assertLess(min(lit_rows), height*.45)
+        self.assertGreater(max(lit_rows), height*.55)
         # HDR is bright locally, with most of the frame retaining dark space.
         self.assertLess(sum(value > 245 for value in first) / len(first), .08)
 

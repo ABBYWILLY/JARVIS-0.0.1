@@ -1,3 +1,17 @@
+# PRESENCE GPU 3.0 — A, 27 octobre 2026
+
+Sous-lot A uniquement : noir exact, noyau agrandi, trois orbites et 24/36
+particules. Cage permanente retirée ; aucune nouvelle machine d'états.
+Une fuite d'anticrénelage des anneaux à incidence rasante a été corrigée.
+56 tests ciblés réussis avec OpenGL/EGL réel Mesa, dont 17 renderer.
+Shader et API autonomes ; Canvas, voix, mémoire et main inchangés.
+Guide : PRESENCE-GPU-3.0.md ; spécification utilisateur conservée dans
+PRESENCE-GPU-3.0-SPEC.md. B matière/lumière reste à livrer séparément.
+Arrêt obligatoire après A + B pour avis artistique ; C/D/E/F non commencés.
+Validation Windows/RTX3070 + Ollama et esthétique utilisateur en attente.
+
+---
+
 # PRESENCE GPU2.5D — chantier B, 27 octobre 2026
 
 Chantier A publié 61fb5d7 : favoris, niveaux progressifs, aperçus directs,
