@@ -1,3 +1,25 @@
+# UX Polish — chantier A, 27 octobre 2026
+
+Base 231de9e inspectée et synchronisée ; main inchangée. Les cinq familles
+restent présentes. Niveaux progressifs Essentiel / Personnaliser / Avancé,
+recherche globale et Favoris (étoile ou Ctrl+D) ouvrent les mêmes éditeurs,
+avec des raccourcis vers leurs champs. Seuls les IDs de navigation sont ajoutés
+aux préférences existantes ; aucune valeur métier n'est copiée.
+
+Studio : sept états prévisualisables directement pendant quatre secondes,
+quatre styles reconnaissables, mêmes préférences et Canvas, brouillon/Avant-Après/
+Appliquer conservés. Signaux synthétiques indiqués ; vraie voix prioritaire.
+Défaut existant reproduit : résumé de provenance trop haut à250%DPI, sources
+masquées. Résumé borné/défilant et bouton Fermer réservé ; données inchangées.
+
+188 tests intégrés Tk9 réussis (35,540s), 41 tests ciblés Tk8.6 réussis.
+Captures et recette : docs/CONTROL-STUDIO.md ; inventaire de mission et limites :
+docs/UX-POLISH-PRESENCE-25D.md. Aucun modèle ajouté/supprimé. Chantier B séparé,
+prototype GPU uniquement ; aucune intégration dans Jarvis.exe, LOTS4/5/7 exclus.
+Validation matérielle Windows11/RTX/micro en attente ; consulter Actions après push.
+
+---
+
 # Validation Centre / Studio — étape E, 24 octobre 2026
 
 Commits publiés : A e2f8b27, B 513dc86, C c0e21c6, D 426e270,

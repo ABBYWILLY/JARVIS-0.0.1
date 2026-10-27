@@ -23,6 +23,7 @@ STAGES = (
     ("Repos final", .8, "silent"),
 )
 DEMO_LABEL = "DÉMONSTRATION · PCM synthétique · aucun micro ni modèle"
+PREVIEW_SECONDS = 4.
 
 
 def synthetic_signal(elapsed):
@@ -52,8 +53,12 @@ class DemoController:
         self._old_response = -1
         self._old_closed = True
         self._caption = None
+        self._single_stage = None
 
-    def start(self):
+    def start(self, *, stage=None):
+        """Play the full rehearsal, or one explicitly selected four-second state."""
+        if stage is not None and (type(stage) is not int or not 0 <= stage < len(STAGES)):
+            raise ValueError("État de prévisualisation inconnu.")
         view = self.view
         if (self.active or view.app.voice.listening or getattr(view.app, "operation", None)
                 or view.state != "silent" or not view._visible()):
@@ -66,6 +71,7 @@ class DemoController:
         self._old_response, self._old_closed = view._semantic_response, view._semantic_closed
         self._response = max(0, self._old_response + 1)
         self._started = self.clock()
+        self._single_stage = stage
         self.active, self.reason, self.stage = True, None, -1
         view._trace_semantic("demo", "offline_synthetic_pcm")
         self._tick()
@@ -83,11 +89,14 @@ class DemoController:
         elapsed = max(0., self.clock() - self._started)
         edge = 0.
         selected = None
-        for index, (_, duration, _) in enumerate(STAGES):
-            if elapsed < edge + duration:
-                selected = index
-                break
-            edge += duration
+        if self._single_stage is not None:
+            selected = self._single_stage if elapsed < PREVIEW_SECONDS else None
+        else:
+            for index, (_, duration, _) in enumerate(STAGES):
+                if elapsed < edge + duration:
+                    selected = index
+                    break
+                edge += duration
         if selected is None:
             self.cancel("completed")
             return

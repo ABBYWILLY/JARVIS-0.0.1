@@ -10,12 +10,27 @@ import unittest
 from unittest.mock import Mock, patch
 
 from jarvis.presence import PresenceModel, PresenceSettings, PresenceView, stroke_widths
-from jarvis.presence_studio import PRESETS
+from jarvis.presence_studio import PRESETS, PREVIEW_STATES, VISUAL_STYLES
 from jarvis.storage import Store
 from tests.test_jarvis import display_available
 
 
 class StudioSettingsTests(unittest.TestCase):
+    def test_visual_styles_have_distinct_real_shapes_and_preserve_resource_and_accessibility_choices(self):
+        shapes = set()
+        protected = {"profile", "reduced_motion", "animations", "semantic_morphing", "subtitles", "mini_mode"}
+        for key, style in VISUAL_STYLES.items():
+            with self.subTest(style=key):
+                self.assertFalse(protected.intersection(style))
+                original = PresenceSettings(profile="eco", reduced_motion=True, semantic_morphing=False)
+                settings = PresenceSettings.from_dict(asdict(original) | style)
+                for field in protected:
+                    self.assertEqual(getattr(settings, field), getattr(original, field))
+                model = PresenceModel(settings)
+                model.update_event("thinking", now=5.)
+                shapes.add(tuple(model.target_geometry(900, 600, now=6.)))
+        self.assertEqual(len(shapes), 4)
+
     def test_settings_schema_validates_new_controls_and_presets_keep_accessibility(self):
         for key, low, high in (("halo_diffusion", 50, 180), ("animation_speed", 50, 150),
                                ("transition_speed", 50, 150)):
@@ -95,6 +110,51 @@ class StudioTkTests(unittest.TestCase):
         self.studio.cancel()
         self.assertFalse(self.view._demo.active)
         self.assertIsNone(self.view._demo.after_id)
+
+    def test_direct_state_first_click_and_favourite_focus_use_existing_controls_without_writing(self):
+        original = self.store.get_preference("presence")
+        self.assertTrue(self.studio.preview_state("THINKING"))
+        self.assertEqual(self.view._demo.stage, PREVIEW_STATES["THINKING"])
+        self.assertEqual(self.view.state, "thinking")
+        canvas = self.view.canvas
+        self.assertIn("PCM SYNTHÉTIQUE", self.view.state_label.cget("text"))
+        self.assertTrue(self.studio.window.focus_control("halo_intensity"))
+        self.root.update()
+        self.assertEqual(self.studio.section.get(), "Visualiseur")
+        target = self.studio.controls["halo_intensity"]
+        self.assertIs(self.studio.window.focus_get(), target)
+        parent = target.master.master
+        self.assertGreaterEqual(target.winfo_rooty(), parent.winfo_rooty())
+        self.assertLessEqual(target.winfo_rooty() + target.winfo_height(),
+                             parent.winfo_rooty() + parent.winfo_height())
+        self.assertIs(self.view.canvas, canvas)
+        self.assertEqual(self.store.get_preference("presence"), original)
+        self.assertFalse(self.studio.window.focus_control("nonexistent"))
+        self.assertFalse(self.studio.preview_state("nonexistent"))
+        self.view.update_event("user_speaking", {"rms": .07, "wave": [.1] * 48})
+        self.assertFalse(self.view._demo.active)
+        self.assertIsNone(self.view._demo.after_id)
+        self.assertAlmostEqual(self.view.model.signal["rms"], .07)
+
+    def test_style_is_a_draft_then_persists_as_existing_fields_with_resource_choices_unchanged(self):
+        self.view.set_options(profile="eco", reduced_motion=True, semantic_morphing=False)
+        original = self.store.get_preference("presence")
+        self.studio.load_style("amber")
+        self.assertEqual(self.store.get_preference("presence"), original)
+        self.assertEqual(self.studio.draft.profile, "eco")
+        self.assertTrue(self.studio.draft.reduced_motion)
+        self.assertFalse(self.studio.draft.semantic_morphing)
+        self.assertTrue(self.studio.preview())
+        self.assertEqual(self.view.settings.fixed_color, "#ffc276")
+        self.assertTrue(self.studio.apply())
+        reopened = PresenceView(self.app)
+        self.addCleanup(reopened.close)
+        self.assertEqual(reopened.settings.fixed_color, "#ffc276")
+        self.assertEqual(reopened.settings.thinking_structure, "elongated")
+        self.assertEqual(reopened.settings.profile, "eco")
+        self.assertTrue(reopened.settings.reduced_motion)
+        self.assertFalse(reopened.settings.semantic_morphing)
+        self.assertEqual(self.store.get_preference("presence")["future_option"], "preserved")
 
     def test_draft_before_after_cancel_and_apply_use_one_real_renderer_and_one_preference(self):
         original = self.store.get_preference("presence")

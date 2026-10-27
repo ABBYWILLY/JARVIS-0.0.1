@@ -24,6 +24,29 @@ PRESETS = {
 }
 STRUCTURE_LABELS = {"lens": "Lentille organique", "round": "Noyau circulaire",
                     "elongated": "Lentille étirée"}
+STYLE_LABELS = {"cyan": "Hologramme cyan", "amber": "Ambre · concentration",
+                "soft": "Spectre doux", "story": "Récit expressif"}
+# Style is independent of quality/resource limits and accessibility preferences.
+VISUAL_STYLES = {
+    "cyan": dict(accent_mode="cyan", emotional_palette="original", ambience="conversation",
+                 background="#000000", thinking_structure="lens", thinking_size=100,
+                 halo_intensity=85, halo_diffusion=110, visualizer_thickness=6,
+                 animation_speed=100, transition_speed=100, fluidity="cinematic"),
+    "amber": dict(accent_mode="fixed", fixed_color="#ffc276", emotional_palette="warm",
+                  ambience="focus", background="#080604", thinking_structure="elongated",
+                  thinking_size=90, halo_intensity=65, halo_diffusion=80,
+                  visualizer_thickness=5, animation_speed=65, transition_speed=75, fluidity="calm"),
+    "soft": dict(accent_mode="adaptive", emotional_palette="soft", ambience="explanation",
+                 background="#080c14", thinking_structure="round", thinking_size=95,
+                 halo_intensity=60, halo_diffusion=150, visualizer_thickness=4,
+                 animation_speed=70, transition_speed=80, fluidity="calm"),
+    "story": dict(accent_mode="adaptive", emotional_palette="original", ambience="story",
+                  background="#000000", thinking_structure="round", thinking_size=120,
+                  halo_intensity=100, halo_diffusion=165, visualizer_thickness=8,
+                  animation_speed=110, transition_speed=85, fluidity="cinematic"),
+}
+PREVIEW_STATES = {"Repos": 0, "Écoute": 1, "THINKING": 2, "Parole": 3,
+                  "Émotion": 4, "Emoji": 5, "Interruption": 6}
 
 
 class PresenceStudio:
@@ -36,8 +59,13 @@ class PresenceStudio:
         self.previewing = False
         self.closed = False
         self.variables = {}
+        self.controls = {}
+        self._preview_arranged = False
+        self._preview_side_by_side = False
         self._syncing = False
         self.window = window = tk.Toplevel(view.app.root)
+        window.focus_control = self.focus_control
+        window.controls = self.controls
         window.title("PRESENCE Studio 2.0")
         window.transient(view.app.root)
         window.configure(bg="#121c29", padx=12, pady=10)
@@ -51,7 +79,12 @@ class PresenceStudio:
         window.bind("<Destroy>", self._destroyed, add="+")
         ttk.Label(window, text="PRESENCE STUDIO", font=(getattr(view.app, "font_family", "Segoe UI"), 15, "bold")).pack(anchor="w")
         self.status = tk.StringVar(value="Modifiez un brouillon · Appliquer enregistre · Ctrl+Entrée")
-        ttk.Label(window, textvariable=self.status, wraplength=440).pack(fill="x", pady=(3, 8))
+        self.status_label = ttk.Label(window, textvariable=self.status, wraplength=440)
+        self.status_label.pack(fill="x", pady=(3, 8))
+        def wrap_status(event):
+            if event.widget is window:
+                self.status_label.configure(wraplength=max(160, event.width - 24))
+        window.bind("<Configure>", wrap_status, add="+")
         # Fixed action rows are reserved before the scrollable content, including
         # at large DPI. No navigation item depends on a tab bar's total width.
         footer = ttk.Frame(window)
@@ -130,6 +163,7 @@ class PresenceStudio:
         self._label(page, label)
         variable = self.variables[key] = tk.StringVar(value=choices[getattr(self.draft, key)])
         widget = ttk.Combobox(page, name=key, textvariable=variable, state="readonly", values=list(choices.values()))
+        self.controls[key] = widget
         widget.pack(fill="x", pady=(0, 5))
         widget.bind("<<ComboboxSelected>>", lambda _event: self.change(**{
             key: next(option for option, text in choices.items() if text == variable.get())}))
@@ -138,21 +172,38 @@ class PresenceStudio:
     def _scale(self, page, key, label, low, high):
         self._label(page, label)
         variable = self.variables[key] = tk.IntVar(value=getattr(self.draft, key))
-        tk.Scale(page, name=key, from_=low, to=high, resolution=1, orient="horizontal", variable=variable,
+        widget = self.controls[key] = tk.Scale(page, name=key, from_=low, to=high, resolution=1, orient="horizontal", variable=variable,
                  bg="#121c29", fg="#e4edf6", troughcolor="#203040", highlightthickness=0,
-                 command=lambda value: self.change(**{key: round(float(value))}) if not self._syncing else None).pack(fill="x")
+                 command=lambda value: self.change(**{key: round(float(value))}) if not self._syncing else None)
+        widget.pack(fill="x")
 
     def _check(self, page, key, label):
         variable = self.variables[key] = tk.BooleanVar(value=getattr(self.draft, key))
-        tk.Checkbutton(page, name=key, text=label, variable=variable, bg="#121c29", fg="#e4edf6",
+        widget = self.controls[key] = tk.Checkbutton(page, name=key, text=label, variable=variable, bg="#121c29", fg="#e4edf6",
                        selectcolor="#203040", activebackground="#121c29", activeforeground="#e4edf6",
                        wraplength=360, anchor="w", justify="left",
-                       command=lambda: self.change(**{key: variable.get()})).pack(fill="x", pady=5)
+                       command=lambda: self.change(**{key: variable.get()}))
+        widget.pack(fill="x", pady=5)
 
     def _build(self):
         workshop, visual, spectrum, captions, expressions = self.pages.values()
         self._label(workshop, "Un seul visualiseur réel · aperçus sans micro, Ollama ni Piper.\n"
                     "Les signaux de démonstration sont explicitement synthétiques.")
+        self._label(workshop, "État à regarder · aperçu direct de quatre secondes")
+        self.preview_state_var = tk.StringVar(value="THINKING")
+        ttk.Combobox(workshop, name="preview_state", textvariable=self.preview_state_var,
+                     state="readonly", values=list(PREVIEW_STATES)).pack(fill="x", pady=4)
+        ttk.Button(workshop, name="preview_state_button", text="Voir cet état", command=lambda:
+                   self.preview_state(self.preview_state_var.get())).pack(fill="x", pady=(0, 5))
+        self._label(workshop, "Style à essayer · indépendant de la qualité graphique")
+        self.visual_style = tk.StringVar(value=STYLE_LABELS["cyan"])
+        ttk.Combobox(workshop, name="visual_style", textvariable=self.visual_style, state="readonly",
+                     values=list(STYLE_LABELS.values())).pack(fill="x", pady=4)
+        ttk.Button(workshop, name="load_style", text="Essayer ce style", command=lambda: self.load_style(
+            next(key for key, label in STYLE_LABELS.items() if label == self.visual_style.get()))).pack(fill="x", pady=(0, 5))
+        self._label(workshop, "Les styles gardent la qualité, la réduction des mouvements et l’activation du morphing.\n"
+                    "Appliquer enregistre ; les aperçus seuls ne changent pas vos préférences.")
+        self._label(workshop, "Préréglage de qualité et de consommation")
         self.preset = tk.StringVar(value=PROFILE_LABELS[self.draft.profile])
         ttk.Combobox(workshop, name="preset", textvariable=self.preset, state="readonly",
                      values=list(PROFILE_LABELS.values())).pack(fill="x", pady=4)
@@ -182,7 +233,8 @@ class PresenceStudio:
         self._scale(visual, "transition_speed", "Vitesse des transitions géométriques (%)", 50, 150)
         self._check(visual, "animations", "Animations visuelles")
         self._check(visual, "reduced_motion", "Réduire les mouvements")
-        ttk.Button(visual, text="Choisir le fond…", command=lambda: self.choose_color("background")).pack(fill="x", pady=5)
+        self.controls["background"] = ttk.Button(visual, text="Choisir le fond…", command=lambda: self.choose_color("background"))
+        self.controls["background"].pack(fill="x", pady=5)
         ttk.Button(visual, text="Rétablir le noir", command=lambda: self.change(background="#000000")).pack(fill="x", pady=4)
         self._label(visual, "Les vitesses concernent les formes symboliques, jamais le PCM, les seuils VAD ou Piper.\n"
                     "La réduction de mouvement reste prioritaire, y compris après un préréglage.")
@@ -190,7 +242,8 @@ class PresenceStudio:
         self._choice(spectrum, "accent_mode", "Accents de tonalité", ACCENT_LABELS)
         self._choice(spectrum, "spectrum_mode", "Interprétation locale du spectre", SPECTRUM_LABELS)
         self._scale(spectrum, "spectrum_intensity", "Intensité du spectre (%)", 0, 100)
-        ttk.Button(spectrum, text="Choisir la couleur d’accent…", command=lambda: self.choose_color("fixed_color")).pack(fill="x", pady=5)
+        self.controls["fixed_color"] = ttk.Button(spectrum, text="Choisir la couleur d’accent…", command=lambda: self.choose_color("fixed_color"))
+        self.controls["fixed_color"].pack(fill="x", pady=5)
         self._label(spectrum, "Aperçu local · phrase au choix ; estimation sans effet sur les permissions.")
         self.phrase = tk.StringVar(value="Je suis heureux et ravi.")
         ttk.Entry(spectrum, textvariable=self.phrase).pack(fill="x", pady=4)
@@ -253,6 +306,35 @@ class PresenceStudio:
         self.change(**PRESETS[key])
         self._sync()
 
+    def load_style(self, key):
+        self.change(**VISUAL_STYLES[key])
+        self._sync()
+        self.status.set("Style « " + STYLE_LABELS[key] + " » dans le brouillon · Appliquer pour enregistrer")
+
+    def focus_control(self, key):
+        """A favourite opens the existing section and actual preference widget."""
+        widget = self.controls.get(key)
+        if widget is None or self.closed:
+            return False
+        for index, page in enumerate(self.pages.values()):
+            if widget.master is page:
+                self.notebook.select(index)
+                break
+        self.window.deiconify()
+        self.window.lift()
+        self.window.update_idletasks()
+        # This is an explicit user navigation action (favourite or keyboard),
+        # so transfer focus from the renderer as well as raising the editor.
+        widget.focus_force()
+        page = widget.master
+        canvas = page.master
+        y = widget.winfo_rooty() - page.winfo_rooty()
+        bottom = y + widget.winfo_height()
+        top = canvas.canvasy(0)
+        if y < top or bottom > top + canvas.winfo_height():
+            canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, page.winfo_height()))
+        return True
+
     def restore(self):
         self.change(**asdict(PresenceSettings()))
         self._sync()
@@ -276,23 +358,72 @@ class PresenceStudio:
     def preview(self, action=None):
         if not self.compare():
             return False
-        self.view.show()
+        self._show_renderer()
         self.view.clear_preview()
         result = (action or self.view.preview_workshop)()
-        self.window.lift()
+        self._present_preview()
         return result
 
     def demo(self):
+        return self._start_demo()
+
+    def preview_state(self, label):
+        """The normal rehearsal controller also owns bounded single-state views."""
+        if label not in PREVIEW_STATES:
+            return False
+        return self._start_demo(stage=PREVIEW_STATES[label])
+
+    def _start_demo(self, *, stage=None):
         from .presence_demo import DemoController
         if not self.compare():
             return False
-        self.view.show()
+        self._show_renderer()
         self.view.clear_preview()
+        if self.view.state == "dormant":
+            self.status.set("Réveillez PRESENCE avant de lancer cet aperçu")
+            return False
+        if stage == PREVIEW_STATES["Emoji"] and not self.view.settings.semantic_morphing:
+            self.status.set("Activez Semantic Morphing pour prévisualiser un emoji")
+            return False
         if self.view._demo is None:
             self.view._demo = DemoController(self.view)
-        result = self.view._demo.start()
-        self.window.lift()
+        result = self.view._demo.start(stage=stage)
+        if result:
+            self.status.set("Aperçu hors ligne · PCM synthétique · retour automatique au repos")
+        self._present_preview()
         return result
+
+    def _show_renderer(self):
+        created = self.view.window is None or not self.view.window.winfo_exists()
+        self.view.show()
+        self.view.window.update_idletasks()
+        sw, sh = self.window.winfo_screenwidth(), self.window.winfo_screenheight()
+        required_width = 484 + self.view.window.winfo_width()
+        self._preview_side_by_side = (sw >= 1200 and not self.view.settings.mini_mode
+                                     and (created or sw >= required_width))
+        if self._preview_side_by_side and not self._preview_arranged:
+            # Two windows share one Canvas. Keep the core visible while sliders
+            # are adjusted, rather than covering it with a large settings form.
+            height = min(730, max(300, sh - 100))
+            self.window.geometry(f"440x{height}+12+30")
+            if created:
+                width = min(1100, sw - 484)
+                self.view.window.geometry(f"{width}x{height}+464+30")
+            else:
+                # Existing renderer dimensions are user choices, not drafts.
+                self.view.window.geometry("+464+30")
+            self._preview_arranged = True
+            self.window.update_idletasks()
+            self.view.window.update_idletasks()
+
+    def _present_preview(self):
+        if self._preview_side_by_side:
+            self.window.lift()
+        else:
+            # A small screen cannot show both panes fully. The existing Atelier
+            # button brings this same Studio back, with its draft intact.
+            self.view.window.lift()
+            self.status.set("Aperçu visible dans PRESENCE · bouton Atelier pour revenir au brouillon")
 
     def stop_preview(self):
         self.view.clear_preview()

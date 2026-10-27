@@ -7,6 +7,17 @@ toutes les familles. Une recherche révèle aussi les entrées avancées.
 Ctrl+F revient à la recherche, flèche bas puis Entrée ouvre le résultat,
 Tab/Maj+Tab parcourt les commandes, Escape ferme le panneau.
 
+Le second sélecteur propose **Essentiel**, **Personnaliser**, **Avancé** et
+**Favoris**. Les niveaux sont progressifs : Personnaliser ajoute les réglages
+visuels et vocaux, Avancé révèle également les outils techniques. La recherche
+retrouve toujours tous les niveaux, même depuis Favoris.
+
+Sélectionner un réglage puis **☆**, ou **Ctrl+D**, pour ajouter/retirer son
+raccourci des favoris. Certains liens ouvrent directement l'épaisseur de l'onde,
+le halo, la taille THINKING, la vitesse vocale, le silence ou la police dans leur
+éditeur habituel. Seuls les identifiants des favoris et le niveau de navigation
+sont enregistrés ; les valeurs des réglages ne sont pas copiées.
+
 ![Centre de contrôle sous Linux/Tk9](assets/ux-control-center.png)
 
 ## Personnaliser PRESENCE
@@ -14,6 +25,18 @@ Tab/Maj+Tab parcourt les commandes, Escape ferme le panneau.
 Ouvrir **PRESENCE → PRESENCE Studio** dans le Centre, ou **Atelier** dans
 PRESENCE. Le sélecteur en haut donne accès à cinq sections, chacune défilante :
 Atelier, Visualiseur, Spectre et aperçu, Sous-titres, Expressions.
+
+Dans Atelier, choisir **Repos, Écoute, THINKING, Parole, Émotion, Emoji ou
+Interruption**, puis **Voir cet état**. Chaque aperçu dure au plus quatre
+secondes avant le retour au repos. Les mouvements liés à l'audio de ces aperçus
+sont explicitement synthétiques ; aucun microphone, Ollama ou Piper n'est lancé.
+
+Quatre styles utilisent les mêmes préférences existantes : **Hologramme cyan**,
+**Ambre · concentration**, **Spectre doux**, **Récit expressif**. Ils proposent
+des couleurs, formes, tailles et rythmes distincts tout en conservant la qualité
+graphique, la réduction du mouvement et l'activation du morphing. Le sélecteur
+de style sert à essayer un ensemble de valeurs ; il ne constitue pas une seconde
+préférence de thème à synchroniser. Seul Appliquer enregistre le résultat.
 
 1. Modifier le brouillon, ou charger un préréglage Éco/Équilibré/Cinématique.
 2. Choisir **Aperçu vivant**, THINKING, ligne, phrase, microexpression ou emoji.

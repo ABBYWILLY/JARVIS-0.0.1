@@ -144,6 +144,37 @@ class ContextDesktopTests(unittest.TestCase):
         self.assertEqual(self.store.settings().retrieval_budget, 1024)
         self.assertEqual(self.store.settings().reasoning_mode, "fast")
 
+    def test_high_dpi_summary_scrolls_without_hiding_sources_details_or_close(self):
+        original_scaling = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", original_scaling))
+        mid = self.previous_turn()
+        self.store.update_message_metadata(mid, {"context": self.context_record(mid)})
+        for scale in (1., 2.5):
+            self.root.tk.call("tk", "scaling", 96 / 72 * scale)
+            dialog = self.open_inspector()
+            dialog.geometry("600x480")
+            self.root.update()
+            sources = dialog.nametowidget("sources")
+            close = dialog.nametowidget("close_context")
+            self.assertTrue(sources.winfo_viewable())
+            self.assertTrue(dialog.nametowidget("detail.details").winfo_viewable())
+            self.assertTrue(close.winfo_viewable())
+            self.assertLessEqual(close.winfo_rooty() + close.winfo_height(),
+                                 dialog.winfo_rooty() + dialog.winfo_height())
+            sources.selection_clear(0, "end")
+            sources.selection_set(sources.size() - 1)
+            sources.event_generate("<<ListboxSelect>>")
+            self.root.update()
+            details = dialog.nametowidget("detail.details").get("1.0", "end")
+            self.assertIn("généré non vérifié", details)
+            self.assertIn("Le fichier du projet Atlas reste local.", details)
+            before = dialog.summary_canvas.yview()
+            dialog.summary_canvas.yview_scroll(5, "units")
+            self.assertGreater(dialog.summary_canvas.yview()[0], before[0])
+            close.invoke()
+            self.root.update()
+            self.assertFalse(dialog.winfo_exists())
+
     def test_recent_source_inspection_uses_full_original_not_its_short_preview(self):
         original = "Le projet Atlas est local. " * 20
         mid = self.store.begin_turn(self.app.session_id, "Projet Atlas", "qwen3.5:4b")

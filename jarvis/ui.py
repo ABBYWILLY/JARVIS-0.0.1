@@ -821,6 +821,9 @@ class App:
         dialog.transient(self.root)
         dialog.geometry("820x660")
         dialog.minsize(600, 480)
+        # Reserve the close action before any potentially long/DPI-scaled text.
+        ttk.Button(dialog, name="close_context", text="Fermer", command=dialog.destroy).pack(
+            side="bottom", anchor="e", pady=(8, 0))
         archive = list(self.store.messages(self.session_id))
         user_inputs = {row["id"]: archive[index - 1] for index, row in enumerate(archive)
                        if index and row["role"] == "assistant" and archive[index - 1]["role"] == "user"}
@@ -830,20 +833,47 @@ class App:
         if not recorded:
             tk.Label(dialog, text="Aucun contexte instrumenté dans cette conversation.\nLes conversations déjà archivées restent conservées.",
                      bg=PANEL, fg=MUTED, justify="left").pack(anchor="w", pady=14)
-            ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(anchor="e")
             return
         labels = [f"Réponse #{row['id']} · {row['created']} · {row['content'][:45]}" for row, _ in recorded]
         picker = ttk.Combobox(dialog, name="responses", values=labels, state="readonly")
         picker.pack(fill="x")
         summary = tk.StringVar()
         summary_label = tk.Label(dialog, name="summary", textvariable=summary, bg=PANEL, fg=MUTED,
-                 justify="left", anchor="w", wraplength=760, font=(self.font_family, 10))
-        summary_label.pack(fill="x", pady=12)
-        dialog.bind("<Configure>", lambda event: summary_label.configure(wraplength=max(300, event.width - 32))
-                    if event.widget is dialog else None)
+                 justify="left", anchor="w", wraplength=760, font=(self.font_family, 10), takefocus=True)
+        # Bound the summary so the source list remains reachable at high DPI.
+        # Canvas can embed a child of its ancestor, keeping the existing widget
+        # name and textvariable used by source inspection and accessibility.
+        summary_frame = tk.Frame(dialog, bg=PANEL, height=140)
+        summary_frame.pack(fill="x", pady=8)
+        summary_frame.pack_propagate(False)
+        summary_canvas = dialog.summary_canvas = tk.Canvas(summary_frame, bg=PANEL, highlightthickness=0,
+                                                          width=1, height=1)
+        summary_scroll = ttk.Scrollbar(summary_frame, command=summary_canvas.yview)
+        summary_scroll.pack(side="right", fill="y")
+        summary_canvas.pack(side="left", fill="both", expand=True)
+        summary_canvas.configure(yscrollcommand=summary_scroll.set)
+        summary_item = summary_canvas.create_window(0, 0, window=summary_label, anchor="nw")
+        summary_label.bind("<Configure>", lambda _event: summary_canvas.configure(scrollregion=summary_canvas.bbox("all")))
+        def fit_summary(event):
+            if event.widget is summary_canvas:
+                summary_canvas.itemconfigure(summary_item, width=event.width)
+                summary_label.configure(wraplength=max(180, event.width - 8))
+            elif event.widget is dialog:
+                summary_frame.configure(height=min(140, max(72, event.height // 5)))
+        summary_canvas.bind("<Configure>", fit_summary)
+        dialog.bind("<Configure>", fit_summary)
+        def scroll_summary(event):
+            if event.widget in (summary_label, summary_canvas):
+                direction = -1 if getattr(event, "num", None) == 4 or getattr(event, "delta", 0) > 0 else 1
+                summary_canvas.yview_scroll(direction * 3, "units")
+                return "break"
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            dialog.bind(sequence, scroll_summary, add="+")
+        for sequence, step in (("<Down>", 1), ("<Up>", -1), ("<Next>", 5), ("<Prior>", -5)):
+            summary_label.bind(sequence, lambda _event, n=step: (summary_canvas.yview_scroll(n, "units"), "break")[-1])
         tk.Label(dialog, text="Sources retenues — sélectionnez un passage pour consulter son original", bg=PANEL,
                  fg=TEXT, anchor="w").pack(fill="x")
-        source_list = tk.Listbox(dialog, name="sources", height=5, bg=FIELD, fg=TEXT,
+        source_list = tk.Listbox(dialog, name="sources", height=3, bg=FIELD, fg=TEXT,
             selectbackground="#244055", selectforeground=CYAN, exportselection=False, activestyle="dotbox")
         source_list.pack(fill="x", pady=(6, 10))
         detail_frame = tk.Frame(dialog, name="detail", bg=PANEL)
@@ -943,7 +973,6 @@ class App:
         source_list.bind("<<ListboxSelect>>", show_source)
         picker.current(len(recorded) - 1)
         show_response()
-        ttk.Button(dialog, text="Fermer", command=dialog.destroy).pack(anchor="e", pady=(10, 0))
 
     def finish(self, status, text, error=False, read_partial=False):
         if self.operation == "chat" and self.message_id is not None:

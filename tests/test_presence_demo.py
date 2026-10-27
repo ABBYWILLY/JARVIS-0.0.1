@@ -8,12 +8,17 @@ import unittest
 from unittest.mock import Mock, patch
 
 from jarvis.presence import PresenceView
-from jarvis.presence_demo import DEMO_LABEL, STAGES, DemoController, synthetic_signal
+from jarvis.presence_demo import DEMO_LABEL, PREVIEW_SECONDS, STAGES, DemoController, synthetic_signal
 from jarvis.storage import Store
 from tests.test_jarvis import display_available
 
 
 class DemoSignalTests(unittest.TestCase):
+    def test_invalid_direct_state_is_rejected_before_touching_the_view(self):
+        for stage in (-1, len(STAGES), "thinking", True, 1.5):
+            with self.subTest(stage=stage), self.assertRaises(ValueError):
+                DemoController(object()).start(stage=stage)
+
     def test_synthetic_pcm_is_explicit_deterministic_bounded_and_has_true_rms(self):
         self.assertIn("synthétique", DEMO_LABEL)
         for elapsed in (0., .2, 1., 8., 100.):
@@ -106,6 +111,35 @@ class DemoCanvasTests(unittest.TestCase):
         points = canvas.coords(self.view.paths[-1])
         self.assertLess(max(points[1::2]) - min(points[1::2]), 1e-7)
         self.assertIsNone(self.view.after_id)
+        self.voice.toggle.assert_not_called()
+
+    def test_each_direct_state_is_bounded_and_returns_to_flat_without_playing_other_stages(self):
+        canvas, items = self.view.canvas, self.view.canvas.find_all()
+        original = self.store.get_preference("presence")
+        for stage, (_, _, state) in enumerate(STAGES[:7]):
+            with self.subTest(stage=stage):
+                self.now = 100.
+                self.history.clear()
+                self.assertTrue(self.demo.start(stage=stage))
+                self.advance(.25)
+                self.assertEqual(self.demo.stage, stage)
+                self.assertEqual(self.history, [stage])
+                self.assertIs(self.view.canvas, canvas)
+                self.assertEqual(canvas.find_all(), items)
+                self.assertIn("PCM SYNTHÉTIQUE", self.view.state_label.cget("text"))
+                self.assertEqual(self.view.state, "silent" if stage == 5 else state)
+                if stage == 5:
+                    self.assertEqual(self.view.semantic.family, "smile")
+                timer = self.demo.after_id
+                self.advance(PREVIEW_SECONDS + .01)
+                self.assertFalse(self.demo.active)
+                self.assertEqual(self.demo.reason, "completed")
+                self.assertIsNone(self.demo.after_id)
+                self.assertNotIn(timer, self.root.tk.call("after", "info"))
+                self.assertEqual(self.view.state, "silent")
+                self.assertEqual(self.view.model.signal["rms"], 0.)
+                self.assertEqual(self.view._semantic_response, -1)
+        self.assertEqual(self.store.get_preference("presence"), original)
         self.voice.toggle.assert_not_called()
 
     def test_real_event_cancels_timer_and_restores_response_ids_before_receiving_pcm(self):

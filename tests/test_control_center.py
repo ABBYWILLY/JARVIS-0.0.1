@@ -4,10 +4,11 @@ from pathlib import Path
 import tempfile
 import tkinter as tk
 from tkinter import ttk
+import sqlite3
 import unittest
 from unittest.mock import patch
 
-from jarvis.control_center import FAMILIES, ROUTES, find_routes
+from jarvis.control_center import FAMILIES, LEVELS, ROUTES, VIEWS, find_routes, navigation_preferences
 from jarvis.storage import Store
 from jarvis.ui import App
 from tests.test_jarvis import display_available
@@ -24,6 +25,31 @@ class SettingsSearchTests(unittest.TestCase):
         self.assertFalse(any(r.advanced for r in find_routes(family=FAMILIES[4])))
         self.assertTrue(any(r.advanced for r in find_routes(family=FAMILIES[4], advanced=True)))
         self.assertFalse(find_routes("réglage inexistant xyz"))
+
+    def test_progressive_levels_and_global_search_keep_every_route_reachable(self):
+        self.assertEqual(tuple(LEVELS.values()), ("Essentiel", "Personnaliser", "Avancé"))
+        essential = {route.key for route in find_routes(level="essential")}
+        personal = {route.key for route in find_routes(level="personalize")}
+        advanced = {route.key for route in find_routes(level="advanced")}
+        self.assertLess(essential, personal)
+        self.assertLess(personal, advanced)
+        self.assertEqual(advanced, {route.key for route in ROUTES})
+        for route in ROUTES:
+            self.assertIn(route, find_routes(route.title, family=FAMILIES[0], level="essential"))
+        self.assertTrue(all(route.control and route.owner for route in ROUTES if route.key == "wave_thickness"))
+
+    def test_navigation_data_is_bounded_deduplicated_and_contains_no_parameter_values(self):
+        for raw in (None, [], "voice", {"favorites": "voice"}, {"favorites": {}},
+                    {"favorites": [None, [], {}, 5]}, {"view": []}):
+            with self.subTest(raw=raw):
+                self.assertEqual(navigation_preferences(raw), ((), "essential"))
+        favorites, view = navigation_preferences({"favorites": ["voice", "voice", "missing", "halo"],
+                                                  "view": "favorites", "speed": 100})
+        self.assertEqual((favorites, view), (("voice", "halo"), "favorites"))
+        self.assertEqual(len(navigation_preferences({"favorites": ["voice"] * 10000})[0]), 1)
+        routes = find_routes(level="essential", favorites=favorites, only_favorites=True)
+        self.assertEqual({route.key for route in routes}, {"voice", "halo"})
+        self.assertTrue(all(route.key in favorites for route in routes))
 
 
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")
@@ -102,10 +128,101 @@ class ControlCenterTkTests(unittest.TestCase):
             for size in ("360x340", "620x380", "380x640"):
                 center.window.geometry(size)
                 self.root.update()
-                for widget in (center.search, center.category, center.results, center.open_button):
+                for widget in (center.search, center.category, center.level_choice, center.results,
+                               center.open_button, center.favorite_button):
                     self.assert_inside(widget, center.window)
                 self.assertGreater(center.results.winfo_height(), 10)
             center.window.destroy()
+
+    def test_favorite_and_level_persist_only_navigation_ids_and_preserve_future_keys(self):
+        original_model = self.store.settings()
+        original_presence = self.store.get_preference("presence")
+        original_voice = self.store.get_preference("voice")
+        self.store.set_preference("control_center", {"future_navigation": {"keep": True}})
+        center = self.app.open_control_center()
+        center.query.set("Épaisseur de l’onde")
+        center.results.selection_set("wave_thickness")
+        center.toggle_favorite()
+        self.assertEqual(center.favorite_button.cget("text"), "★")
+        center.level.set("Favoris")
+        center.query.set("")
+        self.assertEqual(center.results.get_children(), ("wave_thickness",))
+        saved = self.store.get_preference("control_center")
+        self.assertEqual(saved, {"future_navigation": {"keep": True},
+                                 "favorites": ["wave_thickness"], "view": "favorites"})
+        center.window.destroy()
+        center = self.app.open_control_center()
+        self.assertEqual(center.level.get(), "Favoris")
+        self.assertEqual(center.results.get_children(), ("wave_thickness",))
+        center.toggle_favorite()
+        self.assertEqual(center.results.get_children(), ())
+        self.assertIn("Aucun favori", center.detail.get("1.0", "end"))
+        self.assertEqual(self.store.settings(), original_model)
+        self.assertEqual(self.store.get_preference("presence"), original_presence)
+        self.assertEqual(self.store.get_preference("voice"), original_voice)
+
+    def test_search_in_favorites_is_still_global_and_targets_canonical_controls(self):
+        center = self.app.open_control_center()
+        center.level.set("Favoris")
+        center.query.set("Vitesse de la voix")
+        center.results.selection_set("voice_speed")
+        with patch.object(self.app.voice, "open_settings") as voice:
+            center.open_selected()
+        voice.assert_called_once_with(focus_key="speed")
+        center.query.set("Épaisseur de l’onde")
+        center.results.selection_set("wave_thickness")
+        with patch.object(self.app.presence, "open_settings") as presence:
+            center.open_selected()
+        presence.return_value.focus_control.assert_called_once_with("visualizer_thickness")
+        self.assertEqual(center.favorites, ())
+
+    def test_failed_save_preserves_old_favorites_and_level_and_reports_error(self):
+        self.store.set_preference("control_center", {"favorites": ["voice"], "view": "essential"})
+        center = self.app.open_control_center()
+        center.query.set("morphing")
+        center.results.selection_set("presence")
+        with patch.object(self.store, "set_preference", side_effect=sqlite3.OperationalError("disk full")):
+            center.toggle_favorite()
+            self.assertIn("Impossible d’enregistrer", center.detail.get("1.0", "end"))
+            center.level.set("Avancé")
+        self.assertEqual(center.level.get(), "Essentiel")
+        self.assertEqual(center.favorites, ("voice",))
+        self.assertEqual(self.store.get_preference("control_center"), {"favorites": ["voice"], "view": "essential"})
+
+    def test_unreadable_navigation_never_overwrites_it_or_blocks_editors(self):
+        with patch.object(self.store, "get_preference", side_effect=sqlite3.OperationalError("read failed")):
+            center = self.app.open_control_center()
+        self.assertIn("Impossible de lire", center.detail.get("1.0", "end"))
+        self.assertIn("disabled", center.favorite_button.state())
+        with patch.object(self.store, "set_preference") as save:
+            center.toggle_favorite()
+            center.level.set("Avancé")
+            save.assert_not_called()
+        with patch.object(self.app.presence, "open_settings") as presence:
+            center.open_selected()
+        presence.assert_called_once_with()
+
+    def test_keyboard_favorite_toggle_uses_selected_route_and_has_no_extra_timer(self):
+        center = self.app.open_control_center()
+        self.root.update()
+        center.window.focus_force()
+        center.results.selection_set("presence")
+        center.window.event_generate("<Control-d>")
+        self.root.update()
+        self.assertEqual(center.favorites, ("presence",))
+        center.window.event_generate("<Control-d>")
+        self.root.update()
+        self.assertEqual(center.favorites, ())
+        center.query.set("morphing")
+        center.search.focus_force()
+        center.search.icursor(0)
+        self.root.update()
+        center.search.event_generate("<Control-d>")
+        self.root.update()
+        self.assertEqual(center.query.get(), "morphing")
+        self.assertEqual(center.favorites, ("presence",))
+        center.window.destroy()
+        self.assertEqual(tuple(self.root.tk.call("after", "info")), (self.app.poll_id,))
 
     def test_model_settings_scroll_focus_and_cancel_preserve_canonical_values(self):
         before = self.store.settings()
