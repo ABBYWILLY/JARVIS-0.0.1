@@ -6,12 +6,14 @@ This checks the renderer contracts, not hardware speed: EGL may use llvmpipe.
 import hashlib
 import os
 import subprocess
+import struct
 import sys
 import unittest
 from unittest import mock
 
 from jarvis.gpu_renderer import GpuRenderer
 from jarvis.morphing import CATALOGUE
+from jarvis import reactor_shaders as shaders
 
 
 def flat_line(y=0.0):
@@ -225,6 +227,87 @@ class GpuRendererTests(unittest.TestCase):
             self.assertEqual(len(self.renderer.release_errors), 1)
         finally:
             real_release()
+
+    def test_real_shader_projects_near_objects_larger_and_preserves_aspect(self):
+        fragment = """#version 330
+        uniform vec3 u_world;
+        uniform vec2 u_size;
+        out vec4 frag;
+        """ + shaders.SPACE_GLSL + """
+        void main() {
+            vec2 projected = project_world(u_world);
+            vec2 round_trip = scene_plane(plane_ndc(projected,u_size),u_size);
+            frag = vec4(projected,round_trip);
+        }
+        """
+        program = self.ctx.program(vertex_shader=shaders.FULLSCREEN_VERTEX,
+                                   fragment_shader=fragment)
+        vao = self.ctx.vertex_array(program, [])
+        texture = self.ctx.texture((1, 1), 4, dtype="f4")
+        target = self.ctx.framebuffer(color_attachments=[texture])
+        try:
+            values = []
+            for size in ((900, 600), (600, 900)):
+                program["u_size"].value = size
+                for depth in (-.4, 0., .4):
+                    program["u_world"].value = (.1, .05, depth)
+                    target.use()
+                    vao.render(vertices=3)
+                    x, y, restored_x, restored_y = struct.unpack("4f", target.read(components=4, dtype="f4"))
+                    self.assertAlmostEqual(x / y, 2., places=5)
+                    self.assertAlmostEqual(x, restored_x, places=6)
+                    self.assertAlmostEqual(y, restored_y, places=6)
+                    values.append(x)
+            self.assertLess(values[0], values[1])
+            self.assertLess(values[1], values[2])
+            self.assertAlmostEqual(values[0], values[3])
+            self.assertAlmostEqual(values[2], values[5])
+        finally:
+            target.release()
+            texture.release()
+            vao.release()
+            program.release()
+
+    def test_actual_particle_shader_occludes_rear_objects_but_keeps_front_and_idle(self):
+        vertex = """#version 330
+        uniform vec3 u_world;
+        uniform vec2 u_size;
+        out float v_power, v_warm;
+        flat out float v_depth;
+        """ + shaders.SPACE_GLSL + """
+        void main() {
+            gl_Position = vec4(plane_ndc(project_world(u_world),u_size),0.0,1.0);
+            gl_PointSize = 9.0;
+            v_power = 1.0;
+            v_warm = 0.0;
+            v_depth = u_world.z;
+        }
+        """
+        program = self.ctx.program(vertex_shader=vertex,
+                                   fragment_shader=shaders.PARTICLE_FRAGMENT)
+        vao = self.ctx.vertex_array(program, [])
+        target = self.ctx.simple_framebuffer((96, 96))
+        try:
+            program["u_size"].value = (96, 96)
+            program["u_color"].value = (.25, .9, 1.)
+            self.ctx.enable(self.renderer._gl.PROGRAM_POINT_SIZE)
+            self.ctx.disable(self.renderer._gl.BLEND)
+            def point(x, depth, activation=1.):
+                program["u_world"].value = (x, 0., depth)
+                program["u_reactor"].value = activation
+                target.use()
+                target.clear()
+                vao.render(mode=self.renderer._gl.POINTS, vertices=1)
+                return max(target.read(components=3))
+            self.assertGreater(point(0., .4), 150)
+            self.assertEqual(point(0., -.4), 0)
+            self.assertGreater(point(.5, -.4), 150)
+            self.assertGreater(point(0., -.4, activation=0.), 150)
+        finally:
+            self.ctx.disable(self.renderer._gl.PROGRAM_POINT_SIZE)
+            target.release()
+            vao.release()
+            program.release()
 
 
 if __name__ == "__main__":

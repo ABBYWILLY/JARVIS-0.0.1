@@ -1,3 +1,28 @@
+# PRESENCE GPU2.5D — chantier B, 27 octobre 2026
+
+Chantier A publié 61fb5d7 : favoris, niveaux progressifs, aperçus directs,
+styles Canvas et correctif de provenance à fort DPI. Chantier B séparé :
+projection perspective des anneaux, occlusion analytique avant/arrière,
+noyau sphérique énergétique et couches lumineuses cohérentes. API, ressources
+et pipeline d'états/morphing existants conservés ; aucun nouveau buffer/pass,
+modèle, pack ou moteur obligatoire. Canvas reste en production.
+
+Preuves réelles avant/après, même viewport 960 × 640 et t = 4 s, plus MP4 :
+docs/assets/presence-gpu-25d-*. Rapport avec hashes/scopes :
+docs/benchmarks/presence-gpu-25d-linux.json. Courts relevés Mesa logiciel :
+équilibré 29,79→27,96 FPS, cinématique 32,34→34,14 FPS ; aucune conclusion RTX,
+statistique ou de gain mémoire. Ressources estimées 7,04 MiB inchangées ;
+repos/réduit : une frame puis attente. VRAM physique, temps GPU, watts et
+latences IA non mesurés. Recette/reproduction : UX-POLISH-PRESENCE-25D.md.
+
+Validation intégrée :624 tests, 615 réussis, 9 ignorés, 80,042 s Linux/Tk9/EGL réel
+logiciel requis.16 tests renderer et 5 helper réussis ;188 tests A Tk9 et 41 Tk8.6
+réussis (campagnes se recouvrant). Consulter Actions pour les deux commits.
+Aucune intégration dans Jarvis.exe avant essai RTX3070+Ollama+voix sur le PC.
+Validation matérielle en attente. LOTS 4/5/7 exclus ; main inchangée.
+
+---
+
 # UX Polish — chantier A, 27 octobre 2026
 
 Base 231de9e inspectée et synchronisée ; main inchangée. Les cinq familles
