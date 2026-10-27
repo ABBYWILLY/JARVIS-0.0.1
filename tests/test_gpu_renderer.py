@@ -81,20 +81,22 @@ class GpuRendererTests(unittest.TestCase):
     def test_background_is_exact_black_beyond_object_halos_with_or_without_bloom(self):
         # Check real resolved RGB, not the framebuffer clear colour: an ambient
         # term or a tone-mapping offset must not tint the empty composition.
-        for bloom in (False, True):
-            self.renderer.bloom = bloom
-            for reactor, time_s in ((0., 0.), (1., 0.), (1., 7.)):
-                with self.subTest(bloom=bloom, reactor=reactor, time_s=time_s):
-                    raw = self.frame(time_s, reactor)
-                    width, height = self.renderer.size
-                    margin = min(width, height) // 20
-                    for x0, y0 in ((0, 0), (width-margin, 0),
-                                   (0, height-margin), (width-margin, height-margin)):
-                        for y in range(y0, y0+margin):
-                            start = (y*width+x0)*3
-                            self.assertEqual(raw[start:start+margin*3], bytes(margin*3))
-                    # Black is empty space, not a hidden or disabled renderer.
-                    self.assertGreater(max(raw), 170)
+        for size in ((256, 192), (192, 256)):
+            self.renderer.resize(*size)
+            for bloom in (False, True):
+                self.renderer.bloom = bloom
+                for reactor, time_s in ((0., 0.), (1., 0.), (1., 7.)):
+                    with self.subTest(size=size, bloom=bloom, reactor=reactor, time_s=time_s):
+                        raw = self.frame(time_s, reactor)
+                        width, height = self.renderer.size
+                        margin = min(width, height) // 20
+                        for x0, y0 in ((0, 0), (width-margin, 0),
+                                       (0, height-margin), (width-margin, height-margin)):
+                            for y in range(y0, y0+margin):
+                                start = (y*width+x0)*3
+                                self.assertEqual(raw[start:start+margin*3], bytes(margin*3))
+                        # Black is empty space, not a hidden or disabled renderer.
+                        self.assertGreater(max(raw), 170)
 
     def test_reactor_animates_and_reduced_motion_freezes_every_gpu_layer(self):
         first = self.frame(1, 1)
@@ -140,6 +142,60 @@ class GpuRendererTests(unittest.TestCase):
         self.renderer.particles = False
         self.assertNotEqual(glowing, self.frame(2, 1))
         self.assertEqual(self.renderer.allocation_bytes, allocated)
+
+    def test_hdr_extraction_keeps_black_and_subthreshold_material_out_of_bloom(self):
+        # Exercise the real extraction shader and HDR targets. Bloom must come
+        # from highlights, not lift the entire dark/translucent core or black.
+        source, framebuffer = self.renderer._targets["scene"]
+        extracted = self.renderer._targets["bloom_a"][1]
+        self.ctx.disable(self.renderer._gl.BLEND)
+        source.use(location=0)
+        self.renderer._extract["u_source_size"].value = self.renderer.size
+
+        def extract(color):
+            framebuffer.clear(*color, 1.)
+            extracted.use()
+            self.renderer._extract_vao.render(vertices=3)
+            return struct.unpack("3f", extracted.read(viewport=(0, 0, 1, 1),
+                                                      components=3, dtype="f4"))
+
+        for color in ((0., 0., 0.), (.1, .1, .1), (.4, .2, .3)):
+            with self.subTest(color=color):
+                self.assertEqual(extract(color), (0., 0., 0.))
+        high = extract((2., 1., .5))
+        higher = extract((4., 2., 1.))
+        self.assertGreater(high[0], 0.)
+        self.assertGreater(high[1], high[2])
+        self.assertGreater(higher[0], high[0])
+        self.assertGreater(higher[0], 1.)  # Extraction retains HDR before resolve.
+
+    def test_real_material_fresnel_increases_at_grazing_view_and_clamps_inputs(self):
+        fragment = """#version 330
+        uniform float u_ndv;
+        out vec4 frag;
+        """ + shaders.MATERIAL_GLSL + """
+        void main() { frag = vec4(fresnel_view(u_ndv),0.0,0.0,1.0); }
+        """
+        program = self.ctx.program(vertex_shader=shaders.FULLSCREEN_VERTEX,
+                                   fragment_shader=fragment)
+        vao = self.ctx.vertex_array(program, [])
+        texture = self.ctx.texture((1, 1), 4, dtype="f4")
+        target = self.ctx.framebuffer(color_attachments=[texture])
+        try:
+            values = []
+            for ndv in (1., .75, .25, 0., -1., 2.):
+                program["u_ndv"].value = ndv
+                target.use()
+                vao.render(vertices=3)
+                values.append(struct.unpack("4f", target.read(components=4, dtype="f4"))[0])
+            self.assertTrue(0. < values[0] < values[1] < values[2] < values[3] <= 1.)
+            self.assertEqual(values[3], values[4])
+            self.assertEqual(values[0], values[5])
+        finally:
+            target.release()
+            texture.release()
+            vao.release()
+            program.release()
 
     def test_detail_opacity_fades_details_without_modifying_the_main_curve(self):
         symbol = CATALOGUE["smile"]

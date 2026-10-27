@@ -47,13 +47,34 @@ float visible_depth(float near_hit, float world_z, float activation) {
 }
 """
 
+# Schlick Fresnel and an angular interference palette are cheap surface terms,
+# not a raymarch or a claim of physical refraction through a real environment.
+MATERIAL_GLSL = """
+float fresnel_view(float ndv) {
+    float grazing = 1.0-clamp(ndv,0.0,1.0);
+    float square = grazing*grazing;
+    return .04+.96*square*square*grazing;
+}
+vec3 interference_tint(float ndv, vec3 normal, vec3 color) {
+    float grazing = 1.0-clamp(ndv,0.0,1.0);
+    vec3 blue = vec3(.075,.24,1.1);
+    vec3 violet = vec3(.43,.10,.95);
+    vec3 cyan = vec3(.12,.9,1.1);
+    vec3 tint = mix(blue,violet,smoothstep(.12,.65,grazing));
+    tint = mix(tint,cyan,smoothstep(.68,.98,grazing));
+    float magenta = smoothstep(.15,.85,-normal.x)*smoothstep(.28,.75,grazing);
+    tint = mix(tint,vec3(.75,.12,.74),magenta*.17);
+    return mix(tint,color,.22);
+}
+"""
+
 REACTOR_FRAGMENT = """#version 330
 in vec2 uv;
 out vec4 frag;
 uniform vec2 u_size;
 uniform vec3 u_color;
 uniform float u_time, u_reactor, u_rms;
-""" + SPACE_GLSL + """
+""" + SPACE_GLSL + MATERIAL_GLSL + """
 const float TAU = 6.28318530718;
 float lineGlow(float d, float width) { return exp(-d*d/(width*width)); }
 void main() {
@@ -67,26 +88,45 @@ void main() {
     float near_hit = core_front(p);
     vec3 cold = mix(u_color,vec3(.53,.83,1.0),.12);
     float breath = 1.0+.035*sin(t*1.7)+.10*u_rms;
-    // A directional, emissive surface gives the same core material and volume.
-    // Three bounded sine fields form flowing energy veins, without textures.
-    light += cold*.045*exp(-r*r/.065)*(1.0-smoothstep(.42,.76,r))*activation;
+    float silhouette = CORE_RADIUS*CAMERA_Z/sqrt(CAMERA_Z*CAMERA_Z-CORE_RADIUS*CORE_RADIUS);
+    // Object-local spill only: no coloured ambient veil or background vignette.
+    float spill = lineGlow(r-silhouette,.027)*(1.0-smoothstep(.38,.48,r));
+    light += mix(cold,vec3(.32,.19,1.0),.32)*spill*.075*activation;
     if (near_hit < 2.0) {
         vec3 surface = vec3(p*near_hit,CAMERA_Z*(1.0-near_hit));
-        vec3 normal = surface/CORE_RADIUS;
-        float lit = max(0.0,dot(normal,normalize(vec3(-.45,.6,1.0))));
-        float field = sin(normal.x*17.0+t*.65+sin(normal.y*11.0-t*.43)*1.2)
-                    +.52*sin(normal.z*21.0+normal.y*13.0-t*.56);
-        float veins = pow(max(0.0,1.0-abs(field)*1.08),8.0);
-        float rim = pow(max(0.0,1.0-normal.z),1.7);
-        float scan = .82+.18*cos(normal.y*76.0-t*.8);
-        float glint = pow(max(0.0,dot(reflect(normalize(vec3(.45,-.6,-1.0)),normal),
-                                      vec3(0.0,0.0,1.0))),18.0);
-        light += cold*(.035+.14*lit+.18*veins+.32*rim)*scan*breath*activation;
-        light += mix(cold,vec3(.8,.96,1.0),.5)*glint*.22*activation;
+        vec3 normal = normalize(surface);
+        vec3 view = normalize(vec3(0.0,0.0,CAMERA_Z)-surface);
+        float ndv = max(0.0,dot(normal,view));
+        float fresnel = fresnel_view(ndv);
+        vec3 spectral = interference_tint(ndv,normal,u_color);
+        // Analytic chord length models optical thickness. The back hemisphere
+        // supplies a faint refracted-looking field; no scene texture is fetched.
+        float chord = 2.0*CORE_RADIUS*ndv;
+        vec3 back = (surface-view*chord)/CORE_RADIUS;
+        vec3 transmission = exp(-vec3(.85,.28,.13)*chord/CORE_RADIUS);
+        float field = sin(back.x*5.4+t*.19+sin(back.y*4.1-t*.13)*.65)
+                    +.5*sin(back.z*6.3+back.y*3.0-t*.15);
+        float plasma = pow(max(0.0,1.0-abs(field)*.85),3.0);
+        float inner = pow(ndv,.55)*(1.0-fresnel);
+        // Dark, translucent body; coloured emission stays below the outer skin.
+        vec3 body = mix(vec3(.018,.028,.08),spectral*.12,.35);
+        body += transmission*mix(vec3(.04,.16,.46),cold*.4,.32)
+                *(.045+.17*plasma)*inner;
+        light += body*breath*activation;
+        // Fresnel is angle dependent, with a broad iridescent shoulder and a
+        // restrained HDR edge. The centre is intentionally much darker.
+        float shoulder = pow(1.0-ndv,1.9);
+        light += spectral*(shoulder*.44+fresnel*1.12)*breath*activation;
+        vec3 key = normalize(vec3(-.55,.72,.85));
+        vec3 fill = normalize(vec3(.8,-.35,.5));
+        float key_reflection = pow(max(0.0,dot(normal,normalize(key+view))),72.0);
+        float fill_reflection = pow(max(0.0,dot(normal,normalize(fill+view))),38.0);
+        float specular = key_reflection*.54+fill_reflection*.15;
+        light += mix(spectral,vec3(.58,.78,1.0),.55)*specular*activation;
     }
-    float angle = atan(p.y,p.x);
-    float shell = lineGlow(r-CORE_RADIUS-.0018*sin(angle*9.0-t*.8),.0015+px*.65);
-    light += cold*shell*.32*activation;
+    // Stable geometric silhouette, with no serrated carrier or scan-line grid.
+    float shell = lineGlow(r-silhouette,.0009+px*.42);
+    light += mix(cold,vec3(.32,.18,1.0),.22)*shell*.42*activation;
     vec3 ray = vec3(p,-CAMERA_Z);
     // Exact ray/plane intersection: every circle has a world-space depth and
     // perspective foreshortening. Rear portions disappear behind the core.
@@ -275,7 +315,10 @@ void main() {
         vec2 offset = (vec2(x,y)-1.5)/u_source_size;
         vec3 c = texture(u_image,uv+offset).rgb;
         float peak = max(c.r,max(c.g,c.b));
-        light += c*smoothstep(.15,1.15,peak);
+        // Selective HDR shoulder: black and sub-threshold midtones cannot
+        // lift the entire scene. Reuse the existing quarter-resolution pass.
+        float contribution = max(peak-.8,0.0)/max(peak,.0001);
+        light += c*contribution*smoothstep(.8,1.4,peak);
     }
     frag = vec4(light/16.0,1.0);
 }

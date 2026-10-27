@@ -1,3 +1,31 @@
+# PRESENCE GPU 3.0 — B, 27 octobre 2026
+
+A publié : add5cf4 ; CI Windows application 40552255549 et prototype 40552255586
+vertes. B livre uniquement Fresnel iridescent, matière optique simulée, reflets
+et bloom HDR sélectif. Mêmes passes, allocations et API ; Canvas et états inchangés.
+Pas de réfraction physique ni expressions gravées ; aucun C/D/E/F commencé.
+
+Preuves consultables : docs/assets/presence-gpu30-comparison.png et .mp4,
+images natives 960 × 640, THINKING t = 4 s, vidéo 125 frames / 5 s à 25 i/s
+d'export (pas FPS mesurés). Hashes : presence-gpu30-evidence.json. Guide et
+recette : PRESENCE-GPU-3.0.md. Rapport : benchmarks/presence-gpu30-linux.json.
+Mesa logiciel, cas frais de 5 s : équilibré 29,89 → 29,88 FPS,
+CPU 330,50 → 214,96 % ; cinématique 34,55 → 44,01 FPS,
+CPU 391,29 → 311,81 %. 100 % CPU = un cœur.
+7,04 MiB demandés inchangés. Pas de gain statistique ou RTX établi, pas de mesure
+VRAM physique, watts ou latence IA. Repos/réduit : une frame puis attente de 5 s.
+
+58 tests ciblés réussis dont 19 renderer EGL réel. Suite complète : 627 tests,
+618 réussis / 9 ignorés, 78,382 s sous Linux/Tk9/EGL requis. Sonde EGL réussie.
+Suivre la CI du SHA B livré avant toute annonce de compilation Windows verte.
+Validation matérielle RTX 3070 + Ollama + voix et esthétique utilisateur en attente.
+
+**ARRÊT OBLIGATOIRE APRÈS A + B : attendre l'avis artistique utilisateur.**
+Ne pas poursuivre C/D/E/F, intégrer le GPU à Jarvis.exe, commencer les LOTS 4/5/7
+ou toucher main sans nouvelle instruction appropriée.
+
+---
+
 # PRESENCE GPU 3.0 — A, 27 octobre 2026
 
 Sous-lot A uniquement : noir exact, noyau agrandi, trois orbites et 24/36

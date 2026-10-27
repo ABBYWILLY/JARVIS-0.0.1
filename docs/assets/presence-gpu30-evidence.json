@@ -1,0 +1,77 @@
+{
+  "origin": "Actual OpenGL RGB framebuffer, bottom-up readback vertically flipped only.",
+  "reference_revision": "3a4c2fd",
+  "candidate_revision": "current",
+  "source_sha256": {
+    "before": {
+      "gpu_renderer.py": "41df641cd0e20dea6e13a4c18f0e261c7eaa6813769355d724d484394ce68057",
+      "reactor_shaders.py": "aaa05c44d303bc883b29fe3e0ecef3d6b1afb0d8da40e7f7643c19f0b1c1ac77"
+    },
+    "after": {
+      "gpu_renderer.py": "0052ffd5f49fafcfd45d1ce5d3a0379b5585a061e10d239564d6c0c211ba9853",
+      "reactor_shaders.py": "a6b8cec55f6afd2046fb8926b1e858aa90fcf7348f45bad703227c4e2d053b15"
+    }
+  },
+  "shared_scene_sha256": {
+    "presence_gpu.py": "da2d8e8f319575201040b9ad36d26692c36829ac7956ea5752f4851db8efe321",
+    "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+    "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+  },
+  "context": {
+    "vendor": "Mesa",
+    "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+    "acceleration": "software",
+    "hardware_validation": "pending",
+    "required_version": "OpenGL 3.3"
+  },
+  "state": "thinking",
+  "quality": "balanced",
+  "color": [
+    0.25,
+    0.88,
+    1.0
+  ],
+  "each_viewport_pixels": [
+    960,
+    640
+  ],
+  "labels_outside_viewport": true,
+  "still_time_seconds": 4.0,
+  "animation": {
+    "frame_count": 125,
+    "encoded_fps": 25,
+    "duration_seconds": 5.0,
+    "clock_seconds": [
+      4.0,
+      8.96
+    ],
+    "scope": "Fixed-clock export of actual rendered frames, not measured runtime FPS.",
+    "audio": false
+  },
+  "postprocessing": "Contact sheet labels and video encoding only; no retouching or independent image generation.",
+  "assets": {
+    "presence-gpu30-before.png": {
+      "bytes": 218934,
+      "sha256": "3dad8b5f92b66d93ac8ef1e2c532d6c9939c082fb895f73caeb689d258af1d00"
+    },
+    "presence-gpu30-after.png": {
+      "bytes": 95016,
+      "sha256": "435a678fc7cdbc6f0185aa02239f8844e500a832da9b2b0559f448fb5e371a77"
+    },
+    "presence-gpu30-comparison.png": {
+      "bytes": 330352,
+      "sha256": "a7dbbc81135947191005b8fd9363d731ff9c0adff313810dd40d68d2dfa34e78"
+    },
+    "presence-gpu30-comparison.mp4": {
+      "bytes": 657450,
+      "sha256": "7a867ac99f22611d1157d4784f56d823047f684a564872bb163bfc31efd250f9"
+    }
+  },
+  "hardware_validation": "pending",
+  "artistic_user_approval": "pending",
+  "limitations": [
+    "Software Mesa/EGL is not an RTX 3070 measurement.",
+    "A+B material/composition only; no new C-F state animations or surface expressions."
+  ]
+}
