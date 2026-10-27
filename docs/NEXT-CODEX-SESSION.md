@@ -1,3 +1,36 @@
+# PRESENCE GPU 3.0 — D, 27 octobre 2026
+
+C publié : 27c3f4e ; CI Windows application 40578074554 et prototype 40578074556
+vertes. A+B restent la direction artistique officiellement validée.
+D : huit familles du catalogue gravées sur l'hémisphère visible, sphère/matière
+conservées. Couronnes progressives, ralentissement puis reprise des phases sans
+reset ; trois signes quaternion fixés à l'entrée. Même VBO/passes/allocations.
+PCM en état parole conserve l'expression ; utilisateur/X/état annulent et
+anciens événements sont ignorés. Réduction du mouvement : maintien statique
+puis effacement sans timer supplémentaire. Dégradation conserve le profil Éco.
+
+91 tests ciblés réussis dont 29 vrais tests EGL. Suite Linux/Tk9/EGL requis :
+660 exécutés, 651 réussis, 9 ignorés, 77,068 s. Sonde EGL shaders/frame/fermeture
+réussie. Galerie des 8 familles, sourire/rire/cœur et interruption :
+assets/presence-gpu30-D-*. Vidéo comparative 250 frames / 10 s, 25 i/s d'export,
+PCM synthétique signalé ; référence réelle C et événements consignés, pas de
+Piper simulé. Le PCM Piper direct et la synchronisation mot à mot ne sont pas
+branchés au prototype ; API spectrale prête et WAV réel utilisable.
+
+Rapport : benchmarks/presence-gpu30-D-linux.json. D Mesa logiciel : Équilibré
+29,86 FPS / CPU 166,49 %, Cinématique 44,61 FPS / CPU 256,61 % ; expression
+29,79 FPS / CPU 171,74 %. CPU 100 % = un cœur. 7,04 MiB demandés inchangés.
+Aucun gain statistique ou RTX démontré ; VRAM physique/watts/latence IA non mesurés.
+Guide et raccourcis : PRESENCE-GPU-3.0-CD.md et PRESENCE-GPU.md.
+Suivre la CI du SHA D livré pour la compilation Windows.
+
+Validation matérielle Windows/RTX 3070 + Ollama + voix et avis artistique C/D
+en attente. Canvas reste stable en production ; aucune intégration GPU dans
+Jarvis.exe, aucun modèle ajouté. E/F fonctionnels, LOTS 4/5/7 et main exclus.
+C et D livrés ; attendre le retour utilisateur avant tout nouveau périmètre.
+
+---
+
 # PRESENCE GPU 3.0 — C, 27 octobre 2026
 
 A+B explicitement validés par l'utilisateur ; référence officielle 41c2373

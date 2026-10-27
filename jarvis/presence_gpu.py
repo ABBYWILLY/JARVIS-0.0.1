@@ -19,7 +19,7 @@ import zlib
 
 from .audio import signal_view
 from .expressions import expression_family
-from .morphing import MorphController, ENTER_SECONDS, HOLD_SECONDS, RETURN_SECONDS
+from .morphing import CATALOGUE, MorphController, ENTER_SECONDS, HOLD_SECONDS, RETURN_SECONDS
 from .presence import PresenceModel, PresenceSettings
 from .richtext import parse_text
 
@@ -62,6 +62,7 @@ class ReactorScene:
         self.epoch = 0
         self.time_origin = None
         self._rendered_signal_active = False
+        self._rendered_family = None
 
     def update_state(self, state, now=None, interrupt=False):
         now = time.monotonic() if now is None else now
@@ -86,8 +87,8 @@ class ReactorScene:
             raise ValueError("Le spectre audio attend trois bandes finies.")
         self._raw_bands = tuple(max(0., min(1., float(value))) for value in raw)
         self.model.update_event(self.model.state, signal, now=now)
-        if self.model.has_signal(now):
-            self.semantic.cancel()  # Physical/recorded PCM has priority over preview.
+        if self.model.has_signal(now) and self.model.state != "jarvis_speaking":
+            self.semantic.cancel()  # User PCM interrupts; Piper PCM animates its expression.
         return True
 
     def set_idle_line(self, enabled):
@@ -102,7 +103,9 @@ class ReactorScene:
         self.last_frame = now
         targets = {"thinking": (.92, -.73, 1.13), "listening": (.065, -.045, .080),
                    "user_speaking": (.065, -.045, .080), "jarvis_speaking": (.12, -.09, .15)}
-        target_velocity = targets.get(self.model.state, (0., 0., 0.))
+        target_velocity = ((.028, -.021, .035) if self.semantic.active else
+                           targets.get(self.model.state, (0., 0., 0.)))
+        inertia = .18 if self.semantic.active else .45
         scale_target = .92 if self.model.state == "thinking" else 1.
         reduced = self.model.settings.reduced_motion
         for index, target in enumerate(target_velocity):
@@ -110,8 +113,8 @@ class ReactorScene:
             if reduced:
                 self.orbit_velocity[index] = 0.
             else:
-                decay = math.exp(-delta / .45)
-                self.orbit_phase[index] += target * delta + (before - target) * .45 * (1. - decay)
+                decay = math.exp(-delta / inertia)
+                self.orbit_phase[index] += target * delta + (before - target) * inertia * (1. - decay)
                 velocity = target + (before - target) * decay
                 self.orbit_velocity[index] = 0. if abs(velocity) < .0001 else velocity
         self.core_scale = (scale_target if reduced else
@@ -131,8 +134,10 @@ class ReactorScene:
         self.model.settings = replace(self.model.settings, reduced_motion=bool(enabled))
         self.semantic.cancel()
 
-    def preview_expression(self, text, width, height, now=None):
-        if self.model.state not in {"silent", "thinking"}:
+    def preview_expression(self, text, width, height, now=None, *, generation=None):
+        if generation is not None and generation != self.epoch:
+            return False
+        if self.model.state not in {"silent", "thinking", "jarvis_speaking"}:
             return False
         now = time.monotonic() if now is None else now
         events = parse_text(text).events
@@ -146,8 +151,8 @@ class ReactorScene:
     def _normal_points(self, width, height, now):
         if self.model.state != "jarvis_speaking":
             return self.model.frame(width, height, now)
-        # The GPU experiment unfolds SPEAKING into a line. Reuse the existing
-        # PCM-arrival filter; do not construct a carrier or a second state model.
+        # Keep the actual PCM curve available to the adapter and classic-line
+        # mode. The GPU's normal foreground remains the sphere, not this curve.
         active = self.model.has_signal(now)
         expressivity = self.model.settings.wave_expressivity / 100
         energy = ((1 - math.exp(-self.model.signal["rms"] * (10 + 35 * expressivity))) ** .8
@@ -169,28 +174,36 @@ class ReactorScene:
         points = self._normal_points(width, height, now)
         morph = self.semantic.frame(points, width, height, now, profile="cinematic")
         self._rendered_signal_active = self.model.has_signal(now)
-        details = morph.details if morph else ()
-        reactor = self.reactor
+        # The existing controller still owns expression timing/cancellation.
+        # Its shrinking flat contour is intentionally not used by the GPU: the
+        # original catalogue strokes are engraved onto the persistent sphere.
+        family = self.semantic.family if morph else None
+        surface_amount = 0.
         if morph:
-            points = morph.contour
-            # The sole MorphController supplies phase/timing; this envelope only
-            # withdraws the reactor's decorative orbits while its symbol owns
-            # the foreground. It does not schedule another morph or audio event.
-            elapsed = now - self.semantic._started
+            elapsed = max(0., now - self.semantic._started)
             smooth = lambda value: (lambda x: x*x*(3-2*x))(max(0., min(1., value)))
             if self.model.settings.reduced_motion or morph.phase == "hold":
-                reactor = 0.
+                surface_amount = 1.
             elif morph.phase == "enter":
-                reactor *= 1 - smooth(elapsed / ENTER_SECONDS * 2)
+                surface_amount = smooth(elapsed / ENTER_SECONDS)
             else:
-                reactor *= smooth(((elapsed - ENTER_SECONDS - HOLD_SECONDS) / RETURN_SECONDS - .5) * 2)
+                surface_amount = 1. - smooth((elapsed - ENTER_SECONDS - HOLD_SECONDS) / RETURN_SECONDS)
+        self._rendered_family = family
         ndc = lambda path: tuple((2 * x / width - 1, 1 - 2 * y / height) for x, y in path)
-        return {"time_s": now - self.time_origin, "reactor": reactor, "points": ndc(points),
-                "details": tuple(ndc(path) for path in details), "color": self.color,
-                "detail_opacity": morph.detail_opacity if morph else 1.,
+        if family is not None:
+            # Explicit surface_family changes this geometry contract from NDC
+            # to local catalogue coordinates (x right/y down). Renderer projects
+            # it onto the visible hemisphere; no alternate visualizer is made.
+            symbol = CATALOGUE[family]
+            points, details = symbol.contour, symbol.details
+        else:
+            points, details = ndc(points), ()
+        return {"time_s": now - self.time_origin, "reactor": 1. if morph else self.reactor,
+                "points": points, "details": details, "color": self.color,
+                "detail_opacity": 1., "surface_family": family, "surface_amount": surface_amount,
                 "rms": self.model.signal["rms"] if self.model.has_signal(now) else 0.,
                 "orbit_phase": tuple(self.orbit_phase), "core_scale": self.core_scale,
-                "audio_bands": tuple(self.audio_bands), "orbit_blend": 0.,
+                "audio_bands": tuple(self.audio_bands), "orbit_blend": surface_amount,
                 "reduced_motion": self.model.settings.reduced_motion}
 
     def moving(self, now):
@@ -199,7 +212,10 @@ class ReactorScene:
         target_velocity = self.model.state in {"thinking", "listening", "user_speaking", "jarvis_speaking"}
         orbital = not self.model.settings.reduced_motion and (target_velocity or any(self.orbit_velocity))
         target_scale = .92 if self.model.state == "thinking" else 1.
-        return (self.semantic.active or orbital or self.model.has_signal(now)
+        semantic_moving = self.semantic.active and (
+            not self.model.settings.reduced_motion or self._rendered_family != self.semantic.family
+            or now - self.semantic._started >= HOLD_SECONDS)
+        return (semantic_moving or orbital or self.model.has_signal(now)
                 or self.model.has_signal(now) != self._rendered_signal_active
                 or any(self.audio_bands) or self.core_scale != target_scale)
 
@@ -405,7 +421,7 @@ def _run(args):
                 if wav:
                     (wav.resume if mapping[key_code] in {"listening", "jarvis_speaking"} else wav.suspend)()
             elif glfw.KEY_1 <= key_code <= glfw.KEY_3:
-                if scene.model.state != "thinking":
+                if scene.model.state not in {"thinking", "jarvis_speaking", "silent"}:
                     scene.update_state("silent", interrupt=True)
                 scene.preview_expression(PREVIEWS[key_code - glfw.KEY_1], *size)
             elif key_code == glfw.KEY_R:
@@ -474,7 +490,8 @@ def _run(args):
                 pressure = gpu.snapshot().get("memory_pressure_fraction")
                 slow_frames = slow_frames + 1 if render_seconds > .050 else 0
                 if slow_frames >= 12 or pressure is not None and pressure > .94:
-                    renderer.set_quality("balanced")
+                    # Degradation must never promote an already economical profile.
+                    renderer.set_quality("eco" if renderer.quality == "eco" else "balanced")
                     renderer.resize(*(max(1, value // 2) for value in size))
                     renderer.bloom = False
                     renderer.particles = False

@@ -16,7 +16,7 @@ SPACE_GLSL = """
 const float CAMERA_Z = 2.6;
 const float CORE_RADIUS = .30;
 uniform float u_core_scale, u_orbit_blend;
-uniform vec3 u_orbit_phase, u_audio_bands;
+uniform vec3 u_orbit_phase, u_audio_bands, u_orbit_targets;
 float core_radius() { return CORE_RADIUS*(u_core_scale>0.0 ? u_core_scale : 1.0); }
 vec2 project_world(vec3 p) { return p.xy * CAMERA_Z / (CAMERA_Z-p.z); }
 vec2 scene_plane(vec2 ndc, vec2 size) {
@@ -43,6 +43,12 @@ vec3 orbit_spin_axis(float ring) {
     return normalize(ring<.5 ? vec3(.72,.24,.61)
                     : ring<1.5 ? vec3(-.18,.88,.44) : vec3(.48,-.61,.63));
 }
+vec4 quaternion_product(vec4 a,vec4 b) {
+    return vec4(a.w*b.xyz+b.w*a.xyz+cross(a.xyz,b.xyz),a.w*b.w-dot(a.xyz,b.xyz));
+}
+vec3 quaternion_rotate(vec4 q,vec3 p) {
+    return p+2.0*cross(q.xyz,cross(q.xyz,p)+q.w*p);
+}
 // Independent world-space rotations around the same origin. Rodrigues keeps
 // each basis orthonormal, hence no drift, screen-space orbit or fake wobble.
 void orbit_axes(float ring, float time_s, out vec3 axis_u, out vec3 axis_v) {
@@ -55,12 +61,48 @@ void orbit_axes(float ring, float time_s, out vec3 axis_u, out vec3 axis_v) {
     vec3 spin = orbit_spin_axis(ring);
     axis_u = rotate_axis(axis_u,spin,phase);
     axis_v = rotate_axis(axis_v,spin,phase);
+    if (u_orbit_blend>0.0) {
+        float tilt=acos(cosine)*.5, yaw=rot*.5;
+        vec4 base=vec4(cos(yaw)*sin(tilt),sin(yaw)*sin(tilt),
+                       sin(yaw)*cos(tilt),cos(yaw)*cos(tilt));
+        vec4 turn=vec4(spin*sin(phase*.5),cos(phase*.5));
+        vec4 orientation=quaternion_product(turn,base);
+        // The target's equivalent quaternion sign is fixed at entry by the
+        // adapter. It cannot flip midway through an expression at 180 degrees.
+        float sign_=ring<.5 ? u_orbit_targets.x : ring<1.5 ? u_orbit_targets.y : u_orbit_targets.z;
+        vec4 target=vec4(0.0,0.0,0.0,sign_<0.0 ? -1.0 : 1.0);
+        vec4 aligned=normalize(mix(orientation,target,u_orbit_blend));
+        axis_u=quaternion_rotate(aligned,vec3(1.0,0.0,0.0));
+        axis_v=quaternion_rotate(aligned,vec3(0.0,1.0,0.0));
+    }
+}
+// Local catalogue paths become points on the visible hemisphere, not a screen
+// overlay. The radial limit leaves room for soft strokes inside the silhouette.
+vec3 surface_point(vec2 local) {
+    vec2 p=vec2(local.x,-local.y)*.78;
+    float radius=length(p);
+    if (radius>.88) p*=.88/radius;
+    return vec3(p,sqrt(max(0.0,1.0-dot(p,p))))*core_radius();
 }
 float visible_depth(float near_hit, float world_z, float activation) {
     if (activation <= 0.0 || near_hit > 2.0) return 1.0;
     float sample_hit = (CAMERA_Z-world_z)/CAMERA_Z;
     float visible = smoothstep(sample_hit-.0008,sample_hit+.0008,near_hit);
     return mix(1.0,visible,smoothstep(.1,.9,activation));
+}
+"""
+
+# Orbital bases are uniform across a frame. Evaluate quaternion alignment only
+# three times per fullscreen vertex, rather than for every shaded pixel.
+REACTOR_VERTEX = """#version 330
+out vec2 uv;
+flat out vec3 v_orbit_u[3], v_orbit_v[3];
+""" + SPACE_GLSL + """
+void main() {
+    vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);
+    uv=p;
+    gl_Position=vec4(p*2.0-1.0,0.0,1.0);
+    for (int i=0;i<3;++i) orbit_axes(float(i),0.0,v_orbit_u[i],v_orbit_v[i]);
 }
 """
 
@@ -87,6 +129,7 @@ vec3 interference_tint(float ndv, vec3 normal, vec3 color) {
 
 REACTOR_FRAGMENT = """#version 330
 in vec2 uv;
+flat in vec3 v_orbit_u[3], v_orbit_v[3];
 out vec4 frag;
 uniform vec2 u_size;
 uniform vec3 u_color;
@@ -152,8 +195,7 @@ void main() {
     // perspective foreshortening. Rear portions disappear behind the core.
     for (int i=0;i<3;++i) {
         float fi = float(i);
-        vec3 axis_u, axis_v;
-        orbit_axes(fi,t,axis_u,axis_v);
+        vec3 axis_u=v_orbit_u[i], axis_v=v_orbit_v[i];
         vec3 normal = cross(axis_u,axis_v);
         float denominator = dot(normal,ray);
         if (abs(denominator)<.015) continue;
@@ -190,10 +232,15 @@ in vec2 a_start, a_end, a_range;
 in float a_main;
 uniform vec2 u_size;
 uniform float u_reactor, u_time, u_rms, u_detail_opacity;
+uniform float u_surface_kind, u_surface_amount;
 out vec2 v_local;
-flat out float v_length, v_strength, v_depth;
+flat out float v_length, v_strength, v_depth, v_surface;
 """ + SPACE_GLSL + """
 vec3 position(vec2 source,float u) {
+    if (u_surface_kind>0.0) {
+        vec3 world=surface_point(source);
+        return vec3(plane_ndc(project_world(world),u_size),world.z);
+    }
     if (a_main<.5 || u_reactor<=0.0) return vec3(source,.4);
     float a = u*25.13274123-u_time*.32;
     float radius = .024+.17*u;
@@ -216,16 +263,23 @@ void main() {
     v_local = vec2(along,side*10.0);
     v_length = length_;
     v_depth = (first.z+last.z)*.5;
+    v_surface=float(u_surface_kind>0.0);
     // The supplied PCM/symbol stays authoritative outside the reactor.
     // Its transitional spiral fades away before the sphere takes prominence.
     v_strength = a_main>.5 ? (1.0-smoothstep(.15,.85,u_reactor))
                           : (1.0-smoothstep(0.0,.8,u_reactor))*u_detail_opacity;
+    if (u_surface_kind>0.0) {
+        // A facial circle is already represented by the physical sphere.
+        // Affection retains its complete heart outline; faces use details.
+        v_strength=(a_main>.5 && u_surface_kind<1.5 ? 0.0 : u_surface_amount)
+                   *(a_main>.5 ? 1.0 : u_detail_opacity);
+    }
 }
 """
 
 CURVE_FRAGMENT = """#version 330
 in vec2 v_local;
-flat in float v_length, v_strength, v_depth;
+flat in float v_length, v_strength, v_depth, v_surface;
 uniform vec3 u_color;
 uniform vec2 u_size;
 uniform float u_rms, u_reactor;
@@ -237,7 +291,9 @@ void main() {
     float shoulder = exp(-d*d/3.2)*.26;
     float halo = exp(-d*d/24.0)*.024;
     vec2 p = scene_plane(gl_FragCoord.xy*2.0/u_size-1.0,u_size);
-    float visible = u_reactor<=0.0 ? 1.0 : visible_depth(core_front(p),v_depth,u_reactor);
+    float near_hit=core_front(p);
+    if (v_surface>.5 && near_hit>2.0) discard;
+    float visible = v_surface>.5 || u_reactor<=0.0 ? 1.0 : visible_depth(near_hit,v_depth,u_reactor);
     vec3 tint = mix(u_color,vec3(1.0),.16);
     frag = vec4(tint*(core*1.45+shoulder+halo)*(1.0+.4*u_rms)*v_strength*visible,1.0);
 }
@@ -247,7 +303,7 @@ FILAMENT_VERTEX = """#version 330
 uniform vec2 u_size;
 uniform float u_time, u_reactor, u_rms;
 out vec2 v_local;
-flat out float v_length, v_strength, v_depth;
+flat out float v_length, v_strength, v_depth, v_surface;
 """ + SPACE_GLSL + """
 const int STEPS = 72;
 vec3 path(float u,float strand) {
@@ -277,6 +333,7 @@ void main() {
     v_local = vec2(along,side*5.0);
     v_length = length_;
     v_depth = (first.z+last.z)*.5;
+    v_surface=0.0;
     v_strength = u_reactor*u_rms*.08*(.4+.6*pow(.5+.5*sin(u*31.4159-u_time*.7+strand),2.0));
 }
 """
@@ -311,7 +368,7 @@ void main() {
     // points share each orbital packet to form a restrained tapered trail.
     float fade=.5+.5*sin(u_time*.35+hash(packet+81.0)*6.2831853);
     gl_PointSize = (1.25+hash(packet+6.0)*.95)*(1.0+u_rms*.15)*CAMERA_Z/(CAMERA_Z-p.z);
-    v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23);
+    v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23)*(1.0-u_orbit_blend*.70);
     v_warm = 0.0;
     v_depth = p.z;
 }

@@ -1,0 +1,532 @@
+{
+  "date": "2026-10-27",
+  "scope": "D actual renderer, shaders and scene; isolated software measurements after C; no concurrent tests or export",
+  "reference_C": "27c3f4e",
+  "measurements": {
+    "idle": {
+      "revision": "current",
+      "case": "idle",
+      "quality": "balanced",
+      "environment": {
+        "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+      },
+      "source_sha256": {
+        "gpu_renderer.py": "47a5768210bae60787cc33ab8d4fc7865b95ac5d208214c443e979ee331d5f3d",
+        "reactor_shaders.py": "6b35c9184d971447edc346827c2f378cca37d562241b8f93a27435d5f1db5e7b"
+      },
+      "context": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "size": [
+        960,
+        640
+      ],
+      "scene_revision": "current",
+      "scene_source_sha256": "16999b3bd5b80118e9288762b865fd2b4f37678576730a004207997a354fd113",
+      "omitted_snapshot_fields": [],
+      "shared_scene_sha256": {
+        "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+        "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+      },
+      "reference_scope": "Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged.",
+      "capture_time_seconds": 4.0,
+      "capture_origin": "actual OpenGL RGB framebuffer",
+      "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+      "expression_policy": null,
+      "timing": {
+        "frame_count": 1,
+        "elapsed_seconds": 5.000124197999867,
+        "fps": 0.19999503220340342,
+        "sampled_frame_count": 1,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 5000.124197999867,
+        "frame_p95_ms": 5000.124197999867,
+        "render_median_ms": 19.937107999794534,
+        "render_p95_ms": 19.937107999794534,
+        "render_scope": "wall_submission_and_driver_finish",
+        "frame_scope": "wall_frame_including_pacing_wait"
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 1.5129049333997366,
+        "cpu_peak_percent": 14.53302781399718,
+        "elapsed_seconds": 5.001243788000011,
+        "interval_seconds": 0.5,
+        "sample_count": 10,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 104382464,
+        "rss_average_bytes": 104370920.72727273,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 11,
+        "rss_peak_bytes": 108285952,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "requested_graphics_bytes": 7380864,
+      "attachment_bytes": 7372800,
+      "physical_vram_bytes": null,
+      "gpu_time_ms": null,
+      "power_watts": null,
+      "ai_voice_latency_ms": null,
+      "unavailable_reasons": {
+        "physical_vram_bytes": "No per-process physical graphics-memory measurement.",
+        "gpu_time_ms": "No GPU timestamp query measured.",
+        "power_watts": "No device power counter measured.",
+        "ai_voice_latency_ms": "AI/audio engines are not active in this isolated prototype."
+      },
+      "limitations": [
+        "Software Mesa is not an RTX measurement.",
+        "Requested resource bytes exclude driver/program/default framebuffer costs.",
+        "No Ollama, microphone, Whisper or Piper is active."
+      ]
+    },
+    "eco": {
+      "revision": "current",
+      "case": "eco",
+      "quality": "eco",
+      "environment": {
+        "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+      },
+      "source_sha256": {
+        "gpu_renderer.py": "47a5768210bae60787cc33ab8d4fc7865b95ac5d208214c443e979ee331d5f3d",
+        "reactor_shaders.py": "6b35c9184d971447edc346827c2f378cca37d562241b8f93a27435d5f1db5e7b"
+      },
+      "context": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "size": [
+        810,
+        540
+      ],
+      "scene_revision": "current",
+      "scene_source_sha256": "16999b3bd5b80118e9288762b865fd2b4f37678576730a004207997a354fd113",
+      "omitted_snapshot_fields": [],
+      "shared_scene_sha256": {
+        "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+        "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+      },
+      "reference_scope": "Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged.",
+      "capture_time_seconds": 4.0,
+      "capture_origin": "actual OpenGL RGB framebuffer",
+      "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+      "expression_policy": null,
+      "timing": {
+        "frame_count": 75,
+        "elapsed_seconds": 5.010200915997757,
+        "fps": 14.969459560099121,
+        "sampled_frame_count": 75,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 66.79197099992962,
+        "frame_p95_ms": 66.8570110001383,
+        "render_median_ms": 10.891738000282203,
+        "render_p95_ms": 16.008531999887055,
+        "render_scope": "wall_submission_and_driver_finish",
+        "frame_scope": "wall_frame_including_pacing_wait"
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 65.30193126897065,
+        "cpu_peak_percent": 83.93287252729738,
+        "elapsed_seconds": 5.012861305000115,
+        "interval_seconds": 0.5,
+        "sample_count": 11,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 102256640,
+        "rss_average_bytes": 102245376.0,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 12,
+        "rss_peak_bytes": 104349696,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "requested_graphics_bytes": 5257944,
+      "attachment_bytes": 5249880,
+      "physical_vram_bytes": null,
+      "gpu_time_ms": null,
+      "power_watts": null,
+      "ai_voice_latency_ms": null,
+      "unavailable_reasons": {
+        "physical_vram_bytes": "No per-process physical graphics-memory measurement.",
+        "gpu_time_ms": "No GPU timestamp query measured.",
+        "power_watts": "No device power counter measured.",
+        "ai_voice_latency_ms": "AI/audio engines are not active in this isolated prototype."
+      },
+      "limitations": [
+        "Software Mesa is not an RTX measurement.",
+        "Requested resource bytes exclude driver/program/default framebuffer costs.",
+        "No Ollama, microphone, Whisper or Piper is active."
+      ]
+    },
+    "balanced": {
+      "revision": "current",
+      "case": "balanced",
+      "quality": "balanced",
+      "environment": {
+        "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+      },
+      "source_sha256": {
+        "gpu_renderer.py": "47a5768210bae60787cc33ab8d4fc7865b95ac5d208214c443e979ee331d5f3d",
+        "reactor_shaders.py": "6b35c9184d971447edc346827c2f378cca37d562241b8f93a27435d5f1db5e7b"
+      },
+      "context": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "size": [
+        960,
+        640
+      ],
+      "scene_revision": "current",
+      "scene_source_sha256": "16999b3bd5b80118e9288762b865fd2b4f37678576730a004207997a354fd113",
+      "omitted_snapshot_fields": [],
+      "shared_scene_sha256": {
+        "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+        "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+      },
+      "reference_scope": "Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged.",
+      "capture_time_seconds": 4.0,
+      "capture_origin": "actual OpenGL RGB framebuffer",
+      "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+      "expression_policy": null,
+      "timing": {
+        "frame_count": 150,
+        "elapsed_seconds": 5.0233020089985985,
+        "fps": 29.86083650381648,
+        "sampled_frame_count": 150,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 33.44362699976955,
+        "frame_p95_ms": 33.49715700005618,
+        "render_median_ms": 12.762667500055613,
+        "render_p95_ms": 18.004421000114235,
+        "render_scope": "wall_submission_and_driver_finish",
+        "frame_scope": "wall_frame_including_pacing_wait"
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 166.49075586105974,
+        "cpu_peak_percent": 185.76557182050428,
+        "elapsed_seconds": 5.02755035600012,
+        "interval_seconds": 0.5,
+        "sample_count": 11,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 106610688,
+        "rss_average_bytes": 106599424.0,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 12,
+        "rss_peak_bytes": 110501888,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "requested_graphics_bytes": 7380864,
+      "attachment_bytes": 7372800,
+      "physical_vram_bytes": null,
+      "gpu_time_ms": null,
+      "power_watts": null,
+      "ai_voice_latency_ms": null,
+      "unavailable_reasons": {
+        "physical_vram_bytes": "No per-process physical graphics-memory measurement.",
+        "gpu_time_ms": "No GPU timestamp query measured.",
+        "power_watts": "No device power counter measured.",
+        "ai_voice_latency_ms": "AI/audio engines are not active in this isolated prototype."
+      },
+      "limitations": [
+        "Software Mesa is not an RTX measurement.",
+        "Requested resource bytes exclude driver/program/default framebuffer costs.",
+        "No Ollama, microphone, Whisper or Piper is active."
+      ]
+    },
+    "cinematic": {
+      "revision": "current",
+      "case": "cinematic",
+      "quality": "cinematic",
+      "environment": {
+        "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+      },
+      "source_sha256": {
+        "gpu_renderer.py": "47a5768210bae60787cc33ab8d4fc7865b95ac5d208214c443e979ee331d5f3d",
+        "reactor_shaders.py": "6b35c9184d971447edc346827c2f378cca37d562241b8f93a27435d5f1db5e7b"
+      },
+      "context": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "size": [
+        960,
+        640
+      ],
+      "scene_revision": "current",
+      "scene_source_sha256": "16999b3bd5b80118e9288762b865fd2b4f37678576730a004207997a354fd113",
+      "omitted_snapshot_fields": [],
+      "shared_scene_sha256": {
+        "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+        "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+      },
+      "reference_scope": "Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged.",
+      "capture_time_seconds": 4.0,
+      "capture_origin": "actual OpenGL RGB framebuffer",
+      "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+      "expression_policy": null,
+      "timing": {
+        "frame_count": 223,
+        "elapsed_seconds": 4.999402051002107,
+        "fps": 44.60533434299421,
+        "sampled_frame_count": 223,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 22.317644000395376,
+        "frame_p95_ms": 22.35341999994489,
+        "render_median_ms": 13.219775999914418,
+        "render_p95_ms": 16.34991099990657,
+        "render_scope": "wall_submission_and_driver_finish",
+        "frame_scope": "wall_frame_including_pacing_wait"
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 256.6067645609152,
+        "cpu_peak_percent": 285.8866775400765,
+        "elapsed_seconds": 5.004087521999736,
+        "interval_seconds": 0.5,
+        "sample_count": 10,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 104284160,
+        "rss_average_bytes": 104272616.72727273,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 11,
+        "rss_peak_bytes": 108150784,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "requested_graphics_bytes": 7380864,
+      "attachment_bytes": 7372800,
+      "physical_vram_bytes": null,
+      "gpu_time_ms": null,
+      "power_watts": null,
+      "ai_voice_latency_ms": null,
+      "unavailable_reasons": {
+        "physical_vram_bytes": "No per-process physical graphics-memory measurement.",
+        "gpu_time_ms": "No GPU timestamp query measured.",
+        "power_watts": "No device power counter measured.",
+        "ai_voice_latency_ms": "AI/audio engines are not active in this isolated prototype."
+      },
+      "limitations": [
+        "Software Mesa is not an RTX measurement.",
+        "Requested resource bytes exclude driver/program/default framebuffer costs.",
+        "No Ollama, microphone, Whisper or Piper is active."
+      ]
+    },
+    "reduced": {
+      "revision": "current",
+      "case": "reduced",
+      "quality": "balanced",
+      "environment": {
+        "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+      },
+      "source_sha256": {
+        "gpu_renderer.py": "47a5768210bae60787cc33ab8d4fc7865b95ac5d208214c443e979ee331d5f3d",
+        "reactor_shaders.py": "6b35c9184d971447edc346827c2f378cca37d562241b8f93a27435d5f1db5e7b"
+      },
+      "context": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "size": [
+        960,
+        640
+      ],
+      "scene_revision": "current",
+      "scene_source_sha256": "16999b3bd5b80118e9288762b865fd2b4f37678576730a004207997a354fd113",
+      "omitted_snapshot_fields": [],
+      "shared_scene_sha256": {
+        "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+        "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+      },
+      "reference_scope": "Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged.",
+      "capture_time_seconds": 4.0,
+      "capture_origin": "actual OpenGL RGB framebuffer",
+      "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+      "expression_policy": null,
+      "timing": {
+        "frame_count": 1,
+        "elapsed_seconds": 5.000119811999866,
+        "fps": 0.1999952076348419,
+        "sampled_frame_count": 1,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 5000.119811999866,
+        "frame_p95_ms": 5000.119811999866,
+        "render_median_ms": 13.662964000104694,
+        "render_p95_ms": 13.662964000104694,
+        "render_scope": "wall_submission_and_driver_finish",
+        "frame_scope": "wall_frame_including_pacing_wait"
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 1.2903765514045544,
+        "cpu_peak_percent": 12.308576021766429,
+        "elapsed_seconds": 5.001035389999743,
+        "interval_seconds": 0.5,
+        "sample_count": 10,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 106778624,
+        "rss_average_bytes": 106767080.72727273,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 11,
+        "rss_peak_bytes": 110657536,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "requested_graphics_bytes": 7380864,
+      "attachment_bytes": 7372800,
+      "physical_vram_bytes": null,
+      "gpu_time_ms": null,
+      "power_watts": null,
+      "ai_voice_latency_ms": null,
+      "unavailable_reasons": {
+        "physical_vram_bytes": "No per-process physical graphics-memory measurement.",
+        "gpu_time_ms": "No GPU timestamp query measured.",
+        "power_watts": "No device power counter measured.",
+        "ai_voice_latency_ms": "AI/audio engines are not active in this isolated prototype."
+      },
+      "limitations": [
+        "Software Mesa is not an RTX measurement.",
+        "Requested resource bytes exclude driver/program/default framebuffer costs.",
+        "No Ollama, microphone, Whisper or Piper is active."
+      ]
+    },
+    "expression": {
+      "revision": "current",
+      "case": "expression",
+      "quality": "balanced",
+      "environment": {
+        "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+        "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]"
+      },
+      "source_sha256": {
+        "gpu_renderer.py": "47a5768210bae60787cc33ab8d4fc7865b95ac5d208214c443e979ee331d5f3d",
+        "reactor_shaders.py": "6b35c9184d971447edc346827c2f378cca37d562241b8f93a27435d5f1db5e7b"
+      },
+      "context": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending",
+        "required_version": "OpenGL 3.3"
+      },
+      "size": [
+        960,
+        640
+      ],
+      "scene_revision": "current",
+      "scene_source_sha256": "16999b3bd5b80118e9288762b865fd2b4f37678576730a004207997a354fd113",
+      "omitted_snapshot_fields": [],
+      "shared_scene_sha256": {
+        "presence.py": "05867e316fbb35c4c628233c00f51584b11c2d2b16730278b8a76bdffc7a09f7",
+        "morphing.py": "b0dde84af1b54b3693da33e59094bce816f95fe3ad3beef05a28a3965b1dfe67"
+      },
+      "reference_scope": "Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged.",
+      "capture_time_seconds": 4.0,
+      "capture_origin": "actual OpenGL RGB framebuffer",
+      "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+      "expression_policy": "Offline smile every 1.5s, existing controller owns duration; no audio or live Piper.",
+      "timing": {
+        "frame_count": 149,
+        "elapsed_seconds": 5.001893439998639,
+        "fps": 29.78871936944753,
+        "sampled_frame_count": 149,
+        "sample_policy": "most_recent_frames",
+        "sample_capacity": 6000,
+        "p95_method": "nearest_rank",
+        "frame_median_ms": 33.44442199977493,
+        "frame_p95_ms": 33.55153899974539,
+        "render_median_ms": 13.220650000221212,
+        "render_p95_ms": 17.99998099977529,
+        "render_scope": "wall_submission_and_driver_finish",
+        "frame_scope": "wall_frame_including_pacing_wait"
+      },
+      "process": {
+        "cpu_scope": "process_one_core_percent",
+        "cpu_average_percent": 171.7424560900876,
+        "cpu_peak_percent": 181.64571600673364,
+        "elapsed_seconds": 5.006181727999774,
+        "interval_seconds": 0.5,
+        "sample_count": 10,
+        "peak_sampling": "periodic_intervals_and_final_partial_interval",
+        "rss_current_bytes": 104321024,
+        "rss_average_bytes": 104315810.9090909,
+        "rss_average_scope": "sample_mean_including_initial_and_final_reads",
+        "rss_sample_count": 11,
+        "rss_peak_bytes": 108138496,
+        "rss_peak_scope": "process_lifetime_high_water_mark",
+        "memory_source": "/proc/self/status",
+        "unavailable_reason": null
+      },
+      "requested_graphics_bytes": 7380864,
+      "attachment_bytes": 7372800,
+      "physical_vram_bytes": null,
+      "gpu_time_ms": null,
+      "power_watts": null,
+      "ai_voice_latency_ms": null,
+      "unavailable_reasons": {
+        "physical_vram_bytes": "No per-process physical graphics-memory measurement.",
+        "gpu_time_ms": "No GPU timestamp query measured.",
+        "power_watts": "No device power counter measured.",
+        "ai_voice_latency_ms": "AI/audio engines are not active in this isolated prototype."
+      },
+      "limitations": [
+        "Software Mesa is not an RTX measurement.",
+        "Requested resource bytes exclude driver/program/default framebuffer costs.",
+        "No Ollama, microphone, Whisper or Piper is active."
+      ]
+    }
+  },
+  "evidence": "docs/assets/presence-gpu30-D-evidence.json",
+  "hardware_validation": "pending",
+  "artistic_CD_user_approval": "pending",
+  "limitations": [
+    "Five-second fresh processes; no statistical performance or memory gain established.",
+    "Mesa llvmpipe software is not RTX3070; CPU100%=onecore.",
+    "No physical VRAM, GPUtimestamps, watts, Ollama latency or live Piper measured.",
+    "Expression case is an offline smile every1.5s using actual controller; no audio."
+  ]
+}

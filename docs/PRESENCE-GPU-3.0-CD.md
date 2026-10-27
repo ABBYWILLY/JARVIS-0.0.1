@@ -101,6 +101,83 @@ Cinématique à 960×640 : toujours 7 380 864 octets graphiques demandés (7,04 
 hors driver et présentation. Ces courts relevés ne prouvent aucun gain statistique,
 mémoire ou RTX ; VRAM physique, watts, temps GPU précis et impact IA non mesurés.
 
+## D — Gravure surfacique
+
+Les **huit familles existantes** sont projetées sur l'hémisphère visible :
+sourire, rire, affection, tristesse, colère, surprise, réflexion et clin d'œil.
+Les visages utilisent les détails du catalogue ; leur ancien cercle n'est pas
+redessiné, puisque la sphère fournit la silhouette. Le cœur utilise son contour.
+Les coordonnées locales deviennent des positions 3D sur la sphère avant la
+projection perspective, avec modulation selon la normale et découpe à la surface.
+Le matériau, le halo et le volume ne disparaissent plus.
+
+Le même VBO et le même passage des courbes sont réutilisés. Aucun bitmap,
+nouveau visualiseur ou modèle. Le `MorphController` existant conserve les durées
+et l'annulation ; la gravure apparaît puis se dissipe progressivement. Les
+orbites ralentissent et rejoignent des couronnes concentriques par interpolation
+de leur orientation, puis reprennent leurs angles continus. Les trois signes
+quaternion sont choisis à l'entrée, conservés jusqu'au retour, pour éviter un
+basculement de chemin à 180°. Les bases sont calculées dans le vertex shader,
+et transmises aux fragments ; aucun calcul d'orientation par pixel nécessaire.
+
+Les expressions sont possibles en THINKING, repos et parole. Le PCM en état
+parole ne les annule plus ; une vraie écoute utilisateur, X ou un changement
+d'état les annulent. Les événements d'une ancienne génération sont ignorés.
+Les exclusions de code, citations et
+exemples techniques sont conservées. En réduction du mouvement, le symbole
+reste statique et une dernière frame le retire à l'échéance ; pas de timer ajouté.
+La suspension du WAV par X empêche la réinjection d'une ancienne réponse.
+
+![Huit expressions sur la sphère](assets/presence-gpu30-D-gallery.png)
+
+[Sourire](assets/presence-gpu30-D-smile.png) ·
+[Rire](assets/presence-gpu30-D-laughter.png) ·
+[Affection](assets/presence-gpu30-D-affection.png) ·
+[Avant/après C→D](assets/presence-gpu30-D-comparison.png) ·
+[Vidéo D](assets/presence-gpu30-D-comparison.mp4) ·
+[Interruption](assets/presence-gpu30-D-interruption.png) ·
+[Manifest](assets/presence-gpu30-D-evidence.json).
+
+L'export compare les vrais adaptateurs et renderers C/D. Les expressions sont
+déclenchées par horloge de test et les bandes viennent de PCM synthétique signalé.
+Cela valide le parcours de l'adaptateur et du renderer, pas une synchronisation
+mot à mot avec Piper. La liaison au PCM/aux événements de la voix de production
+reste réservée à une future intégration GPU, après recette matérielle.
+
+Validation D ciblée : 91 tests réussis, dont 29 vrais tests EGL. Projection sur
+l'hémisphère, maintien du matériau, huit tracés distincts, transparence progressive,
+occlusion, phases longues, ±π/2π, interpolation et interruption sont contrôlés.
+
+Suite complète Linux/Tk9/EGL requis : **660 tests exécutés, 651 réussis,
+9 ignorés**, 77,068 s. Les ignorés concernent les mêmes six dépendances natives
+absentes et trois essais réels opt-in. Sonde EGL source : shaders compilés,
+vraie frame et libération complète. Ces résultats ne valident pas le matériel.
+
+### Mesures D
+
+[Rapport D](benchmarks/presence-gpu30-D-linux.json), mêmes conditions isolées que
+C, cinq secondes par cas, sans export ou test concurrent. Aucun gain statistique
+ou matériel n'est établi par ces fenêtres courtes.
+
+| Cas D | FPS | CPU moyen | RSS moyen | Rendu P50/P95 |
+| --- | ---: | ---: | ---: | ---: |
+| THINKING Éco | 14,97 | 65,30 % | 97,51 MiB | 10,89/16,01 ms |
+| THINKING Équilibré | 29,86 | 166,49 % | 101,66 MiB | 12,76/18,00 ms |
+| THINKING Cinématique | 44,61 | 256,61 % | 99,44 MiB | 13,22/16,35 ms |
+| Expression, Équilibré | 29,79 | 171,74 % | 99,48 MiB | 13,22/18,00 ms |
+
+Le cas `--case expression` déclenche un sourire hors ligne toutes les 1,5 s,
+avec les durées réelles du contrôleur, sans PCM ni Piper. Repos/réduit : une frame
+puis attente de cinq secondes. Toujours 7,04 MiB demandés à 960×640 en Équilibré,
+sans nouvelle texture/VBO/passe. CPU 100 % = un cœur, Mesa logiciel ; VRAM physique,
+watts, timestamps GPU, TTFT/tokens Ollama et latence voix restent non mesurés.
+
+C : [CI Windows application](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40578074554)
+et [prototype](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40578074556)
+vertes. Suivre le SHA D livré dans les mêmes workflows. L'artefact prototype
+reste séparé de `Jarvis.exe` ; une sonde Windows sans pilote peut signaler
+explicitement son indisponibilité, ce qui ne prouve pas un rendu RTX.
+
 ## Périmètre de validation
 
 Les mesures sont exécutées séparément des captures. Le helper

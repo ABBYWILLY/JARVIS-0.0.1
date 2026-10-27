@@ -3,8 +3,8 @@
 Ce programme expérimental accompagne JARVIS, sans remplacer son moteur Canvas.
 La direction artistique A+B est validée. Le guide [C+D](PRESENCE-GPU-3.0-CD.md)
 décrit les états, le spectre, les nouveaux raccourcis et les preuves actuelles.
-La revue artistique [GPU 3.0 — A + B](PRESENCE-GPU-3.0.md) conserve ce statut
-autonome et impose un arrêt pour avis utilisateur avant les autres sous-lots.
+La revue artistique [GPU 3.0 — A + B](PRESENCE-GPU-3.0.md) conserve la référence
+validée. L'utilisateur a autorisé C/D ; E/F fonctionnels restent différés.
 La phase [GPU2.5D](UX-POLISH-PRESENCE-25D.md) ajoute perspective, occlusion et
 matière énergétique légère. Ce document contient la comparaison réelle
 avant/après, la vidéo et les mesures logicielles ; aucune validation RTX n'est
@@ -31,17 +31,19 @@ et peut consommer plusieurs cœurs CPU.
 
 | Touche | Aperçu |
 | --- | --- |
-| I | Ligne immobile, aucun faux signal au repos |
-| T | Transition vers le réacteur : anneaux inclinés, filaments, particules, aura HDR et bloom |
-| L / S | Écoute / parole ; ligne plate sans source PCM |
-| 1 / 2 / 3 | Sourire 😊 / affection ❤️ / rire 😂, puis retour ; depuis T, le réacteur revient après le symbole |
-| Q / C | Qualité équilibrée/cinématique ; couleur de l'aperçu |
+| I / V | Repos sphérique stable / option de ligne classique immobile |
+| T | Contraction de 8 %, orbites multiaxiales accélérées, aura HDR |
+| L / S | Écoute / parole ; sphère conservée, aura calme sans PCM |
+| 1 / 2 / 3 | Sourire 😊 / affection ❤️ / rire 😂 gravés sur la sphère, puis dissipation |
+| X | Annuler l'expression et suspendre l'ancien WAV ; L/S le reprennent explicitement |
+| Q / C | Qualité Éco/Équilibré/Cinématique ; couleur de l'aperçu |
 | R / Échap | Réduction du mouvement ; fermeture |
 
 Le titre indique **APERÇU HORS LIGNE**. T n'annonce pas qu'Ollama réfléchit.
 L/S ne capturent pas le micro et ne lancent pas Piper. `--wav fichier.wav` accepte
-du PCM16 mono/stéréo jusqu'à192kHz : cette onde provient du fichier enregistré,
-pas du matériel en direct. Le prototype n'est pas raccordé aux réponses vocales.
+du PCM16 mono/stéréo jusqu'à192kHz : RMS et trois bandes fréquentielles viennent
+du fichier enregistré, pas du matériel en direct. Le WAV n'est pas joué.
+Le prototype n'est pas raccordé aux réponses vocales de production.
 Le morphing de JARVIS actuel reste piloté par ses callbacks PCM, approximativement
 par segment, avec exclusions code/citations et interruptions conservées.
 
@@ -79,7 +81,7 @@ et THINKING avec mouvement réduit ne dessinent qu'à un changement utile.
 
 Recette d'acceptation avant intégration :
 
-1. Vérifier `hardware_reported` avec vendeur NVIDIA, puis les deux profils,
+1. Vérifier `hardware_reported` avec vendeur NVIDIA, puis les trois profils,
    portrait/paysage, plusieurs DPI, minimisation/restauration, fermeture et reprise.
 2. Dans COMMAND OS, même modèle Qwen/budget/mode/question, relever TTFT et débit
    sans prototype puis avec, trois fois en alternant l'ordre. Les caches peuvent

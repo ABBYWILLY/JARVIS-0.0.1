@@ -12,6 +12,8 @@ from . import reactor_shaders as shaders
 
 _LIMITS = {"eco": (960, 540), "balanced": (1280, 720), "cinematic": (1920, 1080)}
 _PARTICLES = {"eco": 24, "balanced": 96, "cinematic": 192}
+_SURFACE_FAMILIES = frozenset(("smile", "laughter", "affection", "sadness",
+                               "anger", "surprise", "thinking", "wink"))
 _MAX_MAIN = 97
 _MAX_DETAILS = 8
 _MAX_DETAIL_POINTS = 25
@@ -38,6 +40,7 @@ class GpuRenderer:
         self._release_errors = []
         self._targets = {}
         self._closed = False
+        self._alignment_signs = None
         self._quality = self._validate_quality(quality)
         self._requested_size = self._validate_size(width, height)
         self._size = (0, 0)
@@ -48,7 +51,7 @@ class GpuRenderer:
         try:
             if ctx.version_code < 330:
                 raise ValueError("The GPU reactor requires OpenGL 3.3 or newer.")
-            self._scene = self._program(shaders.FULLSCREEN_VERTEX, shaders.REACTOR_FRAGMENT)
+            self._scene = self._program(shaders.REACTOR_VERTEX, shaders.REACTOR_FRAGMENT)
             self._curve = self._program(shaders.CURVE_VERTEX, shaders.CURVE_FRAGMENT)
             self._filament = self._program(shaders.FILAMENT_VERTEX, shaders.CURVE_FRAGMENT)
             self._particle = self._program(shaders.PARTICLE_VERTEX, shaders.PARTICLE_FRAGMENT)
@@ -231,9 +234,29 @@ class GpuRenderer:
         self._targets[name][1].use()
         vao.render(mode=self._gl.TRIANGLES, vertices=3)
 
+    @staticmethod
+    def _orbital_target_signs(phases):
+        """Choose equivalent frontal quaternions once at expression entry.
+
+        Formula matches R_axis(phase) * R_z(yaw) * R_x(tilt). Keeping the
+        selected signs until alignment returns to zero prevents a per-frame
+        shortest-path flip at 180 degrees. Only three scalars are cached.
+        """
+        signs = []
+        for ring, (phase, axis) in enumerate(zip(phases, ((.72, .24, .61), (-.18, .88, .44), (.48, -.61, .63)))):
+            yaw, tilt = (-.34+ring*.13)*.5, math.acos(.30+ring*.11)*.5
+            vector = (math.cos(yaw)*math.sin(tilt), math.sin(yaw)*math.sin(tilt),
+                      math.sin(yaw)*math.cos(tilt))
+            base_w = math.cos(yaw)*math.cos(tilt)
+            length = math.sqrt(sum(value*value for value in axis))
+            scalar = math.cos(phase*.5)*base_w - math.sin(phase*.5)*sum(a*b/length for a, b in zip(axis, vector))
+            signs.append(1. if scalar >= 0. else -1.)
+        return tuple(signs)
+
     def render(self, time_s, reactor, points, details=(), color=(.25, .9, 1.),
                rms=0., reduced_motion=False, target=None, detail_opacity=1.,
-               orbit_phase=None, core_scale=1., audio_bands=(0., 0., 0.), orbit_blend=0.):
+               orbit_phase=None, core_scale=1., audio_bands=(0., 0., 0.), orbit_blend=0.,
+               surface_family=None, surface_amount=0.):
         """Render the actual supplied curve or its progressive reactor form.
 
         ``points`` and ``details`` use OpenGL NDC (positive Y is up). No line or
@@ -243,13 +266,19 @@ class GpuRenderer:
         ``target=None`` presents to ``ctx.screen``; EGL callers pass a framebuffer.
         ``orbit_phase`` contains continuous world-space angles supplied by the
         state adapter. Audio bands are already analysed/smoothed outside GL.
+        When ``surface_family`` is present, points/details are original local
+        catalogue paths (positive Y down) and are projected onto the sphere.
+        A surface expression always keeps its supporting sphere visible.
         """
         self._check_open()
         if not all(math.isfinite(value) for value in (time_s, reactor, rms, detail_opacity,
-                                                       core_scale, orbit_blend)):
+                                                       core_scale, orbit_blend, surface_amount)):
             raise ValueError("Animation parameters must be finite.")
         if not .85 <= core_scale <= 1.1 or not 0. <= orbit_blend <= 1.:
             raise ValueError("Invalid core scale or orbital alignment.")
+        if (surface_family is not None and (not isinstance(surface_family, str) or surface_family not in _SURFACE_FAMILIES)
+                or not 0. <= surface_amount <= 1.):
+            raise ValueError("Invalid surface expression or opacity.")
         orbit_phase = (tuple((0. if reduced_motion else float(time_s))*speed for speed in (.70, -.91, 1.13))
                        if orbit_phase is None else tuple(orbit_phase))
         audio_bands = tuple(audio_bands)
@@ -264,13 +293,24 @@ class GpuRenderer:
         if destination is None:
             raise RuntimeError("This context has no screen; pass a target framebuffer.")
         segments = self._upload_geometry(points, details)
-        reactor = max(0.0, min(1.0, reactor))
+        # Reduce only the transport representation, not the scene's continuous
+        # counters. Four pi preserves quaternion sign and avoids float32 drift
+        # in long sessions while remaining continuous at the wrap boundary.
+        orbit_phase = tuple(math.remainder(value, math.tau*2) for value in orbit_phase)
+        if orbit_blend <= 0.:
+            self._alignment_signs = None
+        elif self._alignment_signs is None:
+            self._alignment_signs = self._orbital_target_signs(orbit_phase)
+        reactor = 1. if surface_family is not None else max(0.0, min(1.0, reactor))
         values = {"u_time": 0.0 if reduced_motion else float(time_s),
                   "u_reactor": reactor, "u_rms": max(0.0, min(1.0, rms)),
                   "u_detail_opacity": max(0.0, min(1.0, detail_opacity)),
                   "u_core_scale": core_scale, "u_orbit_blend": orbit_blend,
                   "u_orbit_phase": orbit_phase,
                   "u_audio_bands": tuple(value*.4 for value in audio_bands) if reduced_motion else audio_bands,
+                  "u_orbit_targets": self._alignment_signs or (1., 1., 1.),
+                  "u_surface_kind": 0. if surface_family is None else 2. if surface_family == "affection" else 1.,
+                  "u_surface_amount": surface_amount,
                   "u_color": color, "u_size": self._size}
         self.ctx.disable(self._gl.DEPTH_TEST | self._gl.CULL_FACE | self._gl.BLEND)
         for program in (self._scene, self._curve, self._filament, self._particle):
@@ -282,7 +322,7 @@ class GpuRenderer:
         if reactor > 0:
             # Sparse accents require actual supplied audio energy; the stable
             # THINKING core is not buried under a permanent filament cage.
-            if rms > 0:
+            if rms > 0 and surface_family is None:
                 self._filament_vao.render(mode=self._gl.TRIANGLE_STRIP, vertices=4,
                                           instances=72 * 2)
             if self.particles:
@@ -330,3 +370,4 @@ class GpuRenderer:
         self._attachments.clear()
         self._objects.clear()
         self._targets.clear()
+        self._alignment_signs = None

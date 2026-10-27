@@ -26,7 +26,7 @@ import uuid
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
-CASES = ("idle", "eco", "balanced", "cinematic", "reduced")
+CASES = ("idle", "eco", "balanced", "cinematic", "reduced", "expression")
 
 
 def validate_revision(value):
@@ -115,6 +115,8 @@ def measure(args):
             scene.update_state("silent" if args.case == "idle" else "thinking", now=0.)
             for index in range(121):
                 snapshot = scene.snapshot(args.width, args.height, now=index / 30)
+                if args.case == "expression" and index == 108:
+                    scene.preview_expression("Heureux de te revoir 😊", args.width, args.height, now=index/30)
             # Fixed t=4s, color/state/resolution/policy are identical in both versions.
             frame, omitted = compatible_frame(snapshot, parameters)
             renderer.render(**frame, target=target)
@@ -123,11 +125,16 @@ def measure(args):
             timings = FrameTimings()
             sampler = ProcessSampler(interval=.5).start()
             started = time.monotonic()
+            last_expression = 3.6
             interval = 1 / (15 if quality == "eco" else 45 if quality == "cinematic" else 30)
             static = args.case in {"idle", "reduced"}
             while time.monotonic() - started < args.seconds:
                 frame_start = time.monotonic()
-                snapshot = scene.snapshot(args.width, args.height, now=4 + frame_start - started)
+                scene_time = 4 + frame_start - started
+                if args.case == "expression" and scene_time - last_expression >= 1.5:
+                    scene.preview_expression("Heureux de te revoir 😊", args.width, args.height, now=scene_time)
+                    last_expression = scene_time
+                snapshot = scene.snapshot(args.width, args.height, now=scene_time)
                 frame, dropped = compatible_frame(snapshot, parameters)
                 omitted = sorted(set(omitted) | set(dropped))
                 renderer.render(**frame, target=target)
@@ -153,6 +160,8 @@ def measure(args):
                                           "Renderer/shaders snapshot; current shared state adapter. Unsupported fields explicitly listed."),
                       "capture_time_seconds": 4., "capture_origin": "actual OpenGL RGB framebuffer",
                       "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
+                      "expression_policy": ("Offline smile every 1.5s, existing controller owns duration; no audio or live Piper."
+                                            if args.case == "expression" else None),
                       "timing": timings.summary(), "process": process,
                       "requested_graphics_bytes": renderer.allocation_bytes,
                       "attachment_bytes": renderer.attachment_bytes,

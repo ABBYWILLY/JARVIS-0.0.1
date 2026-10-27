@@ -4,6 +4,7 @@ Set JARVIS_REQUIRE_GPU=1 to fail instead of skipping when ModernGL/EGL is absent
 This checks the renderer contracts, not hardware speed: EGL may use llvmpipe.
 """
 import hashlib
+import math
 import os
 import subprocess
 import struct
@@ -128,6 +129,13 @@ class GpuRendererTests(unittest.TestCase):
                 if details:
                     self.assertNotEqual(raw, self.frame(points=points))
         self.assertEqual(len(hashes), 8)
+
+    def test_surface_expression_cannot_request_the_old_flat_reactor_replacement(self):
+        symbol = CATALOGUE["smile"]
+        kwargs = dict(points=symbol.contour, details=symbol.details,
+                      surface_family="smile", surface_amount=1., orbit_blend=1.)
+        visible = self.frame(2., 1., **kwargs)
+        self.assertEqual(visible, self.frame(2., 0., **kwargs))
 
     def test_bloom_and_particles_share_a_fixed_resource_pool(self):
         allocated = self.renderer.allocation_bytes
@@ -259,6 +267,30 @@ class GpuRendererTests(unittest.TestCase):
             self.assertEqual(self.renderer.allocation_bytes, allocated)
         self.assertEqual(len(frames), 3)
 
+    def test_all_eight_surface_expressions_add_visible_traits_without_erasing_the_sphere(self):
+        self.renderer.bloom = False
+        self.renderer.particles = False
+        hashes = set()
+        allocated = self.renderer.allocation_bytes
+        for family, symbol in CATALOGUE.items():
+            with self.subTest(family=family):
+                kwargs = dict(points=symbol.contour, details=symbol.details,
+                              surface_family=family, orbit_blend=1., orbit_phase=(.8, -.4, 1.2))
+                bare = self.frame(2., 1., surface_amount=0., **kwargs)
+                partial = self.frame(2., 1., surface_amount=.35, **kwargs)
+                full = self.frame(2., 1., surface_amount=1., **kwargs)
+                width, height = self.renderer.size
+                centre = ((height//2)*width+width//2)*3
+                self.assertGreater(max(bare[centre:centre+3]), 50)
+                # The original iridescent sphere is still there in every frame;
+                # glyphs add light to it instead of substituting a flat mesh.
+                self.assertTrue(all(a >= b for a, b in zip(full, bare)))
+                self.assertLess(sum(bare), sum(partial))
+                self.assertLess(sum(partial), sum(full))
+                hashes.add(hashlib.sha256(full).digest())
+                self.assertEqual(self.renderer.allocation_bytes, allocated)
+        self.assertEqual(len(hashes), 8)
+
     def test_reduced_motion_respects_explicit_frozen_orientations(self):
         phases = (.8, -.4, 1.2)
         first = self.frame(1., 1., orbit_phase=phases, reduced_motion=True)
@@ -280,7 +312,9 @@ class GpuRendererTests(unittest.TestCase):
                        {"detail_opacity": float("nan")}, {"core_scale": .5},
                        {"core_scale": float("nan")}, {"orbit_phase": (0., 1.)},
                        {"orbit_phase": (0., 1., float("inf"))},
-                       {"audio_bands": (0., 0., 2.)}, {"orbit_blend": -1.}):
+                       {"audio_bands": (0., 0., 2.)}, {"orbit_blend": -1.},
+                       {"surface_family": "unknown"}, {"surface_family": []},
+                       {"surface_amount": float("nan")}, {"surface_amount": 2.}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 self.frame(**kwargs)
         self.assertEqual(expected, self.frame())
@@ -489,6 +523,98 @@ class GpuRendererTests(unittest.TestCase):
             texture.release()
             vao.release()
             program.release()
+
+    def test_real_surface_projection_follows_the_visible_spherical_hemisphere(self):
+        fragment = """#version 330
+        uniform vec2 u_local;
+        out vec4 frag;
+        """ + shaders.SPACE_GLSL + """
+        void main() { vec3 p=surface_point(u_local); frag=vec4(p,dot(p,p)); }
+        """
+        program = self.ctx.program(vertex_shader=shaders.FULLSCREEN_VERTEX, fragment_shader=fragment)
+        vao = self.ctx.vertex_array(program, [])
+        texture = self.ctx.texture((1, 1), 4, dtype="f4")
+        target = self.ctx.framebuffer(color_attachments=[texture])
+        try:
+            program["u_core_scale"].value = .92
+            values = []
+            for point in ((0., 0.), (.5, 0.), (0., .5), (.8, .2), (-.8, -.2)):
+                program["u_local"].value = point
+                target.use()
+                vao.render(vertices=3)
+                x, y, z, radius2 = struct.unpack("4f", target.read(components=4, dtype="f4"))
+                self.assertAlmostEqual(radius2, (.30*.92)**2, places=6)
+                self.assertGreater(z, 0.)
+                values.append((x, y, z))
+            self.assertGreater(values[0][2], values[1][2])
+            self.assertGreater(values[1][0], values[0][0])
+            self.assertLess(values[2][1], values[0][1])  # Catalogue Y points down.
+        finally:
+            target.release()
+            texture.release()
+            vao.release()
+            program.release()
+
+    def test_surface_alignment_remains_finite_and_continuous_at_long_phase_boundaries(self):
+        fragment = """#version 330
+        uniform float u_ring;
+        uniform int u_axis;
+        out vec4 frag;
+        """ + shaders.SPACE_GLSL + """
+        void main() { vec3 a,b; orbit_axes(u_ring,0.0,a,b); frag=vec4(u_axis==0 ? a : b,1.0); }
+        """
+        program = self.ctx.program(vertex_shader=shaders.FULLSCREEN_VERTEX, fragment_shader=fragment)
+        vao = self.ctx.vertex_array(program, [])
+        texture = self.ctx.texture((1, 1), 4, dtype="f4")
+        target = self.ctx.framebuffer(color_attachments=[texture])
+        try:
+            def basis(ring, phases, blend):
+                program["u_ring"].value = ring
+                program["u_orbit_phase"].value = tuple(math.remainder(p, math.tau*2) for p in phases)
+                program["u_orbit_blend"].value = blend
+                vectors = []
+                for axis in (0, 1):
+                    program["u_axis"].value = axis
+                    target.use()
+                    vao.render(vertices=3)
+                    vector = struct.unpack("4f", target.read(components=4, dtype="f4"))[:3]
+                    self.assertTrue(all(math.isfinite(x) for x in vector))
+                    self.assertAlmostEqual(sum(x*x for x in vector), 1., places=5)
+                    vectors.append(vector)
+                self.assertAlmostEqual(sum(a*b for a, b in zip(*vectors)), 0., places=5)
+                return vectors
+            for ring in range(3):
+                for phase in (-math.pi, math.pi, 2.373, -math.tau, math.tau, 10000*math.tau+math.pi):
+                    phases = [.3, -.7, 1.1]
+                    phases[ring] = phase
+                    program["u_orbit_targets"].value = self.renderer._orbital_target_signs(phases)
+                    before, after = list(phases), list(phases)
+                    before[ring] -= .00001
+                    after[ring] += .00001
+                    a, b = basis(ring, before, .5), basis(ring, after, .5)
+                    self.assertLess(max(abs(x-y) for av, bv in zip(a, b) for x, y in zip(av, bv)), .001)
+                    aligned = basis(ring, phases, 1.)
+                    self.assertEqual(aligned, [(1., 0., 0.), (0., 1., 0.)])
+        finally:
+            target.release()
+            texture.release()
+            vao.release()
+            program.release()
+
+    def test_alignment_target_sign_is_held_until_the_expression_has_returned(self):
+        # A full turn preserves the world pose while changing the equivalent
+        # quaternion sign. An active alignment must keep its entry target.
+        symbol = CATALOGUE["smile"]
+        kwargs = dict(points=symbol.contour, details=symbol.details,
+                      surface_family="smile", surface_amount=.5, orbit_blend=.5)
+        self.frame(1., 1., orbit_phase=(0., 0., 0.), **kwargs)
+        initial = self.renderer._alignment_signs
+        self.frame(1., 1., orbit_phase=(math.tau, 0., 0.), **kwargs)
+        self.assertEqual(self.renderer._alignment_signs, initial)
+        self.frame(1., 1., orbit_phase=(math.tau, 0., 0.), orbit_blend=0.)
+        self.assertIsNone(self.renderer._alignment_signs)
+        self.frame(1., 1., orbit_phase=(math.tau, 0., 0.), **kwargs)
+        self.assertNotEqual(self.renderer._alignment_signs[0], initial[0])
 
 
 if __name__ == "__main__":

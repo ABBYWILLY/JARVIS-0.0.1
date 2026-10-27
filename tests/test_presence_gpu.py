@@ -51,6 +51,9 @@ class ReactorSceneTests(unittest.TestCase):
                     self.assertEqual(scene.semantic.family, family)
                     frame = scene.snapshot(960, 640, now + ENTER_SECONDS + HOLD_SECONDS / 2)
                     self.assertEqual(len(frame["points"]), 97)
+                    self.assertEqual(frame["surface_family"], family)
+                    self.assertEqual(frame["surface_amount"], 1.)
+                    self.assertEqual(frame["reactor"], 1.)
                     self.assertTrue(all(-1 <= coordinate <= 1 for point in frame["points"] for coordinate in point))
                     frames.add((frame["points"], frame["details"]))
                     self.assertIs(scene.model, model)
@@ -115,7 +118,7 @@ class ReactorSceneTests(unittest.TestCase):
                 self.assertEqual(expired["audio_bands"], (0., 0., 0.))
                 self.assertTrue(scene.moving(2 + SIGNAL_LIFETIME + .01))
 
-    def test_thinking_reactor_withdraws_for_symbol_and_returns_before_idle_settles(self):
+    def test_thinking_sphere_persists_while_surface_lines_fade_in_hold_and_dissipate(self):
         scene = ReactorScene()
         scene.update_state("thinking", now=0)
         concentrating = scene.snapshot(960, 640, .1)
@@ -124,14 +127,23 @@ class ReactorSceneTests(unittest.TestCase):
         self.assertLess(concentrating["core_scale"], 1)
         self.assertTrue(scene.preview_expression("😊", 960, 640, now=.1))
         entering = scene.snapshot(960, 640, .1 + ENTER_SECONDS / 2)
-        self.assertEqual(entering["reactor"], 0)
+        self.assertEqual(entering["reactor"], 1.)
+        self.assertAlmostEqual(entering["surface_amount"], .5)
+        self.assertEqual(entering["orbit_blend"], entering["surface_amount"])
         held = scene.snapshot(960, 640, .1 + ENTER_SECONDS + HOLD_SECONDS / 2)
-        self.assertEqual(held["reactor"], 0)
+        self.assertEqual(held["reactor"], 1.)
+        self.assertEqual(held["surface_family"], "smile")
+        self.assertEqual(held["surface_amount"], 1.)
         self.assertTrue(held["details"])
         returned = scene.snapshot(960, 640, .1 + ENTER_SECONDS + HOLD_SECONDS + RETURN_SECONDS * .9)
-        self.assertGreater(returned["reactor"], 0)
-        scene.snapshot(960, 640, 2)
+        self.assertEqual(returned["reactor"], 1.)
+        self.assertGreater(returned["surface_amount"], 0.)
+        self.assertLess(returned["surface_amount"], .1)
+        done = scene.snapshot(960, 640, 2)
         self.assertFalse(scene.semantic.active)
+        self.assertIsNone(done["surface_family"])
+        self.assertEqual(done["surface_amount"], 0.)
+        self.assertEqual(done["orbit_blend"], 0.)
         scene.update_state("silent", now=2)
         for index in range(1, 101):
             idle = scene.snapshot(960, 640, 2 + index * .1)
@@ -139,7 +151,7 @@ class ReactorSceneTests(unittest.TestCase):
         self.assertTrue(all(y == 0 for x, y in idle["points"]))
         self.assertFalse(scene.moving(12))
 
-    def test_interrupt_and_recorded_pcm_cancel_the_current_expression(self):
+    def test_interrupt_and_user_pcm_cancel_the_current_expression(self):
         scene = ReactorScene()
         scene.update_state("thinking", now=1)
         scene.snapshot(960, 640, 1.1)
@@ -170,8 +182,10 @@ class ReactorSceneTests(unittest.TestCase):
         self.assertTrue(scene.preview_expression("😂", 960, 640, now=21))
         symbol = scene.snapshot(960, 640, 21)
         self.assertTrue(symbol["details"])
-        self.assertEqual(symbol["reactor"], 0)
+        self.assertEqual(symbol["reactor"], 1.)
+        self.assertEqual(symbol["surface_amount"], 1.)
         self.assertEqual(symbol["points"], scene.snapshot(960, 640, 21 + HOLD_SECONDS / 2)["points"])
+        self.assertFalse(scene.moving(21 + HOLD_SECONDS / 2))
         scene.snapshot(960, 640, 21 + HOLD_SECONDS + .01)
         self.assertFalse(scene.semantic.active)
 
@@ -246,6 +260,60 @@ class ReactorSceneTests(unittest.TestCase):
         scene.update_state("dormant", now=3.)
         self.assertFalse(scene.moving(3.))
         self.assertEqual(scene.snapshot(960, 640, 4.)["reactor"], 0.)
+
+    def test_speaking_pcm_animates_the_surface_without_cancelling_its_expression(self):
+        scene = ReactorScene()
+        scene.update_state("jarvis_speaking", now=0.)
+        generation = scene.epoch
+        self.assertTrue(scene.preview_expression("Heureux de te revoir 😊", 960, 640,
+                                                 now=0., generation=generation))
+        scene.update_audio(dict(pcm_signal(), bands=(.2, .4, .1)), now=.05, generation=generation)
+        frame = scene.snapshot(960, 640, .1)
+        self.assertEqual(frame["surface_family"], "smile")
+        self.assertGreater(frame["surface_amount"], 0.)
+        self.assertGreater(frame["audio_bands"][1], 0.)
+        self.assertEqual(frame["reactor"], 1.)
+        scene.update_state("listening", now=.2, interrupt=True)
+        self.assertFalse(scene.semantic.active)
+        self.assertFalse(scene.preview_expression("❤️", 960, 640, now=.2, generation=generation))
+        self.assertFalse(scene.update_audio(pcm_signal(), now=.2, generation=generation))
+        cancelled = scene.snapshot(960, 640, .21)
+        self.assertIsNone(cancelled["surface_family"])
+        self.assertEqual(cancelled["surface_amount"], 0.)
+        self.assertEqual(cancelled["audio_bands"], (0., 0., 0.))
+        self.assertEqual(cancelled["reactor"], 1.)
+
+    def test_surface_temporarily_keeps_a_sphere_even_with_classic_idle_line(self):
+        scene = ReactorScene(idle_line=True)
+        self.assertEqual(scene.snapshot(960, 640, 0.)["reactor"], 0.)
+        self.assertTrue(scene.preview_expression("Je t'aime ❤️", 960, 640, now=.1))
+        held = scene.snapshot(960, 640, .1 + ENTER_SECONDS + HOLD_SECONDS / 2)
+        self.assertEqual(held["surface_family"], "affection")
+        self.assertEqual(held["reactor"], 1.)
+        self.assertEqual(held["surface_amount"], 1.)
+        done = scene.snapshot(960, 640, 2.)
+        self.assertIsNone(done["surface_family"])
+        self.assertEqual(done["reactor"], 0.)
+
+    def test_surface_crowns_slow_orbits_without_reset_then_return_to_state_speed(self):
+        scene = ReactorScene()
+        scene.update_state("thinking", now=0.)
+        for index in range(61):
+            scene.snapshot(960, 640, index / 30)
+        fast = tuple(abs(value) for value in scene.orbit_velocity)
+        phase = tuple(scene.orbit_phase)
+        self.assertTrue(scene.preview_expression("C'est drôle 😂", 960, 640, now=2.))
+        self.assertEqual(scene.snapshot(960, 640, 2.)["orbit_phase"], phase)
+        for index in range(1, 26):
+            held = scene.snapshot(960, 640, 2 + index / 30)
+        self.assertEqual(held["orbit_blend"], 1.)
+        self.assertTrue(all(abs(value) < before / 4 for value, before in zip(scene.orbit_velocity, fast)))
+        for index in range(26, 121):
+            done = scene.snapshot(960, 640, 2 + index / 30)
+        self.assertFalse(scene.semantic.active)
+        self.assertEqual(done["orbit_blend"], 0.)
+        self.assertGreater(min(abs(value) for value in scene.orbit_velocity), .6)
+        self.assertEqual(done["reactor"], 1.)
 
     def test_three_preview_phrases_respect_code_link_quote_and_unknown_exclusions(self):
         scene = ReactorScene()
