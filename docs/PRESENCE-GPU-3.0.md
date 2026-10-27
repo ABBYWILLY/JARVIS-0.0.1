@@ -1,5 +1,9 @@
 # PRESENCE GPU 3.0 — revue artistique A + B
 
+> Direction artistique A+B validée ensuite par l’utilisateur. Voir la
+> [suite C+D](PRESENCE-GPU-3.0-CD.md). Les résultats ci-dessous sont le relevé A+B
+> conservé, et non une validation matérielle Windows/RTX.
+
 27 octobre 2026. Prototype autonome ; Canvas reste le moteur de `Jarvis.exe`.
 Référence avant travaux : `3a4c2fd`, branche `feat/jalon-2-voice-presence`.
 

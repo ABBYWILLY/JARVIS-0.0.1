@@ -47,11 +47,17 @@ def context_info(ctx):
 
 class ReactorScene:
     """Thin adapter; operational state stays in the existing PresenceModel."""
-    def __init__(self, reduced_motion=False):
+    def __init__(self, reduced_motion=False, *, idle_line=False):
         self.model = PresenceModel(PresenceSettings(reduced_motion=reduced_motion))
         self.semantic = MorphController()
         self.color = (.25, .88, 1.)
-        self.reactor = 0.
+        self.reactor = 0. if idle_line else 1.
+        self.idle_line = bool(idle_line)
+        self.orbit_phase = [0., .85, -.62]
+        self.orbit_velocity = [0., 0., 0.]
+        self.core_scale = 1.
+        self.audio_bands = [0., 0., 0.]
+        self._raw_bands = (0., 0., 0.)
         self.last_frame = None
         self.epoch = 0
         self.time_origin = None
@@ -62,17 +68,66 @@ class ReactorScene:
         self.semantic.cancel()
         self.epoch += 1
         self.model.update_event(state, now=now)
-        if interrupt or state in {"user_speaking", "dormant"}:
-            self.reactor = 0.
+        self.reactor = 0. if state == "dormant" or self.idle_line and state == "silent" else 1.
+        self._raw_bands = (0., 0., 0.)
+        if interrupt or state == "dormant":
+            self.audio_bands[:] = (0., 0., 0.)
+        if state == "dormant":
+            self.orbit_velocity[:] = (0., 0., 0.)
+            self.core_scale = 1.
         self.last_frame = now
 
-    def update_audio(self, signal, now=None):
+    def update_audio(self, signal, now=None, *, generation=None):
         now = time.monotonic() if now is None else now
+        if generation is not None and generation != self.epoch:
+            return False  # A superseded response may not illuminate a new state.
+        raw = signal.get("bands", (0., 0., 0.)) if isinstance(signal, dict) else (0., 0., 0.)
+        if len(raw) != 3 or not all(isinstance(value, (int, float)) and math.isfinite(value) for value in raw):
+            raise ValueError("Le spectre audio attend trois bandes finies.")
+        self._raw_bands = tuple(max(0., min(1., float(value))) for value in raw)
         self.model.update_event(self.model.state, signal, now=now)
         if self.model.has_signal(now):
             self.semantic.cancel()  # Physical/recorded PCM has priority over preview.
+        return True
 
-    def set_reduced_motion(self, enabled):
+    def set_idle_line(self, enabled):
+        self.idle_line = bool(enabled)
+        if self.model.state == "silent":
+            self.reactor = 0. if self.idle_line else 1.
+
+    def _advance(self, now):
+        # Integrate velocity, not state age: changing a state never resets any
+        # orbital angle. Cap a resumed hidden interval to avoid a phase jump.
+        delta = min(.1, max(0., now - self.last_frame)) if self.last_frame is not None else 0.
+        self.last_frame = now
+        targets = {"thinking": (.92, -.73, 1.13), "listening": (.065, -.045, .080),
+                   "user_speaking": (.065, -.045, .080), "jarvis_speaking": (.12, -.09, .15)}
+        target_velocity = targets.get(self.model.state, (0., 0., 0.))
+        scale_target = .92 if self.model.state == "thinking" else 1.
+        reduced = self.model.settings.reduced_motion
+        for index, target in enumerate(target_velocity):
+            before = self.orbit_velocity[index]
+            if reduced:
+                self.orbit_velocity[index] = 0.
+            else:
+                decay = math.exp(-delta / .45)
+                self.orbit_phase[index] += target * delta + (before - target) * .45 * (1. - decay)
+                velocity = target + (before - target) * decay
+                self.orbit_velocity[index] = 0. if abs(velocity) < .0001 else velocity
+        self.core_scale = (scale_target if reduced else
+                           scale_target + (self.core_scale - scale_target) * math.exp(-delta / .30))
+        if abs(self.core_scale - scale_target) < .0001:
+            self.core_scale = scale_target
+        active = self.model.has_signal(now)
+        for index, value in enumerate(self._raw_bands if active else (0., 0., 0.)):
+            previous = self.audio_bands[index]
+            tau = .055 if value > previous else .24
+            current = value + (previous - value) * math.exp(-delta / tau)
+            self.audio_bands[index] = 0. if abs(current) < .0001 else current
+
+    def set_reduced_motion(self, enabled, now=None):
+        if now is not None:
+            self._advance(now)
         self.model.settings = replace(self.model.settings, reduced_motion=bool(enabled))
         self.semantic.cancel()
 
@@ -110,15 +165,7 @@ class ReactorScene:
         width, height = max(1, width), max(1, height)
         if self.time_origin is None:
             self.time_origin = now
-        delta = min(.1, max(0., now - self.last_frame)) if self.last_frame is not None else 0.
-        self.last_frame = now
-        target = 1. if self.model.state == "thinking" else 0.
-        if self.model.settings.reduced_motion:
-            self.reactor = target
-        else:
-            self.reactor += (target - self.reactor) * (1 - math.exp(-delta / .14))
-            if abs(self.reactor - target) < .001:
-                self.reactor = target
+        self._advance(now)
         points = self._normal_points(width, height, now)
         morph = self.semantic.frame(points, width, height, now, profile="cinematic")
         self._rendered_signal_active = self.model.has_signal(now)
@@ -142,16 +189,19 @@ class ReactorScene:
                 "details": tuple(ndc(path) for path in details), "color": self.color,
                 "detail_opacity": morph.detail_opacity if morph else 1.,
                 "rms": self.model.signal["rms"] if self.model.has_signal(now) else 0.,
+                "orbit_phase": tuple(self.orbit_phase), "core_scale": self.core_scale,
+                "audio_bands": tuple(self.audio_bands), "orbit_blend": 0.,
                 "reduced_motion": self.model.settings.reduced_motion}
 
     def moving(self, now):
-        # SPEAKING uses the PCM line, rather than the model's round speaking
-        # geometry; a previous Canvas mesh transition must not keep it awake.
-        model_moving = (self.model.has_signal(now) if self.model.state == "jarvis_speaking"
-                        else self.model.needs_animation(now))
-        return (self.semantic.active or model_moving
+        # IDLE is a static sphere after its outgoing inertia settles. Listening
+        # and speaking have slow real-state orbits; audio energy is never made up.
+        target_velocity = self.model.state in {"thinking", "listening", "user_speaking", "jarvis_speaking"}
+        orbital = not self.model.settings.reduced_motion and (target_velocity or any(self.orbit_velocity))
+        target_scale = .92 if self.model.state == "thinking" else 1.
+        return (self.semantic.active or orbital or self.model.has_signal(now)
                 or self.model.has_signal(now) != self._rendered_signal_active
-                or 0 < self.reactor < 1)
+                or any(self.audio_bands) or self.core_scale != target_scale)
 
 
 class WavInput:
@@ -163,8 +213,32 @@ class WavInput:
             self.reader.close()
             raise ValueError("Choisissez un WAV PCM16 mono ou stéréo, fréquence ≤192kHz ; aucune conversion automatique.")
         self.started = None
+        self.generation = 0
+        self.ended = False
+        self.paused = False
+        from .audio_spectrum import SpectrumWorker
+        try:
+            self.spectrum = SpectrumWorker()
+        except Exception:
+            self.reader.close()
+            raise
+
+    def reset_spectrum(self):
+        self.generation += 1
+        self.spectrum.reset(self.generation)
+
+    def suspend(self):
+        self.paused = True
+        self.reset_spectrum()
+
+    def resume(self):
+        self.paused = False
+        self.reset_spectrum()
 
     def signal(self, now):
+        if self.paused:
+            return {"rms": 0., "wave": [0.] * 48, "bands": (0., 0., 0.),
+                    "spectrum_error": self.spectrum.diagnostic}
         if self.started is None:
             self.started = now
         rate, channels = self.reader.getframerate(), self.reader.getnchannels()
@@ -174,10 +248,23 @@ class WavInput:
         if sys.byteorder != "little":
             samples.byteswap()
         mono = [sum(samples[i:i + channels]) / (32768 * channels) for i in range(0, len(samples), channels)]
-        return signal_view(mono)
+        result = signal_view(mono)
+        if mono:
+            self.spectrum.submit(mono, rate, now, generation=self.generation)
+            result["bands"] = self.spectrum.snapshot(now, generation=self.generation)
+        else:
+            if not self.ended:
+                self.reset_spectrum()
+                self.ended = True
+            result["bands"] = (0., 0., 0.)
+        result["spectrum_error"] = self.spectrum.diagnostic
+        return result
 
     def close(self):
-        self.reader.close()
+        try:
+            self.spectrum.close()
+        finally:
+            self.reader.close()
 
 
 def save_png(path, size, rgb):
@@ -198,7 +285,7 @@ def save_png(path, size, rgb):
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Prototype PRESENCE GPU autonome, sans modèle ni micro ; COMMAND OS reste Canvas.")
-    parser.add_argument("--quality", choices=("balanced", "cinematic"), default="balanced")
+    parser.add_argument("--quality", choices=("eco", "balanced", "cinematic"), default="balanced")
     parser.add_argument("--state", choices=tuple(STATE_KEYS), default="idle", help="État d'aperçu hors ligne, pas une activité réelle d'Ollama.")
     parser.add_argument("--seconds", type=float, default=0., help="Durée limitée ; 0 = fenêtre interactive.")
     parser.add_argument("--headless", action="store_true", help="Contexte EGL sans fenêtre, essais développeur.")
@@ -206,6 +293,7 @@ def parse_args(argv=None):
     parser.add_argument("--require-hardware", action="store_true", help="Refuser un renderer logiciel ou inconnu.")
     parser.add_argument("--allow-software", action="store_true", help="Essai développeur : autoriser le rendu logiciel d'une fenêtre (peut saturer le CPU).")
     parser.add_argument("--reduced-motion", action="store_true")
+    parser.add_argument("--idle-line", action="store_true", help="Conserver la ligne classique au repos ; V bascule ce choix dans cet aperçu.")
     parser.add_argument("--no-bloom", action="store_true")
     parser.add_argument("--no-particles", action="store_true")
     parser.add_argument("--no-adaptive", action="store_true", help="Mesurer un profil fixe sans dégradation automatique.")
@@ -268,7 +356,7 @@ def _open_context(args):
 def _run(args):
     from .gpu_benchmark import FrameTimings, ProcessSampler, NvidiaSampler, build_report, write_report
     started = time.perf_counter()
-    scene = ReactorScene(args.reduced_motion)
+    scene = ReactorScene(args.reduced_motion, idle_line=args.idle_line)
     ctx = glfw = window = renderer = output = wav = process = gpu = None
     report = {"status": "error", "application_integrated": False, "offline_preview": True,
               "startup_scope": "Python_initialization_excludes_frozen_bootloader"}
@@ -314,14 +402,23 @@ def _run(args):
                 glfw.set_window_should_close(window, True)
             elif key_code in mapping:
                 scene.update_state(mapping[key_code], interrupt=key_code == glfw.KEY_L)
+                if wav:
+                    (wav.resume if mapping[key_code] in {"listening", "jarvis_speaking"} else wav.suspend)()
             elif glfw.KEY_1 <= key_code <= glfw.KEY_3:
                 if scene.model.state != "thinking":
                     scene.update_state("silent", interrupt=True)
                 scene.preview_expression(PREVIEWS[key_code - glfw.KEY_1], *size)
             elif key_code == glfw.KEY_R:
-                scene.set_reduced_motion(not scene.model.settings.reduced_motion)
+                scene.set_reduced_motion(not scene.model.settings.reduced_motion, now=time.monotonic())
+            elif key_code == glfw.KEY_V:
+                scene.set_idle_line(not scene.idle_line)
+            elif key_code == glfw.KEY_X:
+                scene.update_state("listening", interrupt=True)
+                if wav:
+                    wav.suspend()
             elif key_code == glfw.KEY_Q:
-                renderer.set_quality("balanced" if renderer.quality == "cinematic" else "cinematic")
+                qualities = ("eco", "balanced", "cinematic")
+                renderer.set_quality(qualities[(qualities.index(renderer.quality) + 1) % len(qualities)])
                 renderer.resize(*size)
                 renderer.bloom, renderer.particles = not args.no_bloom, not args.no_particles
                 degraded, slow_frames = False, 0
@@ -355,7 +452,7 @@ def _run(args):
                     renderer.resize(*(tuple(max(1, value // 2) for value in size) if degraded else size))
                     ctx.screen.viewport = (0, 0, *size)
                     dirty = True
-            if wav and now - last_pcm >= .032 and scene.model.state in {"listening", "jarvis_speaking"}:
+            if wav and not wav.paused and now - last_pcm >= .032 and scene.model.state in {"listening", "jarvis_speaking"}:
                 scene.update_audio(wav.signal(now), now)
                 last_pcm, dirty = now, True
             moving = scene.moving(now)
@@ -383,13 +480,15 @@ def _run(args):
                     renderer.particles = False
                     degraded = True
                     report["adaptive_reason"] = "device_global_memory_pressure" if pressure and pressure > .94 else "frame_over_50ms"
-            fps = 15 if degraded else 30 if renderer.quality == "balanced" else 60
+            fps = 15 if degraded or renderer.quality == "eco" else 30 if renderer.quality == "balanced" else 60
             remaining = 1 / fps - (time.perf_counter() - frame_start)
             if remaining > 0:
                 time.sleep(remaining)
             frames.record(render_seconds, time.perf_counter() - frame_start)
             if window and now - last_title >= 1:
-                glfw.set_window_title(window, f"PRESENCE · APERÇU HORS LIGNE · {scene.model.state} · {info['acceleration']} · {renderer.quality} | I L T S · 1 2 3 emoji · Q qualité · R mouvement · C couleur · Échap")
+                source = ("WAV suspendu" if wav.paused else "WAV enregistré") if wav else "sans audio"
+                spectral = f" · spectre : {wav.spectrum.diagnostic}" if wav and wav.spectrum.diagnostic else ""
+                glfw.set_window_title(window, f"PRESENCE · APERÇU HORS LIGNE · {scene.model.state} · {source}{spectral} · {info['acceleration']} · {renderer.quality} | I L T S · X interruption · 1 2 3 emoji · Q qualité · R mouvement · V repos · C couleur · Échap")
                 last_title = now
         if args.capture:
             save_png(args.capture, renderer.size, renderer.read_rgb())
@@ -406,6 +505,8 @@ def _run(args):
             gpu=gpu, renderer_info=info, allocation_estimate_bytes=renderer.allocation_bytes))
         report.update(status="complete", quality_effective=renderer.quality, adaptive_degraded=degraded,
                       quality_changes=quality_changes, output_size=size, internal_size=renderer.size,
+                      audio_spectrum={"source": "recorded_pcm" if wav else "none", "bands": tuple(scene.audio_bands),
+                                      "diagnostic": wav.spectrum.diagnostic if wav else "", "live_piper": False},
                       timings_scope="headless_render_complete_includes_driver_wait" if args.headless else "render_includes_swap; frame_includes_pacing",
                       shutdown="pending")
         return report, 0

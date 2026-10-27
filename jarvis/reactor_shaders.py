@@ -15,6 +15,9 @@ void main() {
 SPACE_GLSL = """
 const float CAMERA_Z = 2.6;
 const float CORE_RADIUS = .30;
+uniform float u_core_scale, u_orbit_blend;
+uniform vec3 u_orbit_phase, u_audio_bands;
+float core_radius() { return CORE_RADIUS*(u_core_scale>0.0 ? u_core_scale : 1.0); }
 vec2 project_world(vec3 p) { return p.xy * CAMERA_Z / (CAMERA_Z-p.z); }
 vec2 scene_plane(vec2 ndc, vec2 size) {
     float aspect = size.x/size.y;
@@ -27,17 +30,31 @@ vec2 plane_ndc(vec2 p, vec2 size) {
 float core_front(vec2 p) {
     float a = dot(p,p)+CAMERA_Z*CAMERA_Z;
     float b = -CAMERA_Z*CAMERA_Z;
-    float c = CAMERA_Z*CAMERA_Z-CORE_RADIUS*CORE_RADIUS;
+    float radius = core_radius();
+    float c = CAMERA_Z*CAMERA_Z-radius*radius;
     float discriminant = b*b-a*c;
     return discriminant >= 0.0 ? (-b-sqrt(max(0.0,discriminant)))/a : 10000.0;
 }
-// Three related, separated orbital planes replace the crowded cage.
+vec3 rotate_axis(vec3 p,vec3 axis,float angle) {
+    float cosine=cos(angle), sine=sin(angle);
+    return p*cosine+cross(axis,p)*sine+axis*dot(axis,p)*(1.0-cosine);
+}
+vec3 orbit_spin_axis(float ring) {
+    return normalize(ring<.5 ? vec3(.72,.24,.61)
+                    : ring<1.5 ? vec3(-.18,.88,.44) : vec3(.48,-.61,.63));
+}
+// Independent world-space rotations around the same origin. Rodrigues keeps
+// each basis orthonormal, hence no drift, screen-space orbit or fake wobble.
 void orbit_axes(float ring, float time_s, out vec3 axis_u, out vec3 axis_v) {
-    float rot = -.34+ring*.13+.055*sin(time_s*.16+ring);
-    float cosine = .30+ring*.11+.018*sin(time_s*.19+ring*1.7);
+    float rot = -.34+ring*.13;
+    float cosine = .30+ring*.11;
     float sine = sqrt(1.0-cosine*cosine);
     axis_u = vec3(cos(rot),sin(rot),0.0);
     axis_v = vec3(-sin(rot)*cosine,cos(rot)*cosine,sine);
+    float phase = ring<.5 ? u_orbit_phase.x : ring<1.5 ? u_orbit_phase.y : u_orbit_phase.z;
+    vec3 spin = orbit_spin_axis(ring);
+    axis_u = rotate_axis(axis_u,spin,phase);
+    axis_v = rotate_axis(axis_v,spin,phase);
 }
 float visible_depth(float near_hit, float world_z, float activation) {
     if (activation <= 0.0 || near_hit > 2.0) return 1.0;
@@ -87,11 +104,14 @@ void main() {
     float px = 2.0/min(u_size.x,u_size.y);
     float near_hit = core_front(p);
     vec3 cold = mix(u_color,vec3(.53,.83,1.0),.12);
-    float breath = 1.0+.035*sin(t*1.7)+.10*u_rms;
-    float silhouette = CORE_RADIUS*CAMERA_Z/sqrt(CAMERA_Z*CAMERA_Z-CORE_RADIUS*CORE_RADIUS);
+    float radius_core = core_radius();
+    float focus = clamp((1.0-u_core_scale)/.08,0.0,1.0);
+    float bass=u_audio_bands.x, middle=u_audio_bands.y, treble=u_audio_bands.z;
+    float breath = 1.0+.025*sin(t*1.7)+.10*u_rms+.16*middle;
+    float silhouette = radius_core*CAMERA_Z/sqrt(CAMERA_Z*CAMERA_Z-radius_core*radius_core);
     // Object-local spill only: no coloured ambient veil or background vignette.
-    float spill = lineGlow(r-silhouette,.027)*(1.0-smoothstep(.38,.48,r));
-    light += mix(cold,vec3(.32,.19,1.0),.32)*spill*.075*activation;
+    float spill = lineGlow(r-silhouette,.034+.025*bass)*(1.0-smoothstep(.41,.52,r));
+    light += mix(cold,vec3(.32,.19,1.0),.32)*spill*(.13+.14*bass)*activation;
     if (near_hit < 2.0) {
         vec3 surface = vec3(p*near_hit,CAMERA_Z*(1.0-near_hit));
         vec3 normal = normalize(surface);
@@ -101,9 +121,9 @@ void main() {
         vec3 spectral = interference_tint(ndv,normal,u_color);
         // Analytic chord length models optical thickness. The back hemisphere
         // supplies a faint refracted-looking field; no scene texture is fetched.
-        float chord = 2.0*CORE_RADIUS*ndv;
-        vec3 back = (surface-view*chord)/CORE_RADIUS;
-        vec3 transmission = exp(-vec3(.85,.28,.13)*chord/CORE_RADIUS);
+        float chord = 2.0*radius_core*ndv;
+        vec3 back = (surface-view*chord)/radius_core;
+        vec3 transmission = exp(-vec3(.85,.28,.13)*chord/radius_core);
         float field = sin(back.x*5.4+t*.19+sin(back.y*4.1-t*.13)*.65)
                     +.5*sin(back.z*6.3+back.y*3.0-t*.15);
         float plasma = pow(max(0.0,1.0-abs(field)*.85),3.0);
@@ -111,22 +131,22 @@ void main() {
         // Dark, translucent body; coloured emission stays below the outer skin.
         vec3 body = mix(vec3(.018,.028,.08),spectral*.12,.35);
         body += transmission*mix(vec3(.04,.16,.46),cold*.4,.32)
-                *(.045+.17*plasma)*inner;
+                *(.045+(.17+.10*focus+.10*middle)*plasma)*inner;
         light += body*breath*activation;
         // Fresnel is angle dependent, with a broad iridescent shoulder and a
         // restrained HDR edge. The centre is intentionally much darker.
         float shoulder = pow(1.0-ndv,1.9);
-        light += spectral*(shoulder*.44+fresnel*1.12)*breath*activation;
+        light += spectral*(shoulder*.47+fresnel*1.27)*breath*activation;
         vec3 key = normalize(vec3(-.55,.72,.85));
         vec3 fill = normalize(vec3(.8,-.35,.5));
         float key_reflection = pow(max(0.0,dot(normal,normalize(key+view))),72.0);
         float fill_reflection = pow(max(0.0,dot(normal,normalize(fill+view))),38.0);
-        float specular = key_reflection*.54+fill_reflection*.15;
+        float specular = (key_reflection*.60+fill_reflection*.17)*(1.0+.25*treble);
         light += mix(spectral,vec3(.58,.78,1.0),.55)*specular*activation;
     }
     // Stable geometric silhouette, with no serrated carrier or scan-line grid.
     float shell = lineGlow(r-silhouette,.0009+px*.42);
-    light += mix(cold,vec3(.32,.18,1.0),.22)*shell*.42*activation;
+    light += mix(cold,vec3(.32,.18,1.0),.22)*shell*(.48+.15*middle)*activation;
     vec3 ray = vec3(p,-CAMERA_Z);
     // Exact ray/plane intersection: every circle has a world-space depth and
     // perspective foreshortening. Rear portions disappear behind the core.
@@ -148,15 +168,16 @@ void main() {
         // singularity must not paint a false halo into empty black space.
         float pixel_width = clamp(fwidth(length(q)),px*.42,px*2.5);
         float depth = clamp(.5+.5*world.z/radius,0.0,1.0);
-        float phase = a+t*(.12+fi*.035)*(mod(fi,2.0)*2.0-1.0)+fi;
+        float spin = i==0 ? u_orbit_phase.x : i==1 ? u_orbit_phase.y : u_orbit_phase.z;
+        float phase = a+spin*1.7+fi;
         float segment = .62+.38*pow(.5+.5*cos(phase),3.0);
         float width = .0008+pixel_width*(.48+depth*.18);
         float rail = lineGlow(d,width)*segment;
-        float halo = lineGlow(d,.010+pixel_width)*.055*segment;
+        float halo = lineGlow(d,.013+pixel_width)*.085*segment;
         float highlight = pow(max(0.0,cos(phase*2.0+fi)),18.0);
         float packet = pow(max(0.0,cos(phase*3.0+fi)),95.0);
         float visible = visible_depth(near_hit,world.z,u_reactor);
-        light += cold*(rail*(.18+depth*.68+highlight*.28)+halo*.45
+        light += cold*(rail*(.20+depth*.70+highlight*(.28+.24*treble))+halo*.62
                        +lineGlow(d,.004+pixel_width)*packet*(.10+depth*.25))
                       *activation*visible;
     }
@@ -269,17 +290,28 @@ flat out float v_depth;
 float hash(float n) { return fract(sin(n*127.1+311.7)*43758.5453); }
 void main() {
     float id = float(gl_VertexID), seed = hash(id+1.0);
-    float ring = mod(id,3.0);
+    float trail = mod(id,3.0), packet=floor(id/3.0);
+    float ring = mod(packet,3.0);
     float radius = .48+ring*.11;
-    float a = seed*6.2831853+u_time*(.05+ring*.025);
+    float phase = ring<.5 ? u_orbit_phase.x : ring<1.5 ? u_orbit_phase.y : u_orbit_phase.z;
+    float a = hash(packet+1.0)*6.2831853+phase*.65-trail*.017;
     vec3 axis_u, axis_v;
     orbit_axes(ring,u_time,axis_u,axis_v);
     vec3 p = radius*(cos(a)*axis_u+sin(a)*axis_v);
+    if (mod(packet,4.0)<.5) {
+        float latitude=hash(packet+91.0)*2.0-1.0;
+        float around=hash(packet+13.0)*6.2831853+phase*.18;
+        float shell=.34+hash(packet+27.0)*.10;
+        p=vec3(cos(around)*sqrt(1.0-latitude*latitude),latitude,
+               sin(around)*sqrt(1.0-latitude*latitude))*shell;
+    }
     vec2 projected = plane_ndc(project_world(p),u_size);
     gl_Position = vec4(projected,0.0,1.0);
-    float twinkle = pow(.5+.5*sin(u_time*(.5+seed)+id),5.0);
-    gl_PointSize = (1.5+hash(id+6.0)*1.3)*(1.0+u_rms*.3)*CAMERA_Z/(CAMERA_Z-p.z);
-    v_power = (.10+.22*twinkle)*u_reactor*(.65+p.z);
+    // Slow deterministic fades, never random per-frame flicker. Three small
+    // points share each orbital packet to form a restrained tapered trail.
+    float fade=.5+.5*sin(u_time*.35+hash(packet+81.0)*6.2831853);
+    gl_PointSize = (1.25+hash(packet+6.0)*.95)*(1.0+u_rms*.15)*CAMERA_Z/(CAMERA_Z-p.z);
+    v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23);
     v_warm = 0.0;
     v_depth = p.z;
 }

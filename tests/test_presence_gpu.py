@@ -3,11 +3,13 @@ import builtins
 from contextlib import redirect_stderr
 import io
 import json
+import math
 from pathlib import Path
 import struct
 import subprocess
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -67,10 +69,12 @@ class ReactorSceneTests(unittest.TestCase):
                 self.assertEqual(first["points"], later["points"])
                 self.assertTrue(all(y == 0 for x, y in first["points"]))
                 self.assertEqual(first["rms"], 0)
-                self.assertEqual(first["reactor"], 0)
-                self.assertFalse(scene.moving(30))
+                self.assertEqual(first["reactor"], 1)
+                self.assertEqual(first["audio_bands"], (0., 0., 0.))
+                self.assertEqual(later["audio_bands"], (0., 0., 0.))
+                self.assertEqual(scene.moving(30), state != "silent")
 
-    def test_thinking_to_silent_speaking_line_does_not_keep_rendering_an_old_mesh_transition(self):
+    def test_thinking_to_speaking_keeps_the_sphere_and_slow_orbits_not_a_mesh_transition(self):
         scene = ReactorScene()
         scene.update_state("thinking", now=0)
         scene.snapshot(960, 640, .1)
@@ -79,11 +83,18 @@ class ReactorSceneTests(unittest.TestCase):
         scene.update_state("jarvis_speaking", now=1)
         for index in range(1, 21):
             frame = scene.snapshot(960, 640, 1 + index * .1)
-        self.assertEqual(frame["reactor"], 0)
+        self.assertEqual(frame["reactor"], 1)
         self.assertTrue(all(y == 0 for x, y in frame["points"]))
-        self.assertFalse(scene.moving(3))
+        self.assertGreater(frame["core_scale"], .99)
+        self.assertTrue(scene.moving(3))  # Explicit slow SPEAKING orbits, no fake PCM.
+        scene.update_state("silent", now=3)
+        for index in range(1, 101):
+            idle = scene.snapshot(960, 640, 3 + index * .1)
+        self.assertEqual(idle["rms"], 0)
+        self.assertEqual(idle["reactor"], 1)
+        self.assertFalse(scene.moving(13))
 
-    def test_real_pcm_drives_listening_and_speaking_then_expires_to_a_line(self):
+    def test_real_pcm_drives_listening_and_speaking_then_expires_to_a_quiet_sphere(self):
         for state in ("listening", "jarvis_speaking"):
             with self.subTest(state=state):
                 scene = ReactorScene()
@@ -100,14 +111,17 @@ class ReactorSceneTests(unittest.TestCase):
                 expired = scene.snapshot(960, 640, 2 + SIGNAL_LIFETIME + .01)
                 self.assertEqual(expired["rms"], 0)
                 self.assertTrue(all(y == 0 for x, y in expired["points"]))
-                self.assertFalse(scene.moving(2 + SIGNAL_LIFETIME + .01))
+                self.assertEqual(expired["reactor"], 1)
+                self.assertEqual(expired["audio_bands"], (0., 0., 0.))
+                self.assertTrue(scene.moving(2 + SIGNAL_LIFETIME + .01))
 
     def test_thinking_reactor_withdraws_for_symbol_and_returns_before_idle_settles(self):
         scene = ReactorScene()
         scene.update_state("thinking", now=0)
-        rising = scene.snapshot(960, 640, .1)["reactor"]
-        self.assertGreater(rising, 0)
-        self.assertLess(rising, 1)
+        concentrating = scene.snapshot(960, 640, .1)
+        self.assertEqual(concentrating["reactor"], 1)
+        self.assertGreater(concentrating["core_scale"], .92)
+        self.assertLess(concentrating["core_scale"], 1)
         self.assertTrue(scene.preview_expression("😊", 960, 640, now=.1))
         entering = scene.snapshot(960, 640, .1 + ENTER_SECONDS / 2)
         self.assertEqual(entering["reactor"], 0)
@@ -119,11 +133,11 @@ class ReactorSceneTests(unittest.TestCase):
         scene.snapshot(960, 640, 2)
         self.assertFalse(scene.semantic.active)
         scene.update_state("silent", now=2)
-        for index in range(1, 21):
+        for index in range(1, 101):
             idle = scene.snapshot(960, 640, 2 + index * .1)
-        self.assertEqual(idle["reactor"], 0)
+        self.assertEqual(idle["reactor"], 1)
         self.assertTrue(all(y == 0 for x, y in idle["points"]))
-        self.assertFalse(scene.moving(4))
+        self.assertFalse(scene.moving(12))
 
     def test_interrupt_and_recorded_pcm_cancel_the_current_expression(self):
         scene = ReactorScene()
@@ -132,7 +146,7 @@ class ReactorSceneTests(unittest.TestCase):
         self.assertTrue(scene.preview_expression("❤️", 960, 640, now=1.1))
         scene.update_state("listening", now=1.2, interrupt=True)
         self.assertEqual(scene.model.state, "listening")
-        self.assertEqual(scene.reactor, 0)
+        self.assertEqual(scene.reactor, 1)
         self.assertFalse(scene.semantic.active)
         self.assertFalse(scene.preview_expression("😊", 960, 640, now=1.2))
         scene.update_state("silent", now=2)
@@ -160,6 +174,78 @@ class ReactorSceneTests(unittest.TestCase):
         self.assertEqual(symbol["points"], scene.snapshot(960, 640, 21 + HOLD_SECONDS / 2)["points"])
         scene.snapshot(960, 640, 21 + HOLD_SECONDS + .01)
         self.assertFalse(scene.semantic.active)
+
+    def test_orbital_inertia_keeps_phases_continuous_and_thinking_contracts_the_same_core(self):
+        scene = ReactorScene()
+        scene.update_state("thinking", now=0.)
+        for index in range(61):
+            frame = scene.snapshot(960, 640, index / 30)
+        fast = tuple(abs(value) for value in scene.orbit_velocity)
+        self.assertGreater(min(fast), .6)
+        self.assertGreater(len(set(round(value, 2) for value in fast)), 1)
+        self.assertAlmostEqual(frame["core_scale"], .92, places=3)
+        phases = frame["orbit_phase"]
+        scene.update_state("jarvis_speaking", now=2.)
+        self.assertEqual(tuple(scene.orbit_phase), phases)
+        start = scene.snapshot(960, 640, 2.)
+        self.assertEqual(start["orbit_phase"], phases)
+        self.assertEqual(start["core_scale"], frame["core_scale"])
+        for index in range(1, 61):
+            frame = scene.snapshot(960, 640, 2 + index / 30)
+        self.assertEqual(frame["reactor"], 1.)
+        self.assertAlmostEqual(frame["core_scale"], 1., places=3)
+        self.assertTrue(all(abs(value) < old / 2 for value, old in zip(scene.orbit_velocity, fast)))
+        for before, after, sign in zip(phases, frame["orbit_phase"], (1, -1, 1)):
+            self.assertGreater((after-before) * sign, 0.)
+
+    def test_hidden_gap_and_reduced_motion_never_reset_or_teleport_orbital_angles(self):
+        scene = ReactorScene()
+        scene.update_state("thinking", now=0.)
+        for index in range(31):
+            scene.snapshot(960, 640, index / 30)
+        before = tuple(scene.orbit_phase)
+        resumed = scene.snapshot(960, 640, 100.)
+        self.assertTrue(all(abs(last-first) < .12 for first, last in zip(before, resumed["orbit_phase"])))
+        scene.set_reduced_motion(True, now=100.)
+        held = scene.snapshot(960, 640, 101.)
+        self.assertEqual(held["orbit_phase"], scene.snapshot(960, 640, 200.)["orbit_phase"])
+        self.assertFalse(scene.moving(200.))
+        scene.set_reduced_motion(False, now=200.)
+        self.assertEqual(tuple(scene.orbit_phase), held["orbit_phase"])
+        self.assertNotEqual(scene.snapshot(960, 640, 200.1)["orbit_phase"], held["orbit_phase"])
+
+    def test_audio_bands_have_attack_release_silence_gate_and_generation_cancellation(self):
+        scene = ReactorScene()
+        scene.update_state("jarvis_speaking", now=0.)
+        signal = dict(pcm_signal(), bands=(.8, .4, .2))
+        self.assertTrue(scene.update_audio(signal, now=0., generation=scene.epoch))
+        active = scene.snapshot(960, 640, .05)
+        self.assertTrue(all(0. < actual < target for actual, target in zip(active["audio_bands"], signal["bands"])))
+        self.assertGreater(active["audio_bands"][0], active["audio_bands"][1])
+        scene.update_audio(dict(signal, rms=0.), now=.05)
+        released = scene.snapshot(960, 640, .1)
+        self.assertTrue(all(0. < actual < old for actual, old in zip(released["audio_bands"], active["audio_bands"])))
+        for index in range(1, 41):
+            silent = scene.snapshot(960, 640, .1 + index * .1)
+        self.assertEqual(silent["audio_bands"], (0., 0., 0.))
+        old_generation = scene.epoch
+        scene.update_state("listening", now=5., interrupt=True)
+        self.assertFalse(scene.update_audio(signal, now=5., generation=old_generation))
+        self.assertEqual(scene.snapshot(960, 640, 5.1)["audio_bands"], (0., 0., 0.))
+        self.assertEqual(scene.snapshot(960, 640, 5.1)["rms"], 0.)
+
+    def test_classic_idle_line_and_dormancy_remain_static_without_obsolete_motion(self):
+        scene = ReactorScene(idle_line=True)
+        line = scene.snapshot(960, 640, 0.)
+        self.assertEqual(line["reactor"], 0.)
+        self.assertFalse(scene.moving(1.))
+        scene.set_idle_line(False)
+        self.assertEqual(scene.snapshot(960, 640, 1.)["reactor"], 1.)
+        scene.update_state("thinking", now=2.)
+        scene.snapshot(960, 640, 2.1)
+        scene.update_state("dormant", now=3.)
+        self.assertFalse(scene.moving(3.))
+        self.assertEqual(scene.snapshot(960, 640, 4.)["reactor"], 0.)
 
     def test_three_preview_phrases_respect_code_link_quote_and_unknown_exclusions(self):
         scene = ReactorScene()
@@ -196,6 +282,59 @@ class WavAndCaptureTests(unittest.TestCase):
                         self.assertTrue(all(value == 0 for value in ended["wave"]))
                     finally:
                         reader.close()
+
+    def test_recorded_pcm_reaches_background_spectrum_then_scene_and_worker_stops(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "recorded-test-tone.wav"
+            samples = [int(12000 * math.sin(math.tau * 900 * index / 16000)) for index in range(16000)]
+            write_wav(path, samples, rate=16000)
+            reader = WavInput(path)
+            try:
+                reader.signal(0.)
+                deadline = time.monotonic() + 2.
+                while reader.spectrum.analysis_count < 1 and time.monotonic() < deadline:
+                    time.sleep(.005)
+                signal = reader.signal(.01)
+                self.assertGreater(signal["bands"][1], .15)
+                self.assertLess(signal["bands"][0], signal["bands"][1] / 10)
+                self.assertEqual(signal["spectrum_error"], "")
+                scene = ReactorScene()
+                scene.update_state("jarvis_speaking", now=0.)
+                scene.update_audio(signal, now=.01)
+                self.assertGreater(scene.snapshot(960, 640, .05)["audio_bands"][1], 0.)
+                ended = reader.signal(2.)
+                generation = reader.generation
+                self.assertEqual(ended["bands"], (0., 0., 0.))
+                reader.signal(3.)
+                self.assertEqual(reader.generation, generation)
+            finally:
+                reader.close()
+            self.assertFalse(reader.spectrum.alive)
+            self.assertEqual(reader.spectrum.pending_count, 0)
+
+    def test_interruption_suspends_recorded_pcm_until_explicit_resume(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "recorded.wav"
+            write_wav(path, [8192] * 16000, rate=16000)
+            reader = WavInput(path)
+            try:
+                self.assertGreater(reader.signal(0.)["rms"], 0.)
+                position = reader.reader.tell()
+                reader.suspend()
+                generation = reader.generation
+                for now in (.1, .2, .3):
+                    paused = reader.signal(now)
+                    self.assertEqual(paused["rms"], 0.)
+                    self.assertEqual(paused["bands"], (0., 0., 0.))
+                    self.assertEqual(reader.reader.tell(), position)
+                    self.assertEqual(reader.spectrum.pending_count, 0)
+                reader.resume()
+                self.assertFalse(reader.paused)
+                self.assertGreater(reader.generation, generation)
+                self.assertGreater(reader.signal(.4)["rms"], 0.)
+                self.assertGreater(reader.reader.tell(), position)
+            finally:
+                reader.close()
 
     def test_invalid_wav_formats_and_rates_close_the_reader_and_malformed_wav_fails(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -256,6 +395,9 @@ class PrototypeCliTests(unittest.TestCase):
         self.assertEqual((args.width, args.height, args.seconds), (240, 180, 0))
         self.assertEqual(args.state, "idle")
         self.assertEqual(args.quality, "balanced")
+        eco = parse_args(["--quality", "eco", "--idle-line"])
+        self.assertEqual(eco.quality, "eco")
+        self.assertTrue(eco.idle_line)
         maximum = parse_args(["--seconds", "3600", "--width", "7680", "--height", "4320"])
         self.assertEqual((maximum.width, maximum.height, maximum.seconds), (7680, 4320, 3600))
 

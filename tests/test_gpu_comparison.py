@@ -7,7 +7,8 @@ import sys
 import tempfile
 import unittest
 
-from scripts.compare_presence_gpu import REPO, parse_args, renderer_source, validate_revision
+from scripts.compare_presence_gpu import (REPO, compatible_frame, parse_args,
+                                         renderer_source, scene_source, validate_revision)
 
 
 class GpuComparisonTests(unittest.TestCase):
@@ -53,6 +54,26 @@ class GpuComparisonTests(unittest.TestCase):
                 self.assertEqual(before_hashes, after_hashes)
             self.assertIn(before.__module__, sys.modules)
         self.assertFalse(any(name.startswith("_jarvis_gpu_comparison_source_") for name in sys.modules))
+
+    def test_scene_snapshot_is_frozen_independent_and_cleans_module_after_error(self):
+        expected = hashlib.sha256((REPO / "jarvis/presence_gpu.py").read_bytes()).hexdigest()
+        with self.assertRaisesRegex(RuntimeError, "capture failed"):
+            with scene_source("current") as (before, digest):
+                self.assertEqual(digest, expected)
+                with scene_source("current") as (after, other):
+                    self.assertIsNot(before, after)
+                    self.assertEqual(digest, other)
+                self.assertIn(before.__module__, sys.modules)
+                raise RuntimeError("capture failed")
+        self.assertFalse(any(name.startswith("jarvis._gpu_comparison_scene_") for name in sys.modules))
+
+    def test_shared_scene_compatibility_reports_every_omitted_renderer_field(self):
+        original = {"reactor": 1., "orbit_phase": (1., 2., 3.), "rms": 0.}
+        frame, omitted = compatible_frame(original, {"reactor", "rms"})
+        self.assertEqual(frame, {"reactor": 1., "rms": 0.})
+        self.assertEqual(omitted, ["orbit_phase"])
+        self.assertIn("orbit_phase", original)
+        self.assertEqual(compatible_frame(original, set(original)), (original, []))
 
 
 if __name__ == "__main__":

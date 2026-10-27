@@ -10,7 +10,8 @@ import math
 from . import reactor_shaders as shaders
 
 
-_LIMITS = {"balanced": (1280, 720), "cinematic": (1920, 1080)}
+_LIMITS = {"eco": (960, 540), "balanced": (1280, 720), "cinematic": (1920, 1080)}
+_PARTICLES = {"eco": 24, "balanced": 96, "cinematic": 192}
 _MAX_MAIN = 97
 _MAX_DETAILS = 8
 _MAX_DETAIL_POINTS = 25
@@ -80,7 +81,7 @@ class GpuRenderer:
     @staticmethod
     def _validate_quality(quality):
         if quality not in _LIMITS:
-            raise ValueError("quality must be 'balanced' or 'cinematic'")
+            raise ValueError("quality must be 'eco', 'balanced' or 'cinematic'")
         return quality
 
     @staticmethod
@@ -231,7 +232,8 @@ class GpuRenderer:
         vao.render(mode=self._gl.TRIANGLES, vertices=3)
 
     def render(self, time_s, reactor, points, details=(), color=(.25, .9, 1.),
-               rms=0., reduced_motion=False, target=None, detail_opacity=1.):
+               rms=0., reduced_motion=False, target=None, detail_opacity=1.,
+               orbit_phase=None, core_scale=1., audio_bands=(0., 0., 0.), orbit_blend=0.):
         """Render the actual supplied curve or its progressive reactor form.
 
         ``points`` and ``details`` use OpenGL NDC (positive Y is up). No line or
@@ -239,10 +241,22 @@ class GpuRenderer:
         internally generated motion; caller-supplied geometry remains authoritative.
         ``detail_opacity`` preserves the MorphController's detail fade, in [0, 1].
         ``target=None`` presents to ``ctx.screen``; EGL callers pass a framebuffer.
+        ``orbit_phase`` contains continuous world-space angles supplied by the
+        state adapter. Audio bands are already analysed/smoothed outside GL.
         """
         self._check_open()
-        if not all(math.isfinite(value) for value in (time_s, reactor, rms, detail_opacity)):
+        if not all(math.isfinite(value) for value in (time_s, reactor, rms, detail_opacity,
+                                                       core_scale, orbit_blend)):
             raise ValueError("Animation parameters must be finite.")
+        if not .85 <= core_scale <= 1.1 or not 0. <= orbit_blend <= 1.:
+            raise ValueError("Invalid core scale or orbital alignment.")
+        orbit_phase = (tuple((0. if reduced_motion else float(time_s))*speed for speed in (.70, -.91, 1.13))
+                       if orbit_phase is None else tuple(orbit_phase))
+        audio_bands = tuple(audio_bands)
+        if len(orbit_phase) != 3 or not all(math.isfinite(value) for value in orbit_phase):
+            raise ValueError("orbit_phase must contain three finite angles.")
+        if len(audio_bands) != 3 or not all(math.isfinite(value) and 0. <= value <= 1. for value in audio_bands):
+            raise ValueError("audio_bands must contain three values from zero to one.")
         color = tuple(color)
         if len(color) != 3 or not all(math.isfinite(value) and 0 <= value <= 1 for value in color):
             raise ValueError("color must contain three finite values from zero to one.")
@@ -254,6 +268,9 @@ class GpuRenderer:
         values = {"u_time": 0.0 if reduced_motion else float(time_s),
                   "u_reactor": reactor, "u_rms": max(0.0, min(1.0, rms)),
                   "u_detail_opacity": max(0.0, min(1.0, detail_opacity)),
+                  "u_core_scale": core_scale, "u_orbit_blend": orbit_blend,
+                  "u_orbit_phase": orbit_phase,
+                  "u_audio_bands": tuple(value*.4 for value in audio_bands) if reduced_motion else audio_bands,
                   "u_color": color, "u_size": self._size}
         self.ctx.disable(self._gl.DEPTH_TEST | self._gl.CULL_FACE | self._gl.BLEND)
         for program in (self._scene, self._curve, self._filament, self._particle):
@@ -271,7 +288,7 @@ class GpuRenderer:
             if self.particles:
                 self.ctx.enable(self._gl.PROGRAM_POINT_SIZE)
                 self._particle_vao.render(mode=self._gl.POINTS,
-                                          vertices=36 if self._quality == "cinematic" else 24)
+                                          vertices=_PARTICLES[self._quality])
                 self.ctx.disable(self._gl.PROGRAM_POINT_SIZE)
         self.ctx.disable(self._gl.BLEND)
         if self.bloom:
@@ -287,7 +304,7 @@ class GpuRenderer:
                 self._pass("bloom_a", self._blur_vao)
         self._targets["scene"][0].use(location=0)
         self._targets["bloom_a"][0].use(location=1)
-        self._resolve["u_bloom_amount"].value = .78 if self.bloom else 0.0
+        self._resolve["u_bloom_amount"].value = .94 if self.bloom else 0.0
         self._pass("resolved", self._resolve_vao)
         self._targets["resolved"][0].use(location=0)
         destination.use()

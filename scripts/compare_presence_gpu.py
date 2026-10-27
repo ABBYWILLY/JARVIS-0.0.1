@@ -10,6 +10,7 @@ from contextlib import contextmanager
 import hashlib
 import importlib
 import importlib.util
+import inspect
 import json
 import math
 from pathlib import Path
@@ -25,7 +26,7 @@ import uuid
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
-CASES = ("idle", "balanced", "cinematic", "reduced")
+CASES = ("idle", "eco", "balanced", "cinematic", "reduced")
 
 
 def validate_revision(value):
@@ -64,37 +65,72 @@ def renderer_source(revision):
                     del sys.modules[name]
 
 
+@contextmanager
+def scene_source(revision):
+    """Freeze the selected state adapter; shared Canvas/morph code is unchanged.
+
+    Its temporary module belongs to jarvis so relative, model-free imports use
+    the existing common modules. No old files are installed over the worktree.
+    """
+    validate_revision(revision)
+    raw = ((REPO / "jarvis/presence_gpu.py").read_bytes() if revision == "current" else
+           subprocess.check_output(["git", "show", revision + ":jarvis/presence_gpu.py"], cwd=REPO))
+    with tempfile.TemporaryDirectory(prefix="jarvis-gpu-scene-") as folder:
+        path = Path(folder) / "presence_gpu.py"
+        path.write_bytes(raw)
+        name = "jarvis._gpu_comparison_scene_" + uuid.uuid4().hex
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        try:
+            spec.loader.exec_module(module)
+            yield module.ReactorScene, hashlib.sha256(raw).hexdigest()
+        finally:
+            sys.modules.pop(name, None)
+
+
+def compatible_frame(snapshot, parameters):
+    """Adapt an explicitly shared scene to an older renderer, recording omissions."""
+    return ({key: value for key, value in snapshot.items() if key in parameters},
+            sorted(set(snapshot) - set(parameters)))
+
+
 def measure(args):
     import moderngl
     from jarvis.gpu_benchmark import FrameTimings, ProcessSampler
-    from jarvis.presence_gpu import ReactorScene, context_info, save_png
+    from jarvis.presence_gpu import context_info, save_png
 
     args.output.mkdir(parents=True, exist_ok=False)
     context = moderngl.create_standalone_context(require=330, **({"backend": "egl"} if args.backend == "egl" else {}))
     renderer = target = sampler = None
     try:
         info = context_info(context)
-        quality = "cinematic" if args.case == "cinematic" else "balanced"
-        with renderer_source(args.revision) as (factory, hashes):
+        quality = args.case if args.case in {"eco", "cinematic"} else "balanced"
+        scene_revision = args.revision if args.historical_scene else "current"
+        with renderer_source(args.revision) as (factory, hashes), scene_source(scene_revision) as (scene_factory, scene_hash):
             renderer = factory(context, args.width, args.height, quality=quality)
             target = context.simple_framebuffer((args.width, args.height))
-            scene = ReactorScene(reduced_motion=args.case == "reduced")
+            scene = scene_factory(reduced_motion=args.case == "reduced")
+            parameters = frozenset(inspect.signature(factory.render).parameters)
             scene.update_state("silent" if args.case == "idle" else "thinking", now=0.)
             for index in range(121):
                 snapshot = scene.snapshot(args.width, args.height, now=index / 30)
             # Fixed t=4s, color/state/resolution/policy are identical in both versions.
-            renderer.render(**snapshot, target=target)
+            frame, omitted = compatible_frame(snapshot, parameters)
+            renderer.render(**frame, target=target)
             context.finish()
             save_png(args.output / "frame.png", renderer.size, renderer.read_rgb())
             timings = FrameTimings()
             sampler = ProcessSampler(interval=.5).start()
             started = time.monotonic()
-            interval = 1 / (45 if quality == "cinematic" else 30)
+            interval = 1 / (15 if quality == "eco" else 45 if quality == "cinematic" else 30)
             static = args.case in {"idle", "reduced"}
             while time.monotonic() - started < args.seconds:
                 frame_start = time.monotonic()
                 snapshot = scene.snapshot(args.width, args.height, now=4 + frame_start - started)
-                renderer.render(**snapshot, target=target)
+                frame, dropped = compatible_frame(snapshot, parameters)
+                omitted = sorted(set(omitted) | set(dropped))
+                renderer.render(**frame, target=target)
                 context.finish()
                 rendered = time.monotonic() - frame_start
                 remaining = (args.seconds - (time.monotonic() - started) if static else interval - rendered)
@@ -108,9 +144,13 @@ def measure(args):
             report = {"revision": args.revision, "case": args.case, "quality": quality,
                       "environment": {"os": platform.platform(), "python": sys.version},
                       "source_sha256": hashes, "context": info, "size": renderer.size,
+                      "scene_revision": scene_revision, "scene_source_sha256": scene_hash,
+                      "omitted_snapshot_fields": omitted,
                       "shared_scene_sha256": {name: hashlib.sha256((REPO / "jarvis" / name).read_bytes()).hexdigest()
-                                              for name in ("presence_gpu.py", "presence.py", "morphing.py")},
-                      "reference_scope": "Renderer/shaders snapshot; identical current state/morph pipeline in both cases.",
+                                              for name in ("presence.py", "morphing.py")},
+                      "reference_scope": ("Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged."
+                                          if args.historical_scene else
+                                          "Renderer/shaders snapshot; current shared state adapter. Unsupported fields explicitly listed."),
                       "capture_time_seconds": 4., "capture_origin": "actual OpenGL RGB framebuffer",
                       "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
                       "timing": timings.summary(), "process": process,
@@ -147,6 +187,8 @@ def measure(args):
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--revision", default="current", type=validate_revision)
+    parser.add_argument("--historical-scene", action="store_true",
+                        help="Also use that revision's state adapter; recommended when comparing state changes")
     parser.add_argument("--case", choices=CASES, default="balanced")
     parser.add_argument("--seconds", type=float, default=5.)
     parser.add_argument("--width", type=int, default=960)

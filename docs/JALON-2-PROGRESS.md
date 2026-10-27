@@ -1,3 +1,28 @@
+# PRESENCE GPU 3.0 — C, 27 octobre 2026
+
+A+B explicitement validés par l'utilisateur ; référence officielle 41c2373
+conservée. C : trois orbites multiaxiales centrées, phases sans reset, inertie,
+contraction THINKING 8 %, sphère permanente en écoute/parole et repos statique.
+Éco/Équilibré/Cinématique, halo et particules maîtrisés. FFT Hann trois bandes
+hors rendu, worker <=25 Hz/file1/expiration/générations ; aucune dépendance.
+WAV réel d'aperçu uniquement, pas de liaison directe Piper/micro GPU. X/T/I
+suspendent le WAV ; L/S seuls le reprennent. Réduction mouvement/masquage préservés.
+
+83 tests ciblés réussis, dont 24 EGL et 12 FFT/worker. Preuves réelles THINKING,
+transition parole et bandes synthétiques clairement légendées :
+assets/presence-gpu30-C-*. Vidéo250frames/10s, export25i/s non FPSmesurés.
+Guide : PRESENCE-GPU-3.0-CD.md ; rapport benchmarks/presence-gpu30-C-linux.json.
+Mesa logiciel 5s : équilibré29,71FPS/CPU183,08 %, cinématique44,63FPS/CPU263,06 %.
+Allocation estimée7,04MiB inchangée. Aucune extrapolation RTX ou gain statistique.
+
+D reste à livrer séparément : gravure des8familles sur hémisphère, noyau constant,
+couronnes, maintien pendant PCM Piper/speaking et annulation utilisateur/obsolète.
+Suivre CI du commit C publié. Validation matérielle Windows/RTX/Ollama/voix et
+avis artistique C/D en attente. Canvas reste en production ; E/F fonctionnels,
+LOTS4/5/7 et main exclus. Spécification utilisateur PRESENCE-GPU-3.0-CD-SPEC.md.
+
+---
+
 # PRESENCE GPU 3.0 — B, 27 octobre 2026
 
 A publié : add5cf4 ; CI Windows application 40552255549 et prototype 40552255586

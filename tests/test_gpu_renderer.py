@@ -239,9 +239,35 @@ class GpuRendererTests(unittest.TestCase):
         self.renderer.resize(1, 1)
         self.assertEqual(len(self.frame()), 3)
 
+    def test_eco_profile_caps_resources_and_still_renders_the_same_core(self):
+        self.renderer.resize(3840, 2160)
+        balanced = self.renderer.allocation_bytes
+        self.renderer.set_quality("eco")
+        self.assertEqual(self.renderer.quality, "eco")
+        self.assertEqual(self.renderer.size, (960, 540))
+        self.assertLess(self.renderer.allocation_bytes, balanced)
+        self.assertGreater(max(self.frame(1., 1.)), 170)
+
+    def test_spectral_bands_change_object_light_without_changing_allocations(self):
+        baseline = self.frame(2., 1., orbit_phase=(.3, -.5, .8))
+        allocated = self.renderer.allocation_bytes
+        frames = set()
+        for bands in ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.)):
+            raw = self.frame(2., 1., orbit_phase=(.3, -.5, .8), audio_bands=bands)
+            self.assertNotEqual(raw, baseline)
+            frames.add(hashlib.sha256(raw).digest())
+            self.assertEqual(self.renderer.allocation_bytes, allocated)
+        self.assertEqual(len(frames), 3)
+
+    def test_reduced_motion_respects_explicit_frozen_orientations(self):
+        phases = (.8, -.4, 1.2)
+        first = self.frame(1., 1., orbit_phase=phases, reduced_motion=True)
+        self.assertEqual(first, self.frame(500., 1., orbit_phase=phases, reduced_motion=True))
+        self.assertNotEqual(first, self.frame(1., 1., orbit_phase=(0., 0., 0.), reduced_motion=True))
+
     def test_invalid_input_keeps_the_renderer_usable(self):
         expected = self.frame()
-        for quality in ("eco", "", None):
+        for quality in ("ultra", "", None):
             with self.assertRaises(ValueError):
                 self.renderer.set_quality(quality)
         for size in ((0, 1), (1, -1), (1.5, 2), (True, 2)):
@@ -251,7 +277,10 @@ class GpuRendererTests(unittest.TestCase):
                        {"color": (1, 2, 3)}, {"points": [(0, 0)]},
                        {"details": (flat_line(),)},
                        {"points": [(0, 0), (float("nan"), 1)]},
-                       {"detail_opacity": float("nan")}):
+                       {"detail_opacity": float("nan")}, {"core_scale": .5},
+                       {"core_scale": float("nan")}, {"orbit_phase": (0., 1.)},
+                       {"orbit_phase": (0., 1., float("inf"))},
+                       {"audio_bands": (0., 0., 2.)}, {"orbit_blend": -1.}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 self.frame(**kwargs)
         self.assertEqual(expected, self.frame())
@@ -387,6 +416,77 @@ class GpuRendererTests(unittest.TestCase):
         finally:
             self.ctx.disable(self.renderer._gl.PROGRAM_POINT_SIZE)
             target.release()
+            vao.release()
+            program.release()
+
+    def test_real_orbital_bases_rotate_independently_in_depth_about_the_origin(self):
+        fragment = """#version 330
+        in vec2 uv;
+        uniform float u_ring, u_angle;
+        out vec4 frag;
+        """ + shaders.SPACE_GLSL + """
+        void main() {
+            vec3 a,b; orbit_axes(u_ring,0.0,a,b);
+            vec3 p=(a*cos(u_angle)+b*sin(u_angle))*(.48+u_ring*.11);
+            frag=vec4(p,1.0);
+        }
+        """
+        program = self.ctx.program(vertex_shader=shaders.FULLSCREEN_VERTEX, fragment_shader=fragment)
+        vao = self.ctx.vertex_array(program, [])
+        texture = self.ctx.texture((1, 1), 4, dtype="f4")
+        target = self.ctx.framebuffer(color_attachments=[texture])
+        try:
+            def position(ring, angle, phases):
+                program["u_ring"].value = ring
+                program["u_angle"].value = angle
+                program["u_orbit_phase"].value = phases
+                target.use()
+                vao.render(vertices=3)
+                return struct.unpack("4f", target.read(components=4, dtype="f4"))[:3]
+            initial, moved = [], []
+            for ring in range(3):
+                phases = tuple(.9 if index == ring else 0. for index in range(3))
+                a = position(ring, 0., (0., 0., 0.))
+                b = position(ring, 0., phases)
+                opposite = position(ring, 3.141592653589793, phases)
+                initial.append(a)
+                moved.append(b)
+                self.assertNotEqual(a, b)
+                self.assertGreater(abs(a[2]-b[2]), .001)
+                for coordinate, opposite_coordinate in zip(b, opposite):
+                    self.assertAlmostEqual(coordinate+opposite_coordinate, 0., places=6)
+                self.assertAlmostEqual(sum(x*x for x in b), (.48+ring*.11)**2, places=6)
+                other = (ring+1) % 3
+                self.assertEqual(position(other, .7, (0., 0., 0.)), position(other, .7, phases))
+            self.assertEqual(len(set(moved)), 3)
+        finally:
+            target.release()
+            texture.release()
+            vao.release()
+            program.release()
+
+    def test_scaled_sphere_uses_the_same_radius_for_actual_depth_occlusion(self):
+        fragment = """#version 330
+        out vec4 frag;
+        """ + shaders.SPACE_GLSL + """
+        void main() { frag=vec4(core_front(vec2(.28,0.0)),0.0,0.0,1.0); }
+        """
+        program = self.ctx.program(vertex_shader=shaders.FULLSCREEN_VERTEX, fragment_shader=fragment)
+        vao = self.ctx.vertex_array(program, [])
+        texture = self.ctx.texture((1, 1), 4, dtype="f4")
+        target = self.ctx.framebuffer(color_attachments=[texture])
+        try:
+            values = []
+            for scale in (1., .92):
+                program["u_core_scale"].value = scale
+                target.use()
+                vao.render(vertices=3)
+                values.append(struct.unpack("4f", target.read(components=4, dtype="f4"))[0])
+            self.assertLess(values[0], 2.)
+            self.assertGreater(values[1], 2.)
+        finally:
+            target.release()
+            texture.release()
             vao.release()
             program.release()
 
