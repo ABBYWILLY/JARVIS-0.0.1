@@ -1,4 +1,24 @@
 """Original, asset-free GLSL sources for the optional GPU reactor prototype."""
+from .gpu_config import GpuSettings, UNIFORM_KEYS, UNIFORM_VECTORS
+
+
+# One packed, bounded artist uniform block; it is uploaded only on a setting
+# change. Fallbacks keep standalone mathematical shader probes meaningful.
+_approved = GpuSettings().uniforms()
+ART_GLSL = f"uniform vec4 u_art[{UNIFORM_VECTORS}];\nuniform bool u_art_enabled;\n"
+ART_GLSL += "float art_value(int i,float fallback_) { return u_art_enabled ? u_art[i/4][i%4] : fallback_; }\n"
+for _index, _key in enumerate(UNIFORM_KEYS):
+    ART_GLSL += f"#define ART_{_key.upper()} art_value({_index},{_approved[_index]:.9f})\n"
+ART_GLSL += """
+vec3 art_color(vec3 color) {
+    float hue=ART_COLOR_HUE, saturation=ART_COLOR_SATURATION;
+    if (abs(hue)<.000001 && abs(saturation-1.0)<.000001) return color;
+    vec3 axis=vec3(.577350269);
+    color=color*cos(hue)+cross(axis,color)*sin(hue)+axis*dot(axis,color)*(1.0-cos(hue));
+    float luminance=dot(color,vec3(.2126,.7152,.0722));
+    return max(vec3(0.0),mix(vec3(luminance),color,saturation));
+}
+"""
 
 FULLSCREEN_VERTEX = """#version 330
 out vec2 uv;
@@ -12,12 +32,15 @@ void main() {
 # A small analytic camera/sphere model is shared by every luminous layer.
 # No depth texture or raymarch is needed: rings are ray/plane intersections,
 # and the near sphere hit determines whether a world-space stroke is in front.
-SPACE_GLSL = """
+SPACE_GLSL = ART_GLSL + """
 const float CAMERA_Z = 2.6;
 const float CORE_RADIUS = .30;
 uniform float u_core_scale, u_orbit_blend;
 uniform vec3 u_orbit_phase, u_audio_bands, u_orbit_targets;
-float core_radius() { return CORE_RADIUS*(u_core_scale>0.0 ? u_core_scale : 1.0); }
+float core_radius() { return CORE_RADIUS*ART_CORE_SIZE*(u_core_scale>0.0 ? u_core_scale : 1.0); }
+float orbit_radius(float ring) {
+    return min(.85,(.48+ring*.11*ART_RING_SPACING)*ART_RING_RADIUS);
+}
 vec2 project_world(vec3 p) { return p.xy * CAMERA_Z / (CAMERA_Z-p.z); }
 vec2 scene_plane(vec2 ndc, vec2 size) {
     float aspect = size.x/size.y;
@@ -52,8 +75,9 @@ vec3 quaternion_rotate(vec4 q,vec3 p) {
 // Independent world-space rotations around the same origin. Rodrigues keeps
 // each basis orthonormal, hence no drift, screen-space orbit or fake wobble.
 void orbit_axes(float ring, float time_s, out vec3 axis_u, out vec3 axis_v) {
-    float rot = -.34+ring*.13;
-    float cosine = .30+ring*.11;
+    float rot = -.34+ring*.13+ART_RING_ORIENTATION;
+    float tilt_offset=ring<.5 ? ART_RING_1_TILT : ring<1.5 ? ART_RING_2_TILT : ART_RING_3_TILT;
+    float cosine = cos(clamp(acos(.30+ring*.11)+tilt_offset,.10,1.47));
     float sine = sqrt(1.0-cosine*cosine);
     axis_u = vec3(cos(rot),sin(rot),0.0);
     axis_v = vec3(-sin(rot)*cosine,cos(rot)*cosine,sine);
@@ -79,7 +103,7 @@ void orbit_axes(float ring, float time_s, out vec3 axis_u, out vec3 axis_v) {
 // Local catalogue paths become points on the visible hemisphere, not a screen
 // overlay. The radial limit leaves room for soft strokes inside the silhouette.
 vec3 surface_point(vec2 local) {
-    vec2 p=vec2(local.x,-local.y)*.78;
+    vec2 p=vec2(local.x,-local.y)*.78*ART_EXPRESSION_SIZE;
     float radius=length(p);
     if (radius>.88) p*=.88/radius;
     return vec3(p,sqrt(max(0.0,1.0-dot(p,p))))*core_radius();
@@ -88,7 +112,7 @@ float visible_depth(float near_hit, float world_z, float activation) {
     if (activation <= 0.0 || near_hit > 2.0) return 1.0;
     float sample_hit = (CAMERA_Z-world_z)/CAMERA_Z;
     float visible = smoothstep(sample_hit-.0008,sample_hit+.0008,near_hit);
-    return mix(1.0,visible,smoothstep(.1,.9,activation));
+    return mix(1.0,visible,smoothstep(.1,.9,activation)*ART_CORE_OPACITY);
 }
 """
 
@@ -133,28 +157,34 @@ flat in vec3 v_orbit_u[3], v_orbit_v[3];
 out vec4 frag;
 uniform vec2 u_size;
 uniform vec3 u_color;
-uniform float u_time, u_reactor, u_rms;
+uniform float u_time, u_reactor, u_rms, u_surface_amount;
 """ + SPACE_GLSL + MATERIAL_GLSL + """
 const float TAU = 6.28318530718;
 float lineGlow(float d, float width) { return exp(-d*d/(width*width)); }
 void main() {
     // Object light is added onto exact black, never an ambient background.
     vec3 light = vec3(0.0);
-    if (u_reactor <= 0.0) { frag = vec4(light,1.0); return; }
+    if (u_reactor <= 0.0) { frag = vec4(art_color(light),1.0); return; }
     vec2 p = scene_plane(uv*2.0-1.0,u_size);
-    float r = length(p), t = u_time;
+    float r = length(p), t = u_time*ART_SURFACE_SPEED;
     float activation = smoothstep(0.0,.85,u_reactor);
     float px = 2.0/min(u_size.x,u_size.y);
     float near_hit = core_front(p);
     vec3 cold = mix(u_color,vec3(.53,.83,1.0),.12);
     float radius_core = core_radius();
     float focus = clamp((1.0-u_core_scale)/.08,0.0,1.0);
-    float bass=u_audio_bands.x, middle=u_audio_bands.y, treble=u_audio_bands.z;
-    float breath = 1.0+.025*sin(t*1.7)+.10*u_rms+.16*middle;
+    float voice=ART_AUDIO_REACTIVITY*ART_PULSE_AMPLITUDE;
+    float bass=u_audio_bands.x*ART_BASS_CONTRIBUTION*voice;
+    float middle=u_audio_bands.y*ART_MID_CONTRIBUTION*voice;
+    float treble=u_audio_bands.z*ART_TREBLE_CONTRIBUTION*voice;
+    float breath = 1.0+.025*sin(t*1.7)*ART_BREATHING+.10*u_rms*voice+.16*middle;
     float silhouette = radius_core*CAMERA_Z/sqrt(CAMERA_Z*CAMERA_Z-radius_core*radius_core);
     // Object-local spill only: no coloured ambient veil or background vignette.
-    float spill = lineGlow(r-silhouette,.034+.025*bass)*(1.0-smoothstep(.41,.52,r));
-    light += mix(cold,vec3(.32,.19,1.0),.32)*spill*(.13+.14*bass)*activation;
+    float halo_size=ART_HALO_RADIUS*ART_HALO_SOFTNESS;
+    float spill = lineGlow(r-silhouette,(.034+.025*bass)*halo_size)
+                *(1.0-smoothstep(silhouette+.108*halo_size,silhouette+.218*halo_size,r));
+    light += mix(cold,vec3(.32,.19,1.0),.32)*spill*(.13+.14*bass)
+             *ART_HALO_INTENSITY*ART_HALO_OPACITY*activation;
     if (near_hit < 2.0) {
         vec3 surface = vec3(p*near_hit,CAMERA_Z*(1.0-near_hit));
         vec3 normal = normalize(surface);
@@ -166,34 +196,40 @@ void main() {
         // supplies a faint refracted-looking field; no scene texture is fetched.
         float chord = 2.0*radius_core*ndv;
         vec3 back = (surface-view*chord)/radius_core;
-        vec3 transmission = exp(-vec3(.85,.28,.13)*chord/radius_core);
-        float field = sin(back.x*5.4+t*.19+sin(back.y*4.1-t*.13)*.65)
-                    +.5*sin(back.z*6.3+back.y*3.0-t*.15);
+        vec3 transmission = exp(-vec3(.85,.28,.13)*chord/radius_core)
+                            *ART_CORE_TRANSLUCENCY;
+        float plasma_t=t*ART_PLASMA_SPEED;
+        float field = sin(back.x*5.4+plasma_t*.19+sin(back.y*4.1-plasma_t*.13)*.65)
+                    +.5*sin(back.z*6.3+back.y*3.0-plasma_t*.15);
         float plasma = pow(max(0.0,1.0-abs(field)*.85),3.0);
         float inner = pow(ndv,.55)*(1.0-fresnel);
         // Dark, translucent body; coloured emission stays below the outer skin.
         vec3 body = mix(vec3(.018,.028,.08),spectral*.12,.35);
         body += transmission*mix(vec3(.04,.16,.46),cold*.4,.32)
-                *(.045+(.17+.10*focus+.10*middle)*plasma)*inner;
-        light += body*breath*activation;
+                *(.045+(.17+.10*focus+.10*middle)*plasma*ART_PLASMA_INTENSITY)*inner;
+        float core_light=ART_CORE_BRIGHTNESS*ART_CORE_OPACITY
+                        *(1.0+u_surface_amount*ART_EXPRESSION_CORE_LIGHT);
+        light += body*breath*core_light*activation;
         // Fresnel is angle dependent, with a broad iridescent shoulder and a
         // restrained HDR edge. The centre is intentionally much darker.
         float shoulder = pow(1.0-ndv,1.9);
-        light += spectral*(shoulder*.47+fresnel*1.27)*breath*activation;
+        light += spectral*(shoulder*.47+fresnel*1.27)*ART_CORE_FRESNEL*breath*core_light*activation;
         vec3 key = normalize(vec3(-.55,.72,.85));
         vec3 fill = normalize(vec3(.8,-.35,.5));
         float key_reflection = pow(max(0.0,dot(normal,normalize(key+view))),72.0);
         float fill_reflection = pow(max(0.0,dot(normal,normalize(fill+view))),38.0);
         float specular = (key_reflection*.60+fill_reflection*.17)*(1.0+.25*treble);
-        light += mix(spectral,vec3(.58,.78,1.0),.55)*specular*activation;
+        light += mix(spectral,vec3(.58,.78,1.0),.55)*specular*ART_CORE_REFLECTIONS*core_light*activation;
     }
     // Stable geometric silhouette, with no serrated carrier or scan-line grid.
     float shell = lineGlow(r-silhouette,.0009+px*.42);
-    light += mix(cold,vec3(.32,.18,1.0),.22)*shell*(.48+.15*middle)*activation;
+    light += mix(cold,vec3(.32,.18,1.0),.22)*shell*(.48+.15*middle)
+             *ART_CORE_FRESNEL*ART_CORE_BRIGHTNESS*ART_CORE_OPACITY*activation;
     vec3 ray = vec3(p,-CAMERA_Z);
     // Exact ray/plane intersection: every circle has a world-space depth and
     // perspective foreshortening. Rear portions disappear behind the core.
     for (int i=0;i<3;++i) {
+        if (float(i)>=ART_RING_COUNT) continue;
         float fi = float(i);
         vec3 axis_u=v_orbit_u[i], axis_v=v_orbit_v[i];
         vec3 normal = cross(axis_u,axis_v);
@@ -204,7 +240,7 @@ void main() {
         vec3 world = vec3(p*hit,CAMERA_Z*(1.0-hit));
         vec2 q = vec2(dot(world,axis_u),dot(world,axis_v));
         float a = atan(q.y,q.x);
-        float radius = .48+fi*.11;
+        float radius = orbit_radius(fi);
         float d = length(q)-radius;
         // Bound derivatives at grazing ray/plane intersections: the
         // singularity must not paint a false halo into empty black space.
@@ -213,17 +249,18 @@ void main() {
         float spin = i==0 ? u_orbit_phase.x : i==1 ? u_orbit_phase.y : u_orbit_phase.z;
         float phase = a+spin*1.7+fi;
         float segment = .62+.38*pow(.5+.5*cos(phase),3.0);
-        float width = .0008+pixel_width*(.48+depth*.18);
+        float width = (.0008+pixel_width*(.48+depth*.18))*ART_RING_THICKNESS;
         float rail = lineGlow(d,width)*segment;
-        float halo = lineGlow(d,.013+pixel_width)*.085*segment;
+        float halo = lineGlow(d,(.013+pixel_width)*ART_HALO_RADIUS)*.085*segment
+                    *ART_HALO_INTENSITY*ART_HALO_OPACITY;
         float highlight = pow(max(0.0,cos(phase*2.0+fi)),18.0);
         float packet = pow(max(0.0,cos(phase*3.0+fi)),95.0);
         float visible = visible_depth(near_hit,world.z,u_reactor);
         light += cold*(rail*(.20+depth*.70+highlight*(.28+.24*treble))+halo*.62
-                       +lineGlow(d,.004+pixel_width)*packet*(.10+depth*.25))
-                      *activation*visible;
+                       +lineGlow(d,.004+pixel_width)*packet*(.10+depth*.25)*ART_RING_TRAILS)
+                      *ART_RING_BRIGHTNESS*ART_RING_OPACITY*activation*visible;
     }
-    frag = vec4(light,1.0);
+    frag = vec4(art_color(light),1.0);
 }
 """
 
@@ -257,10 +294,11 @@ void main() {
     vec2 tangent = length_>.0001 ? delta/length_ : vec2(1.0,0.0);
     vec2 normal = vec2(-tangent.y,tangent.x);
     float side = (gl_VertexID & 1)==0 ? -1.0 : 1.0;
-    float along = gl_VertexID<2 ? -10.0 : length_+10.0;
-    vec2 pixel = start+tangent*along+normal*side*10.0;
+    float margin=10.0*(u_surface_kind>0.0 ? max(1.0,ART_EXPRESSION_THICKNESS) : 1.0);
+    float along = gl_VertexID<2 ? -margin : length_+margin;
+    vec2 pixel = start+tangent*along+normal*side*margin;
     gl_Position = vec4(pixel*2.0/u_size,0.0,1.0);
-    v_local = vec2(along,side*10.0);
+    v_local = vec2(along,side*margin);
     v_length = length_;
     v_depth = (first.z+last.z)*.5;
     v_surface=float(u_surface_kind>0.0);
@@ -272,7 +310,7 @@ void main() {
         // A facial circle is already represented by the physical sphere.
         // Affection retains its complete heart outline; faces use details.
         v_strength=(a_main>.5 && u_surface_kind<1.5 ? 0.0 : u_surface_amount)
-                   *(a_main>.5 ? 1.0 : u_detail_opacity);
+                   *(a_main>.5 ? 1.0 : u_detail_opacity)*ART_EXPRESSION_OPACITY;
     }
 }
 """
@@ -287,15 +325,18 @@ out vec4 frag;
 """ + SPACE_GLSL + """
 void main() {
     float d = length(vec2(v_local.x-clamp(v_local.x,0.0,v_length),v_local.y));
-    float core = exp(-d*d/.62);
-    float shoulder = exp(-d*d/3.2)*.26;
-    float halo = exp(-d*d/24.0)*.024;
+    float thickness=v_surface>.5 ? ART_EXPRESSION_THICKNESS : 1.0;
+    float scaled=d/thickness;
+    float core = exp(-scaled*scaled/.62);
+    float shoulder = exp(-scaled*scaled/3.2)*.26;
+    float halo = exp(-scaled*scaled/24.0)*.024;
     vec2 p = scene_plane(gl_FragCoord.xy*2.0/u_size-1.0,u_size);
     float near_hit=core_front(p);
     if (v_surface>.5 && near_hit>2.0) discard;
     float visible = v_surface>.5 || u_reactor<=0.0 ? 1.0 : visible_depth(near_hit,v_depth,u_reactor);
-    vec3 tint = mix(u_color,vec3(1.0),.16);
-    frag = vec4(tint*(core*1.45+shoulder+halo)*(1.0+.4*u_rms)*v_strength*visible,1.0);
+    vec3 tint = art_color(mix(u_color,vec3(1.0),.16));
+    float brightness=v_surface>.5 ? ART_EXPRESSION_BRIGHTNESS : 1.0;
+    frag = vec4(tint*(core*1.45+shoulder+halo)*(1.0+.4*u_rms)*brightness*v_strength*visible,1.0);
 }
 """
 
@@ -348,28 +389,32 @@ float hash(float n) { return fract(sin(n*127.1+311.7)*43758.5453); }
 void main() {
     float id = float(gl_VertexID), seed = hash(id+1.0);
     float trail = mod(id,3.0), packet=floor(id/3.0);
-    float ring = mod(packet,3.0);
-    float radius = .48+ring*.11;
+    float ring = mod(packet,ART_RING_COUNT);
+    float radius = orbit_radius(ring);
     float phase = ring<.5 ? u_orbit_phase.x : ring<1.5 ? u_orbit_phase.y : u_orbit_phase.z;
-    float a = hash(packet+1.0)*6.2831853+phase*.65-trail*.017;
+    float a = hash(packet+1.0)*6.2831853+phase*.65*ART_PARTICLE_SPEED-trail*.017*ART_PARTICLE_TRAILS;
     vec3 axis_u, axis_v;
     orbit_axes(ring,u_time,axis_u,axis_v);
     vec3 p = radius*(cos(a)*axis_u+sin(a)*axis_v);
-    if (mod(packet,4.0)<.5) {
+    if (mod(packet,4.0)<.5*ART_PARTICLE_DISPERSION) {
         float latitude=hash(packet+91.0)*2.0-1.0;
-        float around=hash(packet+13.0)*6.2831853+phase*.18;
-        float shell=.34+hash(packet+27.0)*.10;
+        float around=hash(packet+13.0)*6.2831853+phase*.18*ART_PARTICLE_SPEED;
+        float shell=.34+hash(packet+27.0)*.10*ART_PARTICLE_DISPERSION;
         p=vec3(cos(around)*sqrt(1.0-latitude*latitude),latitude,
                sin(around)*sqrt(1.0-latitude*latitude))*shell;
     }
+    p*=ART_PARTICLE_DISTANCE;
     vec2 projected = plane_ndc(project_world(p),u_size);
     gl_Position = vec4(projected,0.0,1.0);
     // Slow deterministic fades, never random per-frame flicker. Three small
     // points share each orbital packet to form a restrained tapered trail.
-    float fade=.5+.5*sin(u_time*.35+hash(packet+81.0)*6.2831853);
-    gl_PointSize = (1.25+hash(packet+6.0)*.95)*(1.0+u_rms*.15)*CAMERA_Z/(CAMERA_Z-p.z);
-    v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23)*(1.0-u_orbit_blend*.70);
-    v_warm = 0.0;
+    float fade=.5+.5*sin(u_time*.35/max(.4,ART_PARTICLE_LIFETIME)+hash(packet+81.0)*6.2831853);
+    gl_PointSize = (1.25+hash(packet+6.0)*.95*ART_PARTICLE_VARIATION)*ART_PARTICLE_SIZE
+                  *(1.0+u_rms*.15*ART_PARTICLE_AUDIO)*CAMERA_Z/(CAMERA_Z-p.z);
+    float trail_visibility=trail<.5 ? 1.0 : min(1.0,ART_PARTICLE_TRAILS);
+    v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23)*(1.0-u_orbit_blend*.70)
+              *ART_PARTICLE_BRIGHTNESS*ART_PARTICLE_OPACITY*trail_visibility;
+    v_warm = step(.85,hash(packet+17.0))*ART_PARTICLE_COLORS;
     v_depth = p.z;
 }
 """
@@ -388,7 +433,7 @@ void main() {
     if (r2>1.0) discard;
     vec2 screen_p = scene_plane(gl_FragCoord.xy*2.0/u_size-1.0,u_size);
     float visible = visible_depth(core_front(screen_p),v_depth,u_reactor);
-    vec3 tint = mix(u_color,vec3(1.0,.53,.24),v_warm*.85);
+    vec3 tint = art_color(mix(u_color,vec3(1.0,.53,.24),v_warm*.85));
     frag = vec4(tint*exp(-r2*5.5)*v_power*2.1*visible,1.0);
 }
 """
@@ -398,6 +443,7 @@ in vec2 uv;
 uniform sampler2D u_image;
 uniform vec2 u_source_size;
 out vec4 frag;
+""" + ART_GLSL + """
 void main() {
     vec3 light = vec3(0.0);
     for (int y=0;y<4;++y) for (int x=0;x<4;++x) {
@@ -406,8 +452,9 @@ void main() {
         float peak = max(c.r,max(c.g,c.b));
         // Selective HDR shoulder: black and sub-threshold midtones cannot
         // lift the entire scene. Reuse the existing quarter-resolution pass.
-        float contribution = max(peak-.8,0.0)/max(peak,.0001);
-        light += c*contribution*smoothstep(.8,1.4,peak);
+        float threshold=ART_BLOOM_THRESHOLD;
+        float contribution = max(peak-threshold,0.0)/max(peak,.0001);
+        light += c*contribution*smoothstep(threshold,threshold+.6,peak);
     }
     frag = vec4(light/16.0,1.0);
 }

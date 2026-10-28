@@ -36,3 +36,19 @@ Contrats validés : **17 tests réussis** (préférences, configuration GPU et
 protocole borné), sans ouverture de périphérique ni contexte graphique.
 Les phases suivantes implémentent les paramètres, le processus, le Studio et
 le raccordement réel ; ces contrats seuls ne constituent pas une intégration.
+
+## Phase 2 — Personnalisation GPU
+
+66 commandes numériques et trois profils utilisent le vrai renderer, sans
+modifier les réglages Canvas. Les six essentiels sont présentés d'abord ;
+sept sections, recherche et niveaux Personnaliser/Avancé donnent accès au reste.
+Le Studio conserve un brouillon, Avant/Après, Restaurer, Appliquer et Annuler.
+Le propriétaire PRESENCE fournit le canal d'aperçu et l'unique persistance SQLite ;
+le raccordement de l'éditeur dans l'application est la phase 3.
+
+74 tests configuration/Scene/GL réussis : effets réels des 66 commandes,
+rayon/luminosité du halo indépendants en HDR, ressources bornées. Le Studio a
+11 tests Tk/transactions/petites fenêtres/DPI simulés et le comparateur 7 tests.
+Les valeurs par défaut conservent le style approuvé A–D. Aucun nouveau modèle.
+La CI Windows est contrôlée après publication ; les essais RTX/micro/Piper
+sur le PC restent en attente.

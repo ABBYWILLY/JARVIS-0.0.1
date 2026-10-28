@@ -78,8 +78,8 @@ class GpuSettings:
     particle_distance: int = _setting(100, "Distance de distribution (%)", "Particules", "advanced", 60, 140)
     particle_lifetime: int = _setting(100, "Durée de l'enveloppe lumineuse (%)", "Particules", "advanced", 40, 250,
                                      "Apparitions et disparitions déterministes, sans clignotement aléatoire.")
-    particle_trails: int = _setting(0, "Traînées des particules (%)", "Particules", "advanced", 0, 100)
-    particle_colors: int = _setting(100, "Variation des couleurs (%)", "Particules", "advanced", 0, 200)
+    particle_trails: int = _setting(100, "Traînées des particules (%)", "Particules", "advanced", 0, 200)
+    particle_colors: int = _setting(0, "Variation des couleurs (%)", "Particules", "advanced", 0, 100)
     particle_audio: int = _setting(100, "Réaction des particules à la voix (%)", "Particules", "personalize", 0, 200)
     thinking_contraction: int = _setting(8, "Contraction THINKING (%)", "Animations et états", "personalize", 0, 15)
     thinking_speed: int = _setting(100, "Vitesse THINKING (%)", "Animations et états", "personalize", 0, 250)

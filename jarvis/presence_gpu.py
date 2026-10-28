@@ -18,6 +18,7 @@ import wave
 import zlib
 
 from .audio import signal_view
+from .gpu_config import GpuSettings
 from .expressions import expression_family
 from .morphing import CATALOGUE, MorphController, ENTER_SECONDS, HOLD_SECONDS, RETURN_SECONDS
 from .presence import PresenceModel, PresenceSettings
@@ -50,6 +51,7 @@ class ReactorScene:
     def __init__(self, reduced_motion=False, *, idle_line=False):
         self.model = PresenceModel(PresenceSettings(reduced_motion=reduced_motion))
         self.semantic = MorphController()
+        self.gpu_settings = GpuSettings()
         self.color = (.25, .88, 1.)
         self.reactor = 0. if idle_line else 1.
         self.idle_line = bool(idle_line)
@@ -96,18 +98,35 @@ class ReactorScene:
         if self.model.state == "silent":
             self.reactor = 0. if self.idle_line else 1.
 
+    def set_settings(self, settings):
+        """GPU artwork only; does not modify Canvas or open an audio device."""
+        self.gpu_settings = (GpuSettings.from_dict(settings.to_dict()) if isinstance(settings, GpuSettings)
+                             else GpuSettings.from_dict({**self.gpu_settings.to_dict(), **settings}))
+
+    def _orbit_targets(self):
+        art = self.gpu_settings
+        targets = {"thinking": (.92, -.73, 1.13), "listening": (.065, -.045, .080),
+                   "user_speaking": (.065, -.045, .080), "jarvis_speaking": (.12, -.09, .15),
+                   "silent": (.065, -.045, .080)}
+        if self.semantic.active:
+            return tuple(value*art.ring_speed/100 for value in (.028, -.021, .035))
+        multiplier = (art.thinking_speed if self.model.state == "thinking" else
+                      art.speaking_speed if self.model.state == "jarvis_speaking" else
+                      art.idle_speed if self.model.state == "silent" else art.listening_speed)
+        return tuple(value*art.ring_speed/100*multiplier/100
+                     for value in targets.get(self.model.state, (0., 0., 0.)))
+
     def _advance(self, now):
         # Integrate velocity, not state age: changing a state never resets any
         # orbital angle. Cap a resumed hidden interval to avoid a phase jump.
         delta = min(.1, max(0., now - self.last_frame)) if self.last_frame is not None else 0.
         self.last_frame = now
-        targets = {"thinking": (.92, -.73, 1.13), "listening": (.065, -.045, .080),
-                   "user_speaking": (.065, -.045, .080), "jarvis_speaking": (.12, -.09, .15)}
-        target_velocity = ((.028, -.021, .035) if self.semantic.active else
-                           targets.get(self.model.state, (0., 0., 0.)))
-        inertia = .18 if self.semantic.active else .45
-        scale_target = .92 if self.model.state == "thinking" else 1.
-        reduced = self.model.settings.reduced_motion
+        art = self.gpu_settings
+        target_velocity = self._orbit_targets()
+        inertia = (.18/(art.expression_ring_speed/100) if self.semantic.active else
+                   art.ring_acceleration_ms/1000)
+        scale_target = 1.-art.thinking_contraction/100 if self.model.state == "thinking" else 1.
+        reduced = (not self.model.motion_allowed)
         for index, target in enumerate(target_velocity):
             before = self.orbit_velocity[index]
             if reduced:
@@ -118,13 +137,13 @@ class ReactorScene:
                 velocity = target + (before - target) * decay
                 self.orbit_velocity[index] = 0. if abs(velocity) < .0001 else velocity
         self.core_scale = (scale_target if reduced else
-                           scale_target + (self.core_scale - scale_target) * math.exp(-delta / .30))
+                           scale_target + (self.core_scale - scale_target) * math.exp(-delta / (art.transition_ms/1000)))
         if abs(self.core_scale - scale_target) < .0001:
             self.core_scale = scale_target
         active = self.model.has_signal(now)
         for index, value in enumerate(self._raw_bands if active else (0., 0., 0.)):
             previous = self.audio_bands[index]
-            tau = .055 if value > previous else .24
+            tau = (art.audio_attack_ms if value > previous else art.audio_release_ms)/1000
             current = value + (previous - value) * math.exp(-delta / tau)
             self.audio_bands[index] = 0. if abs(current) < .0001 else current
 
@@ -145,7 +164,7 @@ class ReactorScene:
         family = next((family for family in families if family is not None), None)
         if family is None:
             return False
-        return self.semantic.trigger(family, now, reduced_motion=self.model.settings.reduced_motion,
+        return self.semantic.trigger(family, now, reduced_motion=(not self.model.motion_allowed),
                                      origin=self._normal_points(width, height, now), viewport=(width, height))
 
     def _normal_points(self, width, height, now):
@@ -158,7 +177,7 @@ class ReactorScene:
         energy = ((1 - math.exp(-self.model.signal["rms"] * (10 + 35 * expressivity))) ** .8
                   if active else 0.)
         amount = min(220, height * .24) * (.18 + .82 * expressivity) * energy
-        if self.model.settings.reduced_motion:
+        if (not self.model.motion_allowed):
             amount *= .55
         points = [(width * (.08 + .84 * i / 96), height / 2 + self.model._wave_line[i] * amount)
                   for i in range(97)]
@@ -172,7 +191,9 @@ class ReactorScene:
             self.time_origin = now
         self._advance(now)
         points = self._normal_points(width, height, now)
-        morph = self.semantic.frame(points, width, height, now, profile="cinematic")
+        logical = (self.gpu_settings.morph_clock(now, self.semantic._started,
+                   reduced_motion=(not self.model.motion_allowed)) if self.semantic.active else now)
+        morph = self.semantic.frame(points, width, height, logical, profile="cinematic")
         self._rendered_signal_active = self.model.has_signal(now)
         # The existing controller still owns expression timing/cancellation.
         # Its shrinking flat contour is intentionally not used by the GPU: the
@@ -180,15 +201,23 @@ class ReactorScene:
         family = self.semantic.family if morph else None
         surface_amount = 0.
         if morph:
-            elapsed = max(0., now - self.semantic._started)
+            elapsed = max(0., logical - self.semantic._started)
             smooth = lambda value: (lambda x: x*x*(3-2*x))(max(0., min(1., value)))
-            if self.model.settings.reduced_motion or morph.phase == "hold":
+            if (not self.model.motion_allowed) or morph.phase == "hold":
                 surface_amount = 1.
             elif morph.phase == "enter":
                 surface_amount = smooth(elapsed / ENTER_SECONDS)
             else:
                 surface_amount = 1. - smooth((elapsed - ENTER_SECONDS - HOLD_SECONDS) / RETURN_SECONDS)
         self._rendered_family = family
+        orbit_blend = surface_amount
+        if morph and not (not self.model.motion_allowed):
+            art = self.gpu_settings
+            enter = art.expression_transition_ms/1000
+            total = enter*2+art.expression_hold_ms/1000
+            age = max(0., now-self.semantic._started)
+            edge = min(age, max(0., total-age))
+            orbit_blend = smooth(edge/(enter/(art.expression_ring_speed/100)))
         ndc = lambda path: tuple((2 * x / width - 1, 1 - 2 * y / height) for x, y in path)
         if family is not None:
             # Explicit surface_family changes this geometry contract from NDC
@@ -203,18 +232,21 @@ class ReactorScene:
                 "detail_opacity": 1., "surface_family": family, "surface_amount": surface_amount,
                 "rms": self.model.signal["rms"] if self.model.has_signal(now) else 0.,
                 "orbit_phase": tuple(self.orbit_phase), "core_scale": self.core_scale,
-                "audio_bands": tuple(self.audio_bands), "orbit_blend": surface_amount,
-                "reduced_motion": self.model.settings.reduced_motion}
+                "audio_bands": tuple(self.audio_bands), "orbit_blend": orbit_blend,
+                "art": self.gpu_settings.to_dict(),
+                "reduced_motion": (not self.model.motion_allowed)}
 
     def moving(self, now):
         # IDLE is a static sphere after its outgoing inertia settles. Listening
         # and speaking have slow real-state orbits; audio energy is never made up.
-        target_velocity = self.model.state in {"thinking", "listening", "user_speaking", "jarvis_speaking"}
-        orbital = not self.model.settings.reduced_motion and (target_velocity or any(self.orbit_velocity))
-        target_scale = .92 if self.model.state == "thinking" else 1.
+        target_velocity = any(self._orbit_targets())
+        material = (self.model.state in {"thinking", "listening", "user_speaking", "jarvis_speaking"}
+                    and self.gpu_settings.surface_speed > 0)
+        orbital = not (not self.model.motion_allowed) and (target_velocity or material or any(self.orbit_velocity))
+        target_scale = 1.-self.gpu_settings.thinking_contraction/100 if self.model.state == "thinking" else 1.
         semantic_moving = self.semantic.active and (
-            not self.model.settings.reduced_motion or self._rendered_family != self.semantic.family
-            or now - self.semantic._started >= HOLD_SECONDS)
+            not (not self.model.motion_allowed) or self._rendered_family != self.semantic.family
+            or now - self.semantic._started >= self.gpu_settings.expression_hold_ms/1000)
         return (semantic_moving or orbital or self.model.has_signal(now)
                 or self.model.has_signal(now) != self._rendered_signal_active
                 or any(self.audio_bands) or self.core_scale != target_scale)
@@ -373,6 +405,7 @@ def _run(args):
     from .gpu_benchmark import FrameTimings, ProcessSampler, NvidiaSampler, build_report, write_report
     started = time.perf_counter()
     scene = ReactorScene(args.reduced_motion, idle_line=args.idle_line)
+    scene.set_settings({"profile": args.quality})
     ctx = glfw = window = renderer = output = wav = process = gpu = None
     report = {"status": "error", "application_integrated": False, "offline_preview": True,
               "startup_scope": "Python_initialization_excludes_frozen_bootloader"}
@@ -435,6 +468,7 @@ def _run(args):
             elif key_code == glfw.KEY_Q:
                 qualities = ("eco", "balanced", "cinematic")
                 renderer.set_quality(qualities[(qualities.index(renderer.quality) + 1) % len(qualities)])
+                scene.set_settings({"profile": renderer.quality})
                 renderer.resize(*size)
                 renderer.bloom, renderer.particles = not args.no_bloom, not args.no_particles
                 degraded, slow_frames = False, 0
@@ -497,7 +531,8 @@ def _run(args):
                     renderer.particles = False
                     degraded = True
                     report["adaptive_reason"] = "device_global_memory_pressure" if pressure and pressure > .94 else "frame_over_50ms"
-            fps = 15 if degraded or renderer.quality == "eco" else 30 if renderer.quality == "balanced" else 60
+            fps = min(scene.gpu_settings.frames_per_second,
+                      15 if degraded or renderer.quality == "eco" else 30 if renderer.quality == "balanced" else 60)
             remaining = 1 / fps - (time.perf_counter() - frame_start)
             if remaining > 0:
                 time.sleep(remaining)

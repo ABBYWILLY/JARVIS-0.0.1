@@ -17,6 +17,7 @@ import wave
 import zlib
 
 from jarvis import presence_gpu
+from jarvis.gpu_config import GpuSettings
 from jarvis.morphing import ENTER_SECONDS, FAMILIES, HOLD_SECONDS, MorphController, RETURN_SECONDS
 from jarvis.presence import PresenceModel, SIGNAL_LIFETIME
 from jarvis.presence_gpu import GpuUnavailable, ReactorScene, WavInput, context_info, parse_args, save_png
@@ -36,6 +37,55 @@ def write_wav(path, samples, *, channels=1, rate=8000, sample_width=2):
 
 
 class ReactorSceneTests(unittest.TestCase):
+    def test_every_state_timing_control_changes_the_actual_scene_without_changing_pcm(self):
+        state_for = {"speaking_speed": "jarvis_speaking", "listening_speed": "listening",
+                     "idle_speed": "silent"}
+        fields = {"ring_speed": "orbit_phase", "thinking_speed": "orbit_phase",
+                  "speaking_speed": "orbit_phase", "listening_speed": "orbit_phase",
+                  "idle_speed": "orbit_phase", "thinking_contraction": "core_scale",
+                  "transition_ms": "core_scale", "ring_acceleration_ms": "orbit_phase",
+                  "audio_attack_ms": "audio_bands", "audio_release_ms": "audio_bands"}
+        source = {**pcm_signal(), "bands": (.5, .3, .2)}
+        for key, field in fields.items():
+            spec = presence_gpu.GpuSettings.__dataclass_fields__[key]
+            low, high = spec.metadata["low"], spec.metadata["high"]
+            snapshots = []
+            for value in (low, high):
+                scene = ReactorScene()
+                scene.set_settings({key: value})
+                scene.update_state(state_for.get(key, "thinking"), now=0.)
+                scene.update_audio(source, now=0.)
+                for now in (.05, .10, .15):
+                    scene.snapshot(960, 640, now)
+                snapshots.append(scene.snapshot(960, 640, .25 if key == "audio_release_ms" else .16))
+                self.assertEqual(scene.model.signal["rms"], source["rms"])
+            with self.subTest(control=key):
+                self.assertNotEqual(snapshots[0][field], snapshots[1][field])
+
+    def test_gpu_expression_duration_and_alignment_controls_change_transition_hold_and_return(self):
+        settings = (("expression_transition_ms", 120, 1000, .18, "surface_amount"),
+                    ("expression_hold_ms", 250, 2500, .9, "surface_amount"),
+                    ("expression_ring_speed", 40, 200, .18, "orbit_blend"))
+        for key, low, high, age, field in settings:
+            snapshots = []
+            for value in (low, high):
+                scene = ReactorScene()
+                scene.set_settings({key: value})
+                scene.update_state("jarvis_speaking", now=0.)
+                self.assertTrue(scene.preview_expression("Heureux de te revoir 😊", 960, 640, now=0.))
+                snapshots.append(scene.snapshot(960, 640, age))
+                final = scene.snapshot(960, 640, 5.)
+                self.assertIsNone(final["surface_family"])
+                self.assertEqual(final["surface_amount"], 0.)
+            with self.subTest(control=key):
+                self.assertNotEqual(snapshots[0][field], snapshots[1][field])
+
+    def test_gpu_fps_cap_respects_both_user_limit_and_profile(self):
+        for profile, cap in (("eco", 15), ("balanced", 30), ("cinematic", 60)):
+            for limit in (15, 24, 60):
+                settings = GpuSettings.from_dict({"profile": profile, "fps_limit": limit})
+                self.assertEqual(settings.frames_per_second, min(limit, cap))
+
     def test_one_existing_model_and_controller_supply_all_eight_distinct_symbols(self):
         symbols = dict(zip(FAMILIES, ("😊", "😂", "❤️", "😢", "😠", "😮", "🤔", "😉")))
         with patch.object(presence_gpu, "PresenceModel", wraps=PresenceModel) as model_factory, \

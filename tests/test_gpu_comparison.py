@@ -37,7 +37,8 @@ class GpuComparisonTests(unittest.TestCase):
 
     def test_snapshot_matches_exact_sources_and_cleans_imports(self):
         before = {name: (REPO / "jarvis" / name).read_bytes()
-                  for name in ("gpu_renderer.py", "reactor_shaders.py")}
+                  for name in ("gpu_renderer.py", "reactor_shaders.py", "gpu_config.py")
+                  if (REPO / "jarvis" / name).exists()}
         with renderer_source("current") as (renderer, hashes):
             self.assertEqual(renderer.__name__, "GpuRenderer")
             self.assertEqual(hashes, {name: hashlib.sha256(raw).hexdigest() for name, raw in before.items()})

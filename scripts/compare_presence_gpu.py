@@ -43,6 +43,14 @@ def renderer_source(revision):
     for name in ("gpu_renderer.py", "reactor_shaders.py"):
         sources[name] = ((REPO / "jarvis" / name).read_bytes() if revision == "current" else
                          subprocess.check_output(["git", "show", revision + ":jarvis/" + name], cwd=REPO))
+    support = REPO / "jarvis/gpu_config.py"
+    if revision == "current":
+        if support.exists():
+            sources["gpu_config.py"] = support.read_bytes()
+    elif subprocess.run(["git", "cat-file", "-e", revision + ":jarvis/gpu_config.py"],
+                        cwd=REPO, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        sources["gpu_config.py"] = subprocess.check_output(
+            ["git", "show", revision + ":jarvis/gpu_config.py"], cwd=REPO)
     hashes = {name: hashlib.sha256(raw).hexdigest() for name, raw in sources.items()}
     # Copy current before import, so lazy relative imports do not re-read later
     # edits. Callers keep both source files stable while this copy is prepared.
@@ -111,6 +119,8 @@ def measure(args):
             renderer = factory(context, args.width, args.height, quality=quality)
             target = context.simple_framebuffer((args.width, args.height))
             scene = scene_factory(reduced_motion=args.case == "reduced")
+            if hasattr(scene, "set_settings"):
+                scene.set_settings({"profile": quality})
             parameters = frozenset(inspect.signature(factory.render).parameters)
             scene.update_state("silent" if args.case == "idle" else "thinking", now=0.)
             for index in range(121):

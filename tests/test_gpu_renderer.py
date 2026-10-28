@@ -10,9 +10,11 @@ import subprocess
 import struct
 import sys
 import unittest
+from array import array
 from unittest import mock
 
 from jarvis.gpu_renderer import GpuRenderer
+from jarvis.gpu_config import FIELD_SPECS, GpuSettings
 from jarvis.morphing import CATALOGUE
 from jarvis import reactor_shaders as shaders
 
@@ -56,6 +58,75 @@ class GpuRendererTests(unittest.TestCase):
         self.renderer.render(time_s, reactor, flat_line() if points is None else points,
                              target=self.target, **kwargs)
         return self.renderer.read_rgb()
+
+    def test_all_shader_artwork_controls_change_real_pixels_in_their_relevant_context(self):
+        # Timing, state multipliers and frame scheduling are checked against
+        # the state adapter below, rather than pretending an uploaded-but-unused
+        # uniform proves that a slider has an effect.
+        scene_controls = {"ring_speed", "audio_attack_ms", "audio_release_ms",
+                          "thinking_contraction", "thinking_speed", "speaking_speed",
+                          "listening_speed", "idle_speed", "transition_ms",
+                          "ring_acceleration_ms", "expression_transition_ms",
+                          "expression_hold_ms", "expression_ring_speed", "fps_limit"}
+        symbol = CATALOGUE["smile"]
+        context = dict(rms=.35, orbit_phase=(.8, -.7, 1.1),
+                       audio_bands=(.5, .4, .6))
+        defaults = GpuSettings()
+        for key, spec in FIELD_SPECS.items():
+            if key in scene_controls:
+                continue
+            with self.subTest(control=key):
+                frame = dict(context)
+                if key.startswith("expression_"):
+                    frame.update(points=symbol.contour, details=symbol.details,
+                                 surface_family="smile", surface_amount=.8)
+                self.renderer.set_settings(defaults)
+                if key == "particle_colors":
+                    # Sparse warm accents can be behind the core at a given
+                    # orbital pose; use the supported dense/large preview to
+                    # exercise their colour rather than counting hidden points.
+                    self.renderer.set_settings({"particle_density": 200, "particle_size": 300})
+                original = self.frame(4.2, 1., **frame)
+                self.renderer.set_settings({key: spec.low if spec.default != spec.low else spec.high})
+                changed = self.frame(4.2, 1., **frame)
+                self.assertTrue(original != changed, f"{key} has no rendered effect")
+
+    def test_artwork_changes_keep_geometry_and_texture_allocations_bounded(self):
+        geometry = self.renderer._vertex_buffer
+        attachments = tuple(self.renderer._attachments)
+        allocated = self.renderer.allocation_bytes
+        for raw in ({key: spec.low for key, spec in FIELD_SPECS.items()},
+                    {key: spec.high for key, spec in FIELD_SPECS.items()}):
+            self.renderer.set_settings(raw)
+            self.frame(1., 1.)
+            self.assertIs(self.renderer._vertex_buffer, geometry)
+            self.assertEqual(tuple(self.renderer._attachments), attachments)
+            self.assertEqual(self.renderer.allocation_bytes, allocated)
+        for profile, maximum in (("eco", (960, 540)), ("balanced", (1280, 720)),
+                                 ("cinematic", (1920, 1080))):
+            self.renderer.resize(3840, 2160)
+            self.renderer.set_settings({"profile": profile})
+            self.assertLessEqual(self.renderer.size[0], maximum[0])
+            self.assertLessEqual(self.renderer.size[1], maximum[1])
+
+    def test_halo_radius_changes_spread_and_intensity_changes_light_independently(self):
+        self.renderer.bloom = self.renderer.particles = False
+        measured = []
+        for radius, intensity in ((100, 100), (200, 100), (100, 200)):
+            self.renderer.set_settings({"core_brightness": 0, "ring_brightness": 0,
+                                        "halo_radius": radius, "halo_intensity": intensity})
+            self.frame(0., 1.)
+            # Read linear HDR before tone mapping, isolating the physical
+            # intensity control from display gamma and bloom amplification.
+            linear = array("f")
+            linear.frombytes(self.renderer._targets["scene"][1].read(components=4, dtype="f4"))
+            row = [max(linear[(96*256+x)*4:(96*256+x)*4+3]) for x in range(128, 220)]
+            peak = max(row)
+            measured.append((peak, sum(value > peak*.5 for value in row)))
+        self.assertAlmostEqual(measured[1][0]/measured[0][0], 1., delta=.03)
+        self.assertGreater(measured[1][1], measured[0][1]*1.5)
+        self.assertAlmostEqual(measured[2][0]/measured[0][0], 2., delta=.01)
+        self.assertEqual(measured[2][1], measured[0][1])
 
     def test_real_gl_frame_is_rgb_nonblack_and_bottom_up(self):
         raw = self.frame(points=flat_line(.5))

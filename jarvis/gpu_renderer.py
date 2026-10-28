@@ -8,6 +8,7 @@ from array import array
 import math
 
 from . import reactor_shaders as shaders
+from .gpu_config import GpuSettings
 
 
 _LIMITS = {"eco": (960, 540), "balanced": (1280, 720), "cinematic": (1920, 1080)}
@@ -42,6 +43,7 @@ class GpuRenderer:
         self._closed = False
         self._alignment_signs = None
         self._quality = self._validate_quality(quality)
+        self.settings = GpuSettings.from_dict({"profile": quality})
         self._requested_size = self._validate_size(width, height)
         self._size = (0, 0)
         self._bloom_size = (0, 0)
@@ -75,6 +77,7 @@ class GpuRenderer:
                 program["u_image"].value = 0
             self._resolve["u_bloom"].value = 1
             self._replace_attachments(self._bounded_size(self._requested_size, self._quality))
+            self._upload_art()
         except Exception as error:
             self.shutdown()
             if self._release_errors:
@@ -195,6 +198,32 @@ class GpuRenderer:
         self._replace_attachments(self._bounded_size(self._requested_size, quality))
         self._quality = quality
 
+    def _upload_art(self):
+        packed = self.settings.uniforms()
+        for program in (self._scene, self._curve, self._filament, self._particle, self._extract):
+            if "u_art" in program:
+                count = program["u_art"].array_length * 4
+                program["u_art"].write(array("f", packed[:count]).tobytes())
+                program["u_art_enabled"].value = True
+
+    def set_settings(self, settings):
+        """Apply artistic settings without writing preferences or allocating geometry."""
+        self._check_open()
+        if isinstance(settings, GpuSettings):
+            candidate = GpuSettings.from_dict(settings.to_dict())
+        elif isinstance(settings, dict):
+            candidate = GpuSettings.from_dict({**self.settings.to_dict(), **settings})
+        else:
+            raise ValueError("GPU artwork settings must be a dictionary or GpuSettings.")
+        if candidate == self.settings:
+            return False
+        if candidate.profile != self.settings.profile:
+            self.set_quality(candidate.profile)
+        self.settings = candidate
+        self._alignment_signs = None
+        self._upload_art()
+        return True
+
     @staticmethod
     def _path(path, maximum):
         # Geometry is small and bounded. Particles are generated entirely on GPU.
@@ -234,8 +263,7 @@ class GpuRenderer:
         self._targets[name][1].use()
         vao.render(mode=self._gl.TRIANGLES, vertices=3)
 
-    @staticmethod
-    def _orbital_target_signs(phases):
+    def _orbital_target_signs(self, phases):
         """Choose equivalent frontal quaternions once at expression entry.
 
         Formula matches R_axis(phase) * R_z(yaw) * R_x(tilt). Keeping the
@@ -244,7 +272,9 @@ class GpuRenderer:
         """
         signs = []
         for ring, (phase, axis) in enumerate(zip(phases, ((.72, .24, .61), (-.18, .88, .44), (.48, -.61, .63)))):
-            yaw, tilt = (-.34+ring*.13)*.5, math.acos(.30+ring*.11)*.5
+            yaw = (-.34+ring*.13+math.radians(self.settings.ring_orientation))*.5
+            offset = math.radians((self.settings.ring_1_tilt, self.settings.ring_2_tilt, self.settings.ring_3_tilt)[ring])
+            tilt = max(.10,min(1.47,math.acos(.30+ring*.11)+offset))*.5
             vector = (math.cos(yaw)*math.sin(tilt), math.sin(yaw)*math.sin(tilt),
                       math.sin(yaw)*math.cos(tilt))
             base_w = math.cos(yaw)*math.cos(tilt)
@@ -256,7 +286,7 @@ class GpuRenderer:
     def render(self, time_s, reactor, points, details=(), color=(.25, .9, 1.),
                rms=0., reduced_motion=False, target=None, detail_opacity=1.,
                orbit_phase=None, core_scale=1., audio_bands=(0., 0., 0.), orbit_blend=0.,
-               surface_family=None, surface_amount=0.):
+               surface_family=None, surface_amount=0., art=None):
         """Render the actual supplied curve or its progressive reactor form.
 
         ``points`` and ``details`` use OpenGL NDC (positive Y is up). No line or
@@ -271,6 +301,8 @@ class GpuRenderer:
         A surface expression always keeps its supporting sphere visible.
         """
         self._check_open()
+        if art is not None:
+            self.set_settings(art)
         if not all(math.isfinite(value) for value in (time_s, reactor, rms, detail_opacity,
                                                        core_scale, orbit_blend, surface_amount)):
             raise ValueError("Animation parameters must be finite.")
@@ -328,7 +360,7 @@ class GpuRenderer:
             if self.particles:
                 self.ctx.enable(self._gl.PROGRAM_POINT_SIZE)
                 self._particle_vao.render(mode=self._gl.POINTS,
-                                          vertices=_PARTICLES[self._quality])
+                                          vertices=min(384, round(_PARTICLES[self._quality]*self.settings.particle_density/100)))
                 self.ctx.disable(self._gl.PROGRAM_POINT_SIZE)
         self.ctx.disable(self._gl.BLEND)
         if self.bloom:
@@ -337,14 +369,14 @@ class GpuRenderer:
             self._pass("bloom_a", self._extract_vao)
             for _ in range(2 if self._quality == "cinematic" else 1):
                 self._targets["bloom_a"][0].use(location=0)
-                self._blur["u_step"].value = (1 / self._bloom_size[0], 0)
+                self._blur["u_step"].value = (self.settings.bloom_radius / 100 / self._bloom_size[0], 0)
                 self._pass("bloom_b", self._blur_vao)
                 self._targets["bloom_b"][0].use(location=0)
-                self._blur["u_step"].value = (0, 1 / self._bloom_size[1])
+                self._blur["u_step"].value = (0, self.settings.bloom_radius / 100 / self._bloom_size[1])
                 self._pass("bloom_a", self._blur_vao)
         self._targets["scene"][0].use(location=0)
         self._targets["bloom_a"][0].use(location=1)
-        self._resolve["u_bloom_amount"].value = .94 if self.bloom else 0.0
+        self._resolve["u_bloom_amount"].value = .94*self.settings.bloom_intensity/100 if self.bloom else 0.0
         self._pass("resolved", self._resolve_vao)
         self._targets["resolved"][0].use(location=0)
         destination.use()
