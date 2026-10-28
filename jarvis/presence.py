@@ -667,7 +667,7 @@ class PresenceView:
         if (state in {"user_speaking", "dormant"} or self._semantic_preview
                 or state == "thinking" and (self.state != "thinking" or self.semantic.active)):
             self._cancel_semantics("state:" + state)
-        elif state == "jarvis_speaking":
+        elif state == "jarvis_speaking" and not getattr(self, "_keep_speech_expression", False):
             # Any new real audio pre-empts a held symbol immediately. Future
             # events in the response remain available; no audio is delayed.
             incoming = (caption.get("response_id", -1), caption.get("segment_id", -1)) if isinstance(caption, dict) else None

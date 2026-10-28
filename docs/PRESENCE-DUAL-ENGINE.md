@@ -52,3 +52,27 @@ rayon/luminosité du halo indépendants en HDR, ressources bornées. Le Studio a
 Les valeurs par défaut conservent le style approuvé A–D. Aucun nouveau modèle.
 La CI Windows est contrôlée après publication ; les essais RTX/micro/Piper
 sur le PC restent en attente.
+
+## Phase 3 — Intégration optionnelle
+
+Centre de contrôle → PRESENCE → Moteur : Automatique, 2D classique — Canvas,
+2.5D holographique — GPU. Le moteur actif et le motif d'un repli sont affichés.
+Canvas reste choisi pour une configuration existante sans préférence de moteur.
+Automatique mémorise sa décision ; une panne exige une nouvelle sélection GPU
+ou « Réessayer ». Aucun sondage au démarrage en mode 2D.
+
+Une seule fenêtre PRESENCE est visible. Le parent conserve le même modèle
+conversationnel et les mêmes sous-titres/expressions. Le basculement nettoie le
+processus graphique sans rouvrir le micro ni redémarrer Piper/Ollama. Les deux
+Studios restent accessibles et leurs brouillons sont indépendants ; un aperçu
+GPU indique son origine, est annulable et cède devant un événement réel.
+
+13 tests d'intégration Tk/SQLite réussis, dont un vrai processus EGL et les
+trois expressions terminales 😊 ❤️ 😂. Transport/HUD : 16 tests réussis,
+incluant crash, blocage, files bornées, retour au calme et arrêt sans orphelin.
+Les frontières audio des tests sont des doublures explicites, pas du matériel.
+
+**Point de contrôle phase 3 :** états, RMS, sous-titres et morphing empruntent
+le propriétaire existant ; les bandes spectrales du PCM Piper sont raccordées
+dans le commit séparé de phase 4. À ce stade, aucune écoute matérielle GPU ni
+mesure RTX n'est déclarée validée. Le build GPU intégré est la phase 5.

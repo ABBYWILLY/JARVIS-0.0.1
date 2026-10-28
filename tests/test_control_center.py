@@ -51,6 +51,17 @@ class SettingsSearchTests(unittest.TestCase):
         self.assertEqual({route.key for route in routes}, {"voice", "halo"})
         self.assertTrue(all(route.key in favorites for route in routes))
 
+    def test_both_engines_and_gpu_essentials_have_canonical_navigation(self):
+        from jarvis.gpu_config import FIELD_SPECS
+        routes = {route.key: route for route in ROUTES}
+        self.assertEqual(routes["gpu"].family, FAMILIES[0])
+        self.assertEqual(routes["presence_engine"].family, FAMILIES[0])
+        self.assertIn(routes["presence_engine"], find_routes("2.5d", level="essential"))
+        gpu_fields = {route.control for route in ROUTES if route.owner == "gpu"}
+        self.assertEqual(gpu_fields, {key for key, spec in FIELD_SPECS.items() if spec.level == "essential"})
+        old_favorites = ["presence", "gpu", "wave_thickness", "halo"]
+        self.assertEqual(navigation_preferences({"favorites": old_favorites})[0], tuple(old_favorites))
+
 
 @unittest.skipUnless(display_available(), "Écran graphique indisponible")
 class ControlCenterTkTests(unittest.TestCase):
@@ -171,10 +182,28 @@ class ControlCenterTkTests(unittest.TestCase):
         voice.assert_called_once_with(focus_key="speed")
         center.query.set("Épaisseur de l’onde")
         center.results.selection_set("wave_thickness")
-        with patch.object(self.app.presence, "open_settings") as presence:
+        with patch.object(self.app.presence, "open_canvas_settings") as presence:
             center.open_selected()
         presence.return_value.focus_control.assert_called_once_with("visualizer_thickness")
         self.assertEqual(center.favorites, ())
+
+    def test_dual_engine_navigation_opens_one_canonical_editor_without_persisting(self):
+        center = self.app.open_control_center()
+        with patch.object(self.app.presence, "open_engine_settings") as engine, \
+                patch.object(self.app.presence, "open_canvas_settings") as canvas, \
+                patch.object(self.app.presence, "open_gpu_settings") as gpu, \
+                patch.object(self.store, "set_preference") as save:
+            for key, action in (("presence_engine", engine), ("canvas_studio", canvas), ("gpu", gpu)):
+                center.query.set(next(route.title for route in ROUTES if route.key == key))
+                center.results.selection_set(key)
+                center.open_selected()
+                action.assert_called_once_with()
+            for route in (route for route in ROUTES if route.owner == "gpu"):
+                center.query.set(route.title)
+                center.results.selection_set(route.key)
+                center.open_selected()
+                gpu.return_value.focus_control.assert_called_with(route.control)
+            save.assert_not_called()
 
     def test_failed_save_preserves_old_favorites_and_level_and_reports_error(self):
         self.store.set_preference("control_center", {"favorites": ["voice"], "view": "essential"})

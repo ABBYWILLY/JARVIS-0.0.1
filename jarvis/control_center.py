@@ -28,6 +28,13 @@ class Route:
 ROUTES = (
     Route("presence", FAMILIES[0], "PRESENCE Studio", "Personnaliser et comparer le rendu, puis appliquer vos choix.",
           "onde épaisseur expressivité halo diffusion lumière noyau thinking structure vitesse transitions palette couleur émotion microexpression morphing emoji sous-titres mini éco équilibré cinématique mouvement animations fond immersion diagnostic"),
+    Route("presence_engine", FAMILIES[0], "Choisir le moteur PRESENCE", "Automatique, Classique 2D Canvas ou Holographique 2.5D GPU ; moteur actif et raison d’un éventuel repli.",
+          "moteur automatique canvas gpu moderngl opengl 2d 2.5d sélection basculement secours réessayer"),
+    Route("canvas_studio", FAMILIES[0], "Studio Classique 2D", "Conserver et personnaliser l’identité Canvas, indépendamment des réglages GPU.",
+          "canvas classique 2d onde graphisme configuration", level="personalize"),
+    # Keep this historical ID so existing favourites still open the GPU editor.
+    Route("gpu", FAMILIES[0], "Studio Holographique 2.5D", "Prévisualiser le vrai renderer GPU et appliquer ses réglages indépendants ; Canvas reste une alternative permanente.",
+          "gpu opengl moderngl rtx holographique 2.5d shader halo anneaux particules performance vram", level="personalize"),
     Route("generation", FAMILIES[1], "Génération et contexte", "Budgets, raisonnement, instruction système et rappel ciblé.",
           "température contexte tokens budget discussion vocal mission raisonnement utilisation instruction système personnalité mémoire ciblée rappel lexical"),
     Route("cognition", FAMILIES[1], "Politique cognitive", "Choisir Manuel, Automatique local, Rapide, Approfondi ou Créatif dans COMMAND OS.",
@@ -52,8 +59,6 @@ ROUTES = (
           "modèle ollama qwen installé liste sélection"),
     Route("local", FAMILIES[4], "Données locales et permissions", "Emplacement SQLite et garanties actuelles d'accès au système.",
           "stockage sqlite dossier données sauvegarde sécurité permissions local disque", True),
-    Route("gpu", FAMILIES[4], "Canvas et prototype GPU", "Canvas reste actif. Le prototype OpenGL est autonome et expérimental.",
-          "gpu opengl moderngl rtx canvas performance vram consommation moteur", True),
     # These are navigation anchors into the same editors, never copied controls.
     Route("wave_thickness", FAMILIES[0], "Épaisseur de l’onde", "Régler le trait dans le Studio ; aucun effet sur le signal microphone.",
           "épaisseur onde trait visualiseur", level="personalize", owner="presence", control="visualizer_thickness"),
@@ -63,6 +68,18 @@ ROUTES = (
           "halo intensité lumière", level="personalize", owner="presence", control="halo_intensity"),
     Route("thinking_size", FAMILIES[0], "Taille du noyau THINKING", "Accéder directement à la taille du noyau dans le Studio.",
           "thinking noyau taille", level="personalize", owner="presence", control="thinking_size"),
+    Route("gpu_core_size", FAMILIES[0], "GPU · Taille du noyau", "Modifier le rayon apparent de la sphère holographique dans le Studio 2.5D.",
+          "gpu noyau rayon taille sphère", level="personalize", owner="gpu", control="core_size"),
+    Route("gpu_halo_intensity", FAMILIES[0], "GPU · Luminosité du halo", "Régler la lumière indépendamment du rayon de diffusion.",
+          "gpu halo luminosité intensité aura", level="personalize", owner="gpu", control="halo_intensity"),
+    Route("gpu_halo_radius", FAMILIES[0], "GPU · Taille du halo", "Régler le rayon de diffusion indépendamment de la luminosité.",
+          "gpu halo taille rayon diffusion aura", level="personalize", owner="gpu", control="halo_radius"),
+    Route("gpu_ring_speed", FAMILIES[0], "GPU · Vitesse des anneaux", "Ajuster la rotation des orbites holographiques.",
+          "gpu anneaux orbites rotation vitesse", level="personalize", owner="gpu", control="ring_speed"),
+    Route("gpu_particle_density", FAMILIES[0], "GPU · Quantité de particules", "Densité bornée par le profil de performances, dans le Studio 2.5D.",
+          "gpu particules densité quantité", level="personalize", owner="gpu", control="particle_density"),
+    Route("gpu_particle_size", FAMILIES[0], "GPU · Taille des particules", "Ajuster la taille des particules sans modifier leur quantité.",
+          "gpu particules taille", level="personalize", owner="gpu", control="particle_size"),
     Route("voice_speed", FAMILIES[2], "Vitesse de la voix", "Régler la vitesse Piper dans Voix et périphériques.",
           "vitesse débit voix piper", level="personalize", owner="voice", control="speed"),
     Route("turn_silence", FAMILIES[2], "Silence de fin de tour", "Ajuster l’attente de fin de parole dans les réglages vocaux existants.",
@@ -301,7 +318,11 @@ class ControlCenter:
             if route.owner == "voice":
                 app.voice.open_settings(focus_key=route.control)
             elif route.owner == "presence":
-                dialog = app.presence.open_settings()
+                dialog = app.presence.open_canvas_settings()
+                if dialog is not None:
+                    dialog.focus_control(route.control)
+            elif route.owner == "gpu":
+                dialog = app.presence.open_gpu_settings()
                 if dialog is not None:
                     dialog.focus_control(route.control)
             elif route.owner == "reading":
@@ -313,7 +334,10 @@ class ControlCenter:
                             widget.focus_set()
                             break
             return "break"
-        actions = {"presence": app.presence.open_settings, "generation": app.open_settings,
+        actions = {"presence": app.presence.open_settings,
+                   "presence_engine": app.presence.open_engine_settings,
+                   "canvas_studio": app.presence.open_canvas_settings,
+                   "gpu": app.presence.open_gpu_settings, "generation": app.open_settings,
                    "memory": app.open_memory, "context": app.open_context,
                    "voice": app.voice.open_settings, "diagnostics": app.voice.open_diagnostics,
                    "reading": app.open_conversation_settings, "navigation": app.toggle_sidebar}
@@ -339,8 +363,6 @@ class ControlCenter:
         elif key == "local":
             path = app.store.db.execute("PRAGMA database_list").fetchone()[2]
             self.set_detail(f"SQLite : {path}\nSauvegardes mémoire conservées. Stockage local non chiffré. Aucun accès système accordé au modèle.")
-        elif key == "gpu":
-            self.set_detail("Canvas actif · prototype OpenGL autonome. Validation RTX en attente. Réglages visuels communs ; aucune activation GPU en production. Guide : docs/PRESENCE-GPU.md.")
         return "break"
 
     def closed(self, event):

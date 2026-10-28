@@ -192,8 +192,8 @@ class App:
                  font=(self.font_family, 9)).pack(anchor="w", pady=(12, 0))
         from .voice_ui import VoiceControls
         self.voice = VoiceControls(self, sidebar)
-        from .presence import PresenceView
-        self.presence = PresenceView(self)
+        from .presence_host import IntegratedPresence
+        self.presence = IntegratedPresence(self)
         tk.Label(sidebar, text="Outils système : désactivés",
                  justify="left", bg=PANEL, fg=MUTED, font=(self.font_family, 9)).pack(anchor="w", pady=(16, 0))
 

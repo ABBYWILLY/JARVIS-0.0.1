@@ -159,7 +159,8 @@ class DemoController:
         view._render()
         # The normal renderer labels all previews as offline, but does not print
         # their full text. Declare synthetic PCM explicitly on the visible UI.
-        view.state_label.configure(text="DÉMO · PCM SYNTHÉTIQUE\n" + label.upper())
+        if getattr(view, "state_label", None) is not None:
+            view.state_label.configure(text="DÉMO · PCM SYNTHÉTIQUE\n" + label.upper())
 
     def cancel(self, reason="cancelled"):
         if not self.active:
