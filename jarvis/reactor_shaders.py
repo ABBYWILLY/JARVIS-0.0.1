@@ -38,12 +38,23 @@ const float CORE_RADIUS = .30;
 uniform float u_core_scale, u_orbit_blend;
 uniform float u_pixel_scale;
 uniform vec3 u_orbit_phase, u_audio_bands, u_orbit_targets;
+uniform float u_visual_state, u_receipt, u_input_energy, u_visual_motion;
+uniform vec3 u_visual_mix, u_voice_envelopes;
 // Supersampling changes storage pixels, not the apparent size of fine ink.
 // Zero retains meaningful defaults for independent mathematical shader probes.
 float pixel_scale() { return u_pixel_scale>0.0 ? u_pixel_scale : 1.0; }
+float visual_style() { return min(1.0,ART_CONVERGING_INTENSITY+ART_RADIATING_INTENSITY); }
+float receiving_energy() {
+    return min(1.6,(u_input_energy+u_receipt)*ART_CONVERGING_INTENSITY);
+}
+float radiating_energy() {
+    return min(1.6,max(u_voice_envelopes.x,max(u_voice_envelopes.y,u_voice_envelopes.z))
+                   *ART_RADIATING_INTENSITY*ART_PULSE_AMPLITUDE);
+}
 float core_radius() { return CORE_RADIUS*ART_CORE_SIZE*(u_core_scale>0.0 ? u_core_scale : 1.0); }
 float orbit_radius(float ring) {
-    return min(.85,(.48+ring*.11*ART_RING_SPACING)*ART_RING_RADIUS);
+    float attention=1.0+.055*u_visual_mix.x*min(1.0,ART_CONVERGING_INTENSITY);
+    return min(.85,(.48+ring*.11*ART_RING_SPACING)*ART_RING_RADIUS*attention);
 }
 vec2 project_world(vec3 p) { return p.xy * CAMERA_Z / (CAMERA_Z-p.z); }
 vec2 scene_plane(vec2 ndc, vec2 size) {
@@ -181,6 +192,10 @@ void main() {
     float bass=u_audio_bands.x*ART_BASS_CONTRIBUTION*voice;
     float middle=u_audio_bands.y*ART_MID_CONTRIBUTION*voice;
     float treble=u_audio_bands.z*ART_TREBLE_CONTRIBUTION*voice;
+    float receive=receiving_energy(), emit=radiating_energy()*u_visual_mix.z;
+    float near_voice=min(1.6,u_voice_envelopes.x*ART_PULSE_AMPLITUDE*ART_RADIATING_INTENSITY);
+    float middle_voice=min(1.6,u_voice_envelopes.y*ART_PULSE_AMPLITUDE*ART_RADIATING_INTENSITY);
+    float outer_voice=min(1.6,u_voice_envelopes.z*ART_PULSE_AMPLITUDE*ART_RADIATING_INTENSITY);
     float breath = 1.0+.025*sin(t*1.7)*ART_BREATHING+.10*u_rms*voice+.16*middle;
     float silhouette = radius_core*CAMERA_Z/sqrt(CAMERA_Z*CAMERA_Z-radius_core*radius_core);
     // Object-local spill only: no coloured ambient veil or background vignette.
@@ -188,6 +203,25 @@ void main() {
     float spill = lineGlow(r-silhouette,(.034+.025*bass)*halo_size)
                 *(1.0-smoothstep(silhouette+.108*halo_size,silhouette+.218*halo_size,r));
     light += mix(cold,vec3(.32,.19,1.0),.32)*spill*(.13+.14*bass)
+             *ART_HALO_INTENSITY*ART_HALO_OPACITY*activation;
+    // Three distinct attack/release envelopes come from actual played PCM.
+    // No oscillator produces voice energy: exact silence supplies all zeros.
+    // The bright near skin follows syllables, while the low outer veil releases
+    // gently. Radius and peak light remain independent artist controls.
+    float spread=ART_PULSE_RADIUS*u_visual_motion;
+    float voice_halo_scale=clamp(ART_HALO_RADIUS*.6+.4,.5,1.6);
+    float aura_cut=1.0-smoothstep(silhouette+.27,silhouette+.43,r);
+    float outside=smoothstep(silhouette-.006,silhouette+.012,r);
+    float near_aura=lineGlow(r-silhouette,(.014+.025*near_voice*spread)*voice_halo_scale);
+    float middle_aura=lineGlow(r-silhouette,(.050+.075*middle_voice*spread)*voice_halo_scale);
+    float outer_aura=lineGlow(r-silhouette,(.095+.10*outer_voice*spread)*voice_halo_scale);
+    vec3 aura_color=mix(cold,vec3(.32,.22,1.0),.28);
+    light += aura_color*(near_aura*.48*near_voice+middle_aura*.15*middle_voice
+                       +outer_aura*.065*outer_voice)*outside*aura_cut*u_visual_mix.z
+             *ART_HALO_INTENSITY*ART_HALO_OPACITY*activation*(1.0-.30*u_surface_amount);
+    // Reception is a genuine VAD acknowledgement and measured microphone RMS,
+    // not evidence of a successful transcription. It stays tight and cool.
+    light += cold*lineGlow(r-silhouette,.016+px)*receive*.16
              *ART_HALO_INTENSITY*ART_HALO_OPACITY*activation;
     if (near_hit < 2.0) {
         vec3 surface = vec3(p*near_hit,CAMERA_Z*(1.0-near_hit));
@@ -210,7 +244,9 @@ void main() {
         // Dark, translucent body; coloured emission stays below the outer skin.
         vec3 body = mix(vec3(.018,.028,.08),spectral*.12,.35);
         body += transmission*mix(vec3(.04,.16,.46),cold*.4,.32)
-                *(.045+(.17+.10*focus+.10*middle)*plasma*ART_PLASMA_INTENSITY)*inner;
+                *(.045+(.17+.10*focus+.10*middle
+                   +.055*u_visual_mix.y*visual_style()+.08*middle_voice*u_visual_mix.z)
+                   *plasma*ART_PLASMA_INTENSITY)*inner;
         float core_light=ART_CORE_BRIGHTNESS*ART_CORE_OPACITY
                         *(1.0+u_surface_amount*ART_EXPRESSION_CORE_LIGHT);
         light += body*breath*core_light*activation;
@@ -222,7 +258,8 @@ void main() {
         vec3 fill = normalize(vec3(.8,-.35,.5));
         float key_reflection = pow(max(0.0,dot(normal,normalize(key+view))),72.0);
         float fill_reflection = pow(max(0.0,dot(normal,normalize(fill+view))),38.0);
-        float specular = (key_reflection*.60+fill_reflection*.17)*(1.0+.25*treble);
+        float specular = (key_reflection*.60+fill_reflection*.17)
+                         *(1.0+.25*treble+.16*near_voice*u_visual_mix.z);
         light += mix(spectral,vec3(.58,.78,1.0),.55)*specular*ART_CORE_REFLECTIONS*core_light*activation;
     }
     // Stable geometric silhouette, with no serrated carrier or scan-line grid.
@@ -263,6 +300,16 @@ void main() {
         light += cold*(rail*(.20+depth*.70+highlight*(.28+.24*treble))+halo*.62
                        +lineGlow(d,.004+pixel_width)*packet*(.10+depth*.25)*ART_RING_TRAILS)
                       *ART_RING_BRIGHTNESS*ART_RING_OPACITY*activation*visible;
+        // Restrained energy packets travel along each real tilted ring plane:
+        // inwards for VAD/user PCM, outwards for actual Piper envelopes.
+        float pulse_phase=fract(u_time*.75+fi*.19);
+        float inward=mix(radius+.06,radius_core*.97,pulse_phase);
+        float outward=mix(radius_core*1.08,radius+.06,pulse_phase);
+        float packet_fade=sin(pulse_phase*3.14159265);
+        float receive_wave=lineGlow(length(q)-inward,.009+pixel_width)*receive;
+        float emit_wave=lineGlow(length(q)-outward,.012+pixel_width)*emit;
+        light += cold*(receive_wave*.12+emit_wave*.15)*packet_fade*u_visual_motion
+                 *ART_RING_BRIGHTNESS*ART_RING_OPACITY*activation*visible;
     }
     frag = vec4(art_color(light),1.0);
 }
@@ -409,6 +456,16 @@ void main() {
                sin(around)*sqrt(1.0-latitude*latitude))*shell;
     }
     p*=ART_PARTICLE_DISTANCE;
+    // Reuse a quarter of the bounded particle pool for directional energy.
+    // The rest stays orbital, and THINKING keeps its multiaxial concentration.
+    float incoming=clamp(receiving_energy()*u_visual_mix.x*u_visual_motion,0.0,1.0);
+    float outgoing=clamp(radiating_energy()*u_visual_mix.z*u_visual_motion,0.0,1.0);
+    float travel=fract(u_time*.40*max(.01,ART_PARTICLE_SPEED)+hash(packet+71.0)*.6-trail*.012);
+    float directional=step(mod(packet,4.0),.5)*max(incoming,outgoing);
+    float flow_radius=mix(.62,.32,travel);
+    if (outgoing>incoming) flow_radius=mix(.32,.62,travel);
+    vec3 flow=normalize(p+vec3(.00001))*flow_radius*ART_PARTICLE_DISTANCE;
+    p=mix(p,flow,directional);
     vec2 projected = plane_ndc(project_world(p),u_size);
     gl_Position = vec4(projected,0.0,1.0);
     // Slow deterministic fades, never random per-frame flicker. Three small
@@ -419,6 +476,7 @@ void main() {
     float trail_visibility=trail<.5 ? 1.0 : min(1.0,ART_PARTICLE_TRAILS);
     v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23)*(1.0-u_orbit_blend*.70)
               *ART_PARTICLE_BRIGHTNESS*ART_PARTICLE_OPACITY*trail_visibility;
+    v_power*=1.0+directional*.9*sin(travel*3.14159265);
     v_warm = step(.85,hash(packet+17.0))*ART_PARTICLE_COLORS;
     v_depth = p.z;
 }

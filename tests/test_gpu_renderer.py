@@ -77,6 +77,12 @@ class GpuRendererTests(unittest.TestCase):
                 continue
             with self.subTest(control=key):
                 frame = dict(context)
+                if key in {"pulse_radius", "radiating_intensity"}:
+                    frame.update(visual_state=4, visual_mix=(0., 0., 1.),
+                                 voice_envelopes=(.7, .5, .4))
+                elif key == "converging_intensity":
+                    frame.update(visual_state=2, visual_mix=(1., 0., 0.),
+                                 input_energy=.65, receipt=.6)
                 if key.startswith("expression_"):
                     frame.update(points=symbol.contour, details=symbol.details,
                                  surface_family="smile", surface_amount=.8)
@@ -90,6 +96,31 @@ class GpuRendererTests(unittest.TestCase):
                 self.renderer.set_settings({key: spec.low if spec.default != spec.low else spec.high})
                 changed = self.frame(4.2, 1., **frame)
                 self.assertTrue(original != changed, f"{key} has no rendered effect")
+
+    def test_invalid_visual_state_and_audio_envelopes_fail_before_drawing(self):
+        invalid = ({"visual_state": True}, {"visual_state": -1}, {"visual_state": 6},
+                   {"visual_state": 1.5}, {"visual_mix": (0., 0.)},
+                   {"visual_mix": (.6, .6, 0.)}, {"visual_mix": "000"},
+                   {"voice_envelopes": (0., float("nan"), 0.)},
+                   {"voice_envelopes": (.1, -.1, .2)}, {"voice_envelopes": (True, 0., 0.)},
+                   {"receipt": float("inf")}, {"receipt": 1.01}, {"input_energy": -.01},
+                   {"input_energy": "0.5"}, {"input_energy": 10**1000})
+        before = self.frame(1., 1.)
+        for kwargs in invalid:
+            with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
+                self.frame(1., 1., **kwargs)
+            self.assertEqual(self.renderer.read_rgb(), before)
+        self.assertEqual(before, self.frame(1., 1.))
+
+    def test_approved_30_reference_disables_new_energy_layers_without_erasing_old_pcm_light(self):
+        self.renderer.set_settings(GpuSettings.reference_30())
+        legacy = self.frame(2.1, 1., rms=.12, audio_bands=(.3, .2, .1))
+        for code, mix in ((2, (1., 0., 0.)), (3, (0., 1., 0.)), (4, (0., 0., 1.))):
+            with self.subTest(state=code):
+                self.assertEqual(legacy, self.frame(2.1, 1., rms=.12, audio_bands=(.3, .2, .1),
+                    visual_state=code, visual_mix=mix, voice_envelopes=(.5, .4, .3),
+                    input_energy=.4, receipt=.6))
+        self.assertNotEqual(legacy, self.frame(2.1, 1., rms=0., audio_bands=(0., 0., 0.)))
 
     def test_artwork_changes_keep_geometry_and_texture_allocations_bounded(self):
         geometry = self.renderer._vertex_buffer

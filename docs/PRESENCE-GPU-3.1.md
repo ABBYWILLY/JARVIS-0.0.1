@@ -57,6 +57,31 @@ Mini, DPI simulés et préservation de l'audio/historique/génération au bascul
 Une sélection GPU reste affichée comme 2D jusqu'à la notification prêt ; en cas
 d'échec, le motif et le nouvel essai manuel restent accessibles dans les paramètres.
 
+## C — Écoute, concentration et aura vocale
+
+Le spectre linéaire était trop peu visible : à RMS 0,056, l'ancien halo variait
+d'environ 4 % en largeur et 6 % en lumière. Trois enveloppes graphiques utilisent
+maintenant le PCM existant, avec seuil de silence, compression douce, attaque
+rapide et relâchements distincts. Les trois bandes, leurs contributions, le gain
+visuel et l'amplitude existants sont réutilisés. Aucun changement du son prononcé.
+
+Écoute confirmée VAD : particules/impulsions convergentes et réception brève.
+THINKING : concentration, contraction 8 % et trois axes rapides conservés.
+Parole Piper : halo proche réactif, dilatation intermédiaire et aura externe
+plus lente, émissions rayonnantes. Le repos est statique après relâchement.
+Un micro ouvert sans VAD ne déclenche pas une fausse réception vocale.
+
+Les états restent ceux du parent. Les enveloppes suivent l'échéance PCM
+PortAudio existante ; interruptions, erreurs et nouveaux tours effacent l'énergie
+sortante. Un snapshot périmé ne conserve ni énergie ni réception. La réduction
+du mouvement atténue les effets ; les huit gravures et la sphère restent visibles.
+Les couleurs des mots du HUD reçoivent désormais les valeurs RGB entières
+attendues, au lieu de retomber sur le cyan à cause d'un format incompatible.
+
+Les 66 réglages sont conservés. Trois paramètres seulement sont ajoutés : rayon
+de pulsation, intensité convergente et intensité rayonnante. La référence
+artistique 3.0 désactive ces nouvelles couches, sans remettre l'ancien plafond FPS.
+
 ## Validation Windows — matériel en attente
 
 1. Lancer JARVIS complet et choisir 2.5D ; F9 affiche les mesures réelles.

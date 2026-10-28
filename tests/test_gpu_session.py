@@ -66,6 +66,41 @@ class GpuPacketTests(unittest.TestCase):
         self.assertIsNone(expired["surface_family"])
         self.assertEqual(expired["surface_amount"], 0.)
 
+    def test_state_language_fields_are_bounded_copied_and_keep_operational_state(self):
+        values = {"visual_state": 3, "visual_mix": (.1, .2, .7), "voice_envelopes": (.3, .5, .2),
+                  "input_energy": .2, "receipt": .6}
+        source = {**packet(), "frame": {**packet()["frame"], **values}}
+        original = copy.deepcopy(source)
+        validated = validate_packet(source)
+        self.assertEqual(source, original)
+        for key, value in values.items():
+            self.assertEqual(validated["frame"][key], value)
+        changes = ({"visual_state": True}, {"visual_state": 3.}, {"visual_state": -1}, {"visual_state": 6},
+                   {"visual_mix": (0., 1.)}, {"visual_mix": (0., .5, 1.1)},
+                   {"voice_envelopes": (False, 0., 0.)}, {"voice_envelopes": (0., float("nan"), 0.)},
+                   {"receipt": -.01}, {"receipt": True}, {"input_energy": 1.01}, {"input_energy": float("inf")})
+        for change in changes:
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                validate_packet({**source, "frame": {**source["frame"], **change}})
+
+    def test_stale_voice_input_and_receipt_clear_without_cutting_a_fresh_parent_release(self):
+        values = {"visual_state": 3, "visual_mix": (.1, .2, .7), "voice_envelopes": (.3, .5, .2),
+                  "input_energy": .2, "receipt": .6}
+        source = {**packet(), "frame_at": 10., "pcm_at": 9.,
+                  "frame": {**packet()["frame"], **values}}
+        original = copy.deepcopy(source)
+        release, _ = _fresh_frame(source, 10.05)
+        self.assertEqual(release["rms"], 0.)
+        for key, value in values.items():
+            self.assertEqual(release[key], value)
+        stale, _ = _fresh_frame(source, 10.21)
+        self.assertEqual(stale["voice_envelopes"], (0., 0., 0.))
+        self.assertEqual(stale["input_energy"], 0.)
+        self.assertEqual(stale["receipt"], 0.)
+        self.assertEqual(stale["visual_state"], 3)
+        self.assertEqual(stale["visual_mix"], values["visual_mix"])
+        self.assertEqual(source, original)
+
 
 def echo_child(frames, events, quit_event, urgent, options):
     options["heartbeat"].value = time.monotonic()

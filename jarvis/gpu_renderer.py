@@ -314,6 +314,23 @@ class GpuRenderer:
             if name in program:
                 program[name].value = value
 
+    @staticmethod
+    def _unit_value(value, label):
+        try:
+            valid = (not isinstance(value, bool) and isinstance(value, (int, float))
+                     and math.isfinite(value) and 0. <= value <= 1.)
+        except OverflowError:
+            valid = False
+        if not valid:
+            raise ValueError(f"{label} must be a finite number between zero and one.")
+        return float(value)
+
+    @classmethod
+    def _unit_triplet(cls, value, label):
+        if not isinstance(value, (tuple, list)) or len(value) != 3:
+            raise ValueError(f"{label} must contain three finite unit values.")
+        return tuple(cls._unit_value(item, label) for item in value)
+
     def _pass(self, name, vao):
         self._targets[name][1].use()
         vao.render(mode=self._gl.TRIANGLES, vertices=3)
@@ -341,7 +358,8 @@ class GpuRenderer:
     def render(self, time_s, reactor, points, details=(), color=(.25, .9, 1.),
                rms=0., reduced_motion=False, target=None, detail_opacity=1.,
                orbit_phase=None, core_scale=1., audio_bands=(0., 0., 0.), orbit_blend=0.,
-               surface_family=None, surface_amount=0., art=None):
+               surface_family=None, surface_amount=0., art=None, visual_state=0,
+               visual_mix=(0., 0., 0.), voice_envelopes=(0., 0., 0.), receipt=0., input_energy=0.):
         """Render the actual supplied curve or its progressive reactor form.
 
         ``points`` and ``details`` use OpenGL NDC (positive Y is up). No line or
@@ -354,10 +372,21 @@ class GpuRenderer:
         When ``surface_family`` is present, points/details are original local
         catalogue paths (positive Y down) and are projected onto the sphere.
         A surface expression always keeps its supporting sphere visible.
+        ``visual_state`` and the bounded state mix describe actual parent state;
+        the three voice envelopes are already derived from timed PCM elsewhere.
+        This renderer neither classifies speech nor invents audio activity.
         """
         self._check_open()
         if art is not None:
             self.set_settings(art)
+        if type(visual_state) is not int or not 0 <= visual_state <= 5:
+            raise ValueError("visual_state must be an integer between zero and five.")
+        visual_mix = self._unit_triplet(visual_mix, "visual_mix")
+        if sum(visual_mix) > 1.0001:
+            raise ValueError("visual_mix cannot exceed the total state weight.")
+        voice_envelopes = self._unit_triplet(voice_envelopes, "voice_envelopes")
+        receipt = self._unit_value(receipt, "receipt")
+        input_energy = self._unit_value(input_energy, "input_energy")
         if not all(math.isfinite(value) for value in (time_s, reactor, rms, detail_opacity,
                                                        core_scale, orbit_blend, surface_amount)):
             raise ValueError("Animation parameters must be finite.")
@@ -398,6 +427,11 @@ class GpuRenderer:
                   "u_orbit_targets": self._alignment_signs or (1., 1., 1.),
                   "u_surface_kind": 0. if surface_family is None else 2. if surface_family == "affection" else 1.,
                   "u_surface_amount": surface_amount,
+                  "u_visual_state": visual_state, "u_visual_mix": visual_mix,
+                  "u_visual_motion": 0. if reduced_motion else 1.,
+                  "u_voice_envelopes": tuple(value*.35 for value in voice_envelopes) if reduced_motion else voice_envelopes,
+                  "u_receipt": 0. if reduced_motion else receipt,
+                  "u_input_energy": input_energy*.35 if reduced_motion else input_energy,
                   "u_color": color, "u_size": self._size,
                   "u_pixel_scale": min(self._size[0]/self._requested_size[0],
                                        self._size[1]/self._requested_size[1])}

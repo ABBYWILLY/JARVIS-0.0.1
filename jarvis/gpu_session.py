@@ -15,7 +15,8 @@ ACTIONS = ("command", "studio", "microphone", "stop", "sleep", "mini", "diagnost
            "engine_canvas", "engine_gpu", "toggle_engine")
 _FRAME_KEYS = frozenset(("time_s", "reactor", "points", "details", "color", "rms",
                          "reduced_motion", "detail_opacity", "orbit_phase", "core_scale",
-                         "audio_bands", "orbit_blend", "surface_family", "surface_amount", "art"))
+                         "audio_bands", "orbit_blend", "surface_family", "surface_amount", "art",
+                         "visual_state", "visual_mix", "voice_envelopes", "receipt", "input_energy"))
 
 
 def _finite(value, label):
@@ -100,6 +101,19 @@ def validate_packet(packet):
             if not isinstance(values, (tuple, list)) or len(values) != 3:
                 raise ValueError(f"{key} attend trois valeurs.")
             frame[key] = tuple(_finite(value, key) for value in values)
+    if "visual_state" in frame and (type(frame["visual_state"]) is not int or not 0 <= frame["visual_state"] <= 5):
+        raise ValueError("État visuel PRESENCE invalide.")
+    for key in ("visual_mix", "voice_envelopes"):
+        if key in frame:
+            values = frame[key]
+            if not isinstance(values, (tuple, list)) or len(values) != 3:
+                raise ValueError(f"{key} attend trois valeurs.")
+            frame[key] = tuple(_finite(value, key) for value in values)
+            if any(not 0 <= value <= 1 for value in frame[key]):
+                raise ValueError(f"{key} dépasse les limites visuelles.")
+    for key in ("receipt", "input_energy"):
+        if key in frame and not 0 <= _finite(frame[key], key) <= 1:
+            raise ValueError(f"{key} dépasse les limites visuelles.")
     result = {"version": PROTOCOL_VERSION, "seq": seq, "frame": frame,
               "visible": packet.get("visible", True)}
     for key in ("art", "hud", "window"):
@@ -186,6 +200,9 @@ def _fresh_frame(packet, now):
         frame["rms"] = 0.
     if frame_old:
         frame["audio_bands"] = (0., 0., 0.)
+        for key, value in (("voice_envelopes", (0., 0., 0.)), ("input_energy", 0.), ("receipt", 0.)):
+            if key in frame:
+                frame[key] = value
         if not frame.get("surface_family") and frame.get("reactor", 0.) <= 0:
             frame["points"] = tuple((point[0], 0.) for point in frame["points"])
             frame["details"] = ()

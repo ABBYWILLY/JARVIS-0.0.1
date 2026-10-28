@@ -52,6 +52,8 @@ class GpuSettings:
     audio_reactivity: int = _setting(100, "Réactivité visuelle à la voix (%)", "Halo et lumière", "personalize", 0, 200,
                                     "Modifie l'affichage seulement, jamais le PCM, le gain ou le VAD.")
     pulse_amplitude: int = _setting(100, "Amplitude des pulsations (%)", "Halo et lumière", "personalize", 0, 200)
+    pulse_radius: int = _setting(100, "Rayon de pulsation vocale (%)", "Halo et lumière", "personalize", 0, 200,
+                                "Expansion de l'aura pilotée par le PCM joué ; indépendante du rayon statique du halo.")
     audio_attack_ms: int = _setting(55, "Attaque audio (ms)", "Halo et lumière", "advanced", 20, 250, unit="milliseconds")
     audio_release_ms: int = _setting(240, "Retour au calme (ms)", "Halo et lumière", "personalize", 80, 1000, unit="milliseconds")
     bass_contribution: int = _setting(100, "Contribution des graves (%)", "Halo et lumière", "advanced", 0, 200)
@@ -91,6 +93,10 @@ class GpuSettings:
                               "Zéro conserve le repos statique et sa consommation minimale.")
     transition_ms: int = _setting(300, "Transition du noyau (ms)", "Animations et états", "personalize", 80, 1200, unit="milliseconds")
     ring_acceleration_ms: int = _setting(450, "Inertie des anneaux (ms)", "Animations et états", "advanced", 100, 1500, unit="milliseconds")
+    converging_intensity: int = _setting(100, "Réception de la parole (%)", "Animations et états", "personalize", 0, 200,
+                                       "Énergie convergente lors de la parole réellement détectée ; aucun effet sur le VAD.")
+    radiating_intensity: int = _setting(100, "Émission de la voix (%)", "Animations et états", "personalize", 0, 200,
+                                      "Énergie rayonnante pendant le PCM Piper, sans modifier le volume ni la voix.")
     expression_brightness: int = _setting(100, "Luminosité des traits (%)", "Expressions", "personalize", 0, 200)
     expression_thickness: int = _setting(100, "Épaisseur des traits (%)", "Expressions", "personalize", 40, 200)
     expression_opacity: int = _setting(100, "Opacité des traits (%)", "Expressions", "personalize", 0, 100)
@@ -125,6 +131,12 @@ class GpuSettings:
 
     def to_dict(self):
         return asdict(self)
+
+    @classmethod
+    def reference_30(cls, profile="balanced"):
+        """The approved artwork, with the optional 3.1 energy layers disabled."""
+        return cls.from_dict({"profile": profile, "pulse_radius": 0,
+                              "converging_intensity": 0, "radiating_intensity": 0})
 
     @property
     def frames_per_second(self):

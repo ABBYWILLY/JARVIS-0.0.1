@@ -28,6 +28,8 @@ from .richtext import parse_text
 PREVIEWS = ("Heureux de te revoir 😊", "Je t'aime ❤️", "C'est drôle 😂")
 STATE_KEYS = {"idle": "silent", "listening": "listening", "thinking": "thinking",
               "speaking": "jarvis_speaking"}
+VISUAL_STATES = {"silent": 0, "listening": 1, "user_speaking": 2,
+                 "thinking": 3, "jarvis_speaking": 4, "dormant": 5}
 
 
 class GpuUnavailable(RuntimeError):
@@ -65,16 +67,48 @@ class ReactorScene:
         self.time_origin = None
         self._rendered_signal_active = False
         self._rendered_family = None
+        self._visual_state = self.model.state
+        self.visual_mix = [0., 0., 0.]
+        self.voice_envelopes = [0., 0., 0.]
+        self._receipt_started = None
+
+    def clear_output_energy(self):
+        """Presentation-only cancellation; never changes PCM, devices or state."""
+        self._raw_bands = (0., 0., 0.)
+        self.audio_bands[:] = (0., 0., 0.)
+        self.voice_envelopes[:] = (0., 0., 0.)
+
+    def note_visual_event(self, state, now=None):
+        """Observe the shared model without re-running its business transitions.
+
+        An acknowledgement is tied to an actual VAD state transition, not to
+        a fabricated RMS threshold or a timer pretending STT has succeeded.
+        """
+        if state not in VISUAL_STATES:
+            raise ValueError("État visuel PRESENCE inconnu.")
+        if state == self._visual_state:
+            return False
+        now = time.monotonic() if now is None else now
+        previous, self._visual_state = self._visual_state, state
+        if state == "user_speaking" or previous == "user_speaking" and state in {"thinking", "listening"}:
+            self._receipt_started = now
+        if state in {"user_speaking", "dormant"}:
+            self.clear_output_energy()
+        if state == "dormant":
+            self._receipt_started = None
+            self.visual_mix[:] = (0., 0., 0.)
+        return True
 
     def update_state(self, state, now=None, interrupt=False):
         now = time.monotonic() if now is None else now
         self.semantic.cancel()
         self.epoch += 1
         self.model.update_event(state, now=now)
+        self.note_visual_event(state, now)
         self.reactor = 0. if state == "dormant" or self.idle_line and state == "silent" else 1.
         self._raw_bands = (0., 0., 0.)
         if interrupt or state == "dormant":
-            self.audio_bands[:] = (0., 0., 0.)
+            self.clear_output_energy()
         if state == "dormant":
             self.orbit_velocity[:] = (0., 0., 0.)
             self.core_scale = 1.
@@ -121,6 +155,7 @@ class ReactorScene:
         # orbital angle. Cap a resumed hidden interval to avoid a phase jump.
         delta = min(.1, max(0., now - self.last_frame)) if self.last_frame is not None else 0.
         self.last_frame = now
+        self.note_visual_event(self.model.state, now)
         art = self.gpu_settings
         target_velocity = self._orbit_targets()
         inertia = (.18/(art.expression_ring_speed/100) if self.semantic.active else
@@ -146,6 +181,31 @@ class ReactorScene:
             tau = (art.audio_attack_ms if value > previous else art.audio_release_ms)/1000
             current = value + (previous - value) * math.exp(-delta / tau)
             self.audio_bands[index] = 0. if abs(current) < .0001 else current
+        # Keep the old linear frequency-band contract. These additional display
+        # envelopes softly compress actual DAC-timed PCM into a readable range;
+        # they do not alter the microphone, VAD, synthesis or playback gain.
+        visual_target = ((1., 0., 0.) if self.model.state in {"listening", "user_speaking"} else
+                         (0., 1., 0.) if self.model.state == "thinking" else
+                         (0., 0., 1.) if self.model.state == "jarvis_speaking" else (0., 0., 0.))
+        for index, target in enumerate(visual_target):
+            value = target if reduced else target + (self.visual_mix[index]-target)*math.exp(-delta/.18)
+            self.visual_mix[index] = target if abs(value-target) < .0001 else value
+        level, targets = 0., (0., 0., 0.)
+        if active and self.model.state == "jarvis_speaking":
+            compress = lambda value: -math.expm1(-18.*art.audio_reactivity/100*max(0., value-.0025))
+            level = compress(self.model.signal["rms"])
+            bass, middle, treble = (compress(value*weight/100) for value, weight in
+                                   zip(self._raw_bands, (art.bass_contribution,
+                                        art.mid_contribution, art.treble_contribution)))
+            targets = (min(1., .45*level+.40*middle+.15*treble),
+                       min(1., .55*level+.25*middle+.35*bass),
+                       min(1., .35*level+.65*bass))
+        for index, target in enumerate(targets):
+            previous = self.voice_envelopes[index]
+            tau = (art.audio_attack_ms*(.45, 1., 1.7)[index] if target > previous else
+                   art.audio_release_ms*(.65, 1., 1.7)[index])/1000
+            value = target + (previous-target)*math.exp(-delta/max(.012, tau))
+            self.voice_envelopes[index] = 0. if abs(value) < .0001 else value
 
     def set_reduced_motion(self, enabled, now=None):
         if now is not None:
@@ -233,8 +293,23 @@ class ReactorScene:
                 "rms": self.model.signal["rms"] if self.model.has_signal(now) else 0.,
                 "orbit_phase": tuple(self.orbit_phase), "core_scale": self.core_scale,
                 "audio_bands": tuple(self.audio_bands), "orbit_blend": orbit_blend,
+                "visual_state": VISUAL_STATES[self.model.state], "visual_mix": tuple(self.visual_mix),
+                "voice_envelopes": tuple(self.voice_envelopes),
+                "receipt": self._receipt(now), "input_energy": self._input_energy(now),
                 "art": self.gpu_settings.to_dict(),
                 "reduced_motion": (not self.model.motion_allowed)}
+
+    def _input_energy(self, now):
+        if self.model.state != "user_speaking" or not self.model.has_signal(now):
+            return 0.
+        return -math.expm1(-18.*self.gpu_settings.audio_reactivity/100
+                          *max(0., self.model.signal["rms"]-.0025))
+
+    def _receipt(self, now):
+        if self._receipt_started is None or not self.model.motion_allowed:
+            return 0.
+        age = max(0., now-self._receipt_started)
+        return max(0., 1.-age/.42)**2 * min(1., age/.065)
 
     def moving(self, now):
         # IDLE is a static sphere after its outgoing inertia settles. Listening
@@ -249,7 +324,12 @@ class ReactorScene:
             or now - self.semantic._started >= self.gpu_settings.expression_hold_ms/1000)
         return (semantic_moving or orbital or self.model.has_signal(now)
                 or self.model.has_signal(now) != self._rendered_signal_active
-                or any(self.audio_bands) or self.core_scale != target_scale)
+                or any(self.audio_bands) or any(self.voice_envelopes) or self._receipt(now)>0
+                or any(abs(value-target)>.0001 for value, target in zip(self.visual_mix,
+                    (1., 0., 0.) if self.model.state in {"listening", "user_speaking"} else
+                    (0., 1., 0.) if self.model.state == "thinking" else
+                    (0., 0., 1.) if self.model.state == "jarvis_speaking" else (0., 0., 0.)))
+                or self.core_scale != target_scale)
 
 
 class WavInput:

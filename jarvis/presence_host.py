@@ -331,10 +331,23 @@ class IntegratedPresence(PresenceView):
             and all(isinstance(x, (int, float)) and math.isfinite(x) for x in bands)) else (0., 0., 0.)
         if state in {"user_speaking", "dormant"} and self._gpu_scene is not None:
             self._gpu_bands = (0., 0., 0.)
-            self._gpu_scene.audio_bands[:] = (0., 0., 0.)
+            self._gpu_scene.clear_output_energy()
         super().update_event(state, signal, caption)
         if self.active_engine == "gpu" and not self._visible() and self._gpu_ready:
             self._render()
+
+    def begin_response(self):
+        self._gpu_bands = (0., 0., 0.)
+        if self._gpu_scene is not None:
+            self._gpu_scene.clear_output_energy()
+        super().begin_response()
+
+    def update_operation(self, key, detail=""):
+        if key == "error":
+            self._gpu_bands = (0., 0., 0.)
+            if self._gpu_scene is not None:
+                self._gpu_scene.clear_output_energy()
+        super().update_operation(key, detail)
 
     def _render(self):
         if self.active_engine != "gpu":
@@ -384,7 +397,8 @@ class IntegratedPresence(PresenceView):
             "hud": {"state": self.state, "microphone": self.microphone_state,
                 "caption": self.caption_text if self.settings.subtitles else "",
                 "caption_copy": self.caption_text, "caption_marks": marks,
-                "caption_accent": scene.color, "caption_note": "Synchronisation approximative par bloc PCM Piper",
+                "caption_accent": tuple(round(channel*255) for channel in scene.color),
+                "caption_note": "Synchronisation approximative par bloc PCM Piper",
                 "operation": self.operation_detail, "diagnostic": self.settings.diagnostic_mode,
                 "performance": self.gpu_runtime_summary(),
                 "preview": self._preview_text or "", "engine": ENGINE_LABELS["gpu"]}})

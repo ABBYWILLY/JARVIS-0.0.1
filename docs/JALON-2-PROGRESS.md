@@ -1,22 +1,22 @@
-# PRESENCE GPU 3.1 — phases A et B, 28 octobre 2026
+# PRESENCE GPU 3.1 — phases A, B et C, 28 octobre 2026
 
-Base approuvée4ae4f71 conservée. A publiée5cd8866 : cadence de présentation
-indépendante des snapshots, cible60 nominale, rendu natif/HiDPI/échelles bornées,
-adaptation graduelle et mesures réelles. 152 tests ciblés réussis.
-B : contrôle permanent [2D | 2.5D] dans Canvas et GPU, IPC borné et validé,
-Ctrl+F7 commun, choix persistant et protection du pipeline vocal.
-54 tests ciblés réussis ; vrais clics XTest Tk→GPU→Canvas et raccourci GLFW
-validés sous Linux, conversation conservée, aucun périphérique ouvert.
+A publiée5cd8866 et CI Windows verte : cadence découplée, natif/HiDPI,
+échelles bornées et diagnostic réel. B publiée0714a65 : toggle direct dans
+les deux moteurs, IPC validé et Ctrl+F7. Ses deux erreurs CI provenaient du
+test comparant la barre de titre Windows à une limite de pixels client :
+référence corrigée vers le Canvas, sans réduire les exigences de visibilité.
 
-Les mesures Mesa1440×960 atteignent25–27FPS natifs, ~18à125%, ~13à150%.
-60FPS ne sont pas atteints ici ; aucune validation RTX/Ollama matérielle.
-Guide et preuves : PRESENCE-GPU-3.1.md et PRESENCE-GPU-3.1-EVIDENCE.md.
-CI prototypeA verte ; applicationA à suivre. Tester la CI du SHA final.
+C termine l'aura PCM à trois enveloppes, les signatures réception/émission,
+le seuil/compression graphique et l'annulation. Aucun changement du son,
+des moteurs STT/TTS ni du VAD. 66 réglages conservés, trois nouveaux seulement.
+Référence artistique3.0 conservée, sphère et huit gravures testées. Correction
+également du format RGB des accents du HUD. 189 tests ciblés réussis en29,156s.
 
-Reste : C aura PCM expressive et signatures convergente/rayonnante, puis D
-Studio des seuls champs manquants, référence3.0, vidéos, tests complets et CI.
-Ne pas recommencer A/B, ne pas modifier main ou les moteurs vocaux/cognitifs.
-Validation Windows11/RTX3070/micro/Piper/Bluetooth en attente.
+Reste D : exposer render_scale dans le Studio existant, bouton Référence3.0,
+preuves vidéo/captures de C et des toggles, tests complets puis CI finale.
+Guide/spécification/preuves : PRESENCE-GPU-3.1*.md. Mesa natif1440×96025–27FPS :
+60FPS non démontrés ici ; matériel RTX3070/Ollama/micro/Piper à valider surPC.
+Ne pas refaire A/B/C, ne pas modifier main ou les autres lots.
 
 ---
 

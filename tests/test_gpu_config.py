@@ -115,6 +115,20 @@ class GpuSettingsTests(unittest.TestCase):
             with self.subTest(scale=scale):
                 self.assertEqual(GpuSettings.from_dict({"render_scale": scale}).render_scale, "auto")
 
+    def test_31_defaults_and_approved_reference_do_not_rewrite_the_existing_controls(self):
+        additions = {"pulse_radius", "converging_intensity", "radiating_intensity"}
+        self.assertEqual(len(FIELD_SPECS), 69)
+        modern = GpuSettings()
+        for profile in ("eco", "balanced", "cinematic"):
+            reference = GpuSettings.reference_30(profile)
+            self.assertEqual(reference.profile, profile)
+            self.assertEqual({key for key in modern.to_dict()
+                              if key != "profile" and getattr(modern, key) != getattr(reference, key)}, additions)
+            for key in additions:
+                self.assertEqual(getattr(modern, key), 100)
+                self.assertEqual(getattr(reference, key), 0)
+            self.assertEqual(reference, GpuSettings.from_dict(reference.to_dict()))
+
     def test_animated_nominal_budget_is_sixty_except_explicit_eco_or_lower_limit(self):
         for profile, nominal in (("eco", 15), ("balanced", 60), ("cinematic", 60)):
             for limit in (15, 30, 60):

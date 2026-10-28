@@ -141,10 +141,14 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
                     self.root.update()
                     for button in self.presence.engine_buttons.values():
                         self.assertTrue(button.winfo_viewable())
-                        x = button.winfo_rootx()-self.presence.window.winfo_rootx()
-                        y = button.winfo_rooty()-self.presence.window.winfo_rooty()
+                        # Compare client pixels: Windows Toplevel root coordinates
+                        # include its native title bar; the Canvas is the client area.
+                        x = button.winfo_rootx()-self.presence.canvas.winfo_rootx()
+                        y = button.winfo_rooty()-self.presence.canvas.winfo_rooty()
                         self.assertGreaterEqual(x, 0)
-                        self.assertLessEqual(x+button.winfo_width(), self.presence.window.winfo_width())
+                        self.assertGreaterEqual(y, 0)
+                        self.assertLessEqual(x+button.winfo_width(), self.presence.canvas.winfo_width())
+                        self.assertLessEqual(y+button.winfo_height(), self.presence.canvas.winfo_height())
                         self.assertLessEqual(y+button.winfo_height(), 60*scale)
         self.presence.window.focus_force()
         self.presence.window.event_generate("<Control-F7>")
@@ -278,6 +282,34 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
                 self.assertEqual(child.frames[-1]["frame"]["audio_bands"], (0., 0., 0.))
                 self.assertFalse(self.presence.semantic.active)
                 self.assertFalse(self.presence._semantic_cues)
+
+    def test_real_pcm_deadline_drives_visual_state_and_outgoing_aura_cancels_on_stop(self):
+        self.start_audio_contract()
+        child = self.ready_gpu()
+        epoch = self.voice.epoch
+        self.presence.update_event("thinking")
+        self.presence.begin_response()
+        played = self.played(epoch, delay=.25)
+        played.payload.update(bands=(.06, .04, .02), spectrum_status="ready")
+        self.voice.speech.events.append(played)
+        self.voice.poll()
+        self.assertEqual(child.frames[-1]["frame"]["voice_envelopes"], (0., 0., 0.))
+        self.assertTrue(self.voice.pending_visuals)
+        self.pump_until(lambda: not self.voice.pending_visuals)
+        self.pump_until(lambda: max(child.frames[-1]["frame"]["voice_envelopes"]) > .1)
+        frame = child.frames[-1]["frame"]
+        self.assertEqual(frame["visual_state"], 4)
+        self.assertEqual(self.presence.state, "jarvis_speaking")
+        self.assertTrue(all(type(channel) is int for channel in child.frames[-1]["hud"]["caption_accent"]))
+        self.presence.update_event("user_speaking", {"rms": .07, "wave": [.05]*48})
+        frame = child.frames[-1]["frame"]
+        self.assertEqual(frame["visual_state"], 2)
+        self.assertEqual(frame["voice_envelopes"], (0., 0., 0.))
+        self.assertEqual(frame["audio_bands"], (0., 0., 0.))
+        self.assertTrue(self.voice.speech.alive())  # Visual changes do not stop the device.
+        self.presence.emergency()
+        self.assertEqual(child.frames[-1]["frame"]["voice_envelopes"], (0., 0., 0.))
+        self.assertFalse(self.voice.speech.alive())  # Explicit stop owns device cancellation.
 
     def test_real_spawned_renderer_receives_host_state_and_switches_back_cleanly(self):
         try:
