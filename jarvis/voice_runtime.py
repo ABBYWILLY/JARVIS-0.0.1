@@ -242,7 +242,7 @@ def capture_worker(outbox, commands, profile):
         emit(AudioEvent("error", audio_error(exc)))
 
 
-def speech_worker(outbox, commands, profile, generation, persistent=False):
+def speech_worker(outbox, commands, profile, generation, persistent=False, spectrum_control=None):
     loading = True
     try:
         from .tts import AudioPlayer, PiperSpeech, SpeechText
@@ -250,11 +250,20 @@ def speech_worker(outbox, commands, profile, generation, persistent=False):
         loaded_at = time.monotonic()
         speech = PiperSpeech(settings)
         player = AudioPlayer(settings.output_device)
+        player.spectrum_control = spectrum_control
         emit = lambda event: emit_event(outbox, event)
         emit(AudioEvent("tts_ready", {"load_ms": round((time.monotonic() - loaded_at) * 1000)}, generation))
         loading = False
         while True:
             text = commands.get()
+            if isinstance(text, dict) and text.get("kind") == "visual_spectrum":
+                # Direct-worker compatibility. AudioProcess updates the shared
+                # byte immediately, including while a phrase is being played.
+                if isinstance(text.get("enabled"), bool):
+                    player.spectrum_enabled = text["enabled"]
+                    if spectrum_control is not None:
+                        spectrum_control.value = text["enabled"]
+                continue
             if persistent:
                 generation, text = text["generation"], text["text"]
             if text is None:
@@ -342,6 +351,7 @@ class AudioProcess:
         self.process = self.outbox = self.commands = None
         self.kind = None
         self.generation = 0
+        self.spectrum_control = None
 
     def start(self, kind, settings, generation=0):
         self.stop()
@@ -352,7 +362,8 @@ class AudioProcess:
                   "diagnostics": diagnostics_worker}[kind]
         args = (self.outbox, self.commands, settings.to_dict())
         if kind == "speech":
-            args += (generation, True)
+            self.spectrum_control = self.context.Value("b", False, lock=False)
+            args += (generation, True, self.spectrum_control)
         elif kind == "sample":
             args += (generation,)
         self.process = self.context.Process(target=target, args=args, daemon=True)
@@ -361,6 +372,11 @@ class AudioProcess:
     def send(self, command):
         if self.commands is None:
             return False
+        if self.kind == "speech" and isinstance(command, dict) and command.get("kind") == "visual_spectrum":
+            if self.spectrum_control is None or not isinstance(command.get("enabled"), bool):
+                return False
+            self.spectrum_control.value = command["enabled"]
+            return True
         try:
             if self.kind == "speech":
                 command = {"generation": self.generation, "text": command}
@@ -397,3 +413,4 @@ class AudioProcess:
                 channel.cancel_join_thread()
                 channel.close()
         self.commands = self.outbox = None
+        self.spectrum_control = None

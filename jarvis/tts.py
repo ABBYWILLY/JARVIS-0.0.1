@@ -1,11 +1,13 @@
 """Piper CPU synthesis and real device playback; no synthesized visual activity."""
 import re
+import math
 import threading
 import time
 from dataclasses import dataclass
 from typing import Iterable, Protocol
 
 from .audio import AudioEvent, resolve_device, signal_view
+from .audio_spectrum import PCMSpectrum, ZERO_BANDS
 
 
 @dataclass
@@ -90,9 +92,81 @@ class SentenceBuffer:
         return result
 
 
+class _PlaybackSpectrum:
+    """One upcoming device block, analysed outside PortAudio and Tk.
+
+    The first block is prepared before stream startup. Afterwards one daemon
+    worker prepares only the latest requested upcoming block, at most 25 Hz.
+    The immutable result includes its exact resampled offset/count; a late
+    result can never be attached to another block's DAC notification.
+    """
+    def __init__(self, samples, rate, blocksize, start=0, *, analyzer=None):
+        self.samples, self.rate, self.blocksize = samples, rate, blocksize
+        self.analyzer = analyzer or PCMSpectrum()
+        self._closed, self._wake = threading.Event(), threading.Event()
+        self._request_lock = threading.Lock()
+        self._requested = None
+        self._ready = self._analyse(start, min(blocksize, len(samples)-start))
+        self._thread = threading.Thread(target=self._run, name="jarvis-playback-spectrum", daemon=True)
+        self._thread.start()
+
+    def _analyse(self, start, count):
+        try:
+            bands = tuple(self.analyzer.analyze(self.samples[start:start+count], self.rate))
+            if len(bands) != 3 or not all(math.isfinite(value) and 0 <= value <= 1 for value in bands):
+                raise ValueError("Le spectre doit produire trois bandes finies entre 0 et 1.")
+            return start, count, bands, ""
+        except Exception as error:
+            return start, count, ZERO_BANDS, f"Spectre audio indisponible : {type(error).__name__}: {str(error)[:400]}"
+
+    def block(self, start, count):
+        ready = self._ready
+        if not self._closed.is_set() and ready is not None and ready[:2] == (start, count):
+            return ready[2], "error" if ready[3] else "ready", ready[3]
+        return ZERO_BANDS, "waiting", ""
+
+    def request(self, start, count):
+        # Tuple assignment and the event are bounded; no FFT or wait in callback.
+        if not self._closed.is_set() and count > 0:
+            with self._request_lock:
+                self._requested = (start, count)
+            self._wake.set()
+
+    def _run(self):
+        next_at = float("-inf")
+        while not self._closed.is_set():
+            self._wake.wait()
+            self._wake.clear()
+            remaining = max(0., next_at-time.perf_counter())
+            if self._closed.wait(remaining):
+                return
+            with self._request_lock:
+                requested, self._requested = self._requested, None
+            if requested is None:
+                continue
+            next_at = time.perf_counter()+.04
+            result = self._analyse(*requested)
+            if not self._closed.is_set():
+                self._ready = result
+
+    def close(self):
+        self._closed.set()
+        self._ready = None
+        self._wake.set()
+        self._thread.join(timeout=2.)
+        self._ready = self._requested = None
+        if self._thread.is_alive():
+            raise RuntimeError("Le worker du spectre de lecture ne s’est pas arrêté.")
+
+
 class AudioPlayer:
     def __init__(self, device_key):
         self.device_key = device_key
+        self.spectrum_enabled = False
+        self.spectrum_control = None  # Optional spawn-shared boolean; no audio restart.
+
+    def _spectrum_enabled(self):
+        return bool(self.spectrum_control.value if self.spectrum_control is not None else self.spectrum_enabled)
 
     def play(self, pcm, text, emit, generation=0):
         import numpy as np
@@ -106,14 +180,37 @@ class AudioPlayer:
         if len(samples) == 0:
             return
         finished = threading.Event()
+        blocksize = max(128, round(rate * 0.04))
         position = 0
         started_at = None
         failed = []
+        spectrum = None
+        spectrum_failure = ""
+
+        def update_spectrum():
+            nonlocal spectrum, spectrum_failure
+            enabled = self._spectrum_enabled()
+            if spectrum is not None and not enabled:
+                previous, spectrum = spectrum, None
+                try:
+                    previous.close()
+                except Exception as error:
+                    spectrum_failure = str(error)
+                    emit(AudioEvent("spectrum_diagnostic", spectrum_failure, generation))
+            elif spectrum is None and enabled and position < len(samples) and not spectrum_failure:
+                try:
+                    spectrum = _PlaybackSpectrum(samples, rate, blocksize, start=position)
+                except Exception as error:
+                    spectrum_failure = f"Spectre audio indisponible : {type(error).__name__}: {error}"
+
+        # Only the next block is prepared, never the complete phrase/WAV.
+        update_spectrum()
 
         def callback(output, frames, timing, status):
             nonlocal position, started_at
             if status:
                 failed.append(str(status))
+            sample_start = position
             count = min(frames, len(samples) - position)
             output.fill(0)
             output[:count, 0] = samples[position:position + count]
@@ -125,16 +222,32 @@ class AudioPlayer:
                 started_at = emitted_at + delay
             view.update(text=text, fraction=position / len(samples), delay=delay,
                         emitted_at=emitted_at, started_at=started_at)
+            if self._spectrum_enabled():
+                bands, spectral_status, error = (spectrum.block(sample_start, count) if spectrum is not None else
+                    (ZERO_BANDS, "error" if spectrum_failure else "waiting", spectrum_failure))
+                view.update(bands=bands, spectrum_status=spectral_status, spectrum_error=error,
+                            spectrum_sample_start=sample_start, spectrum_sample_count=count,
+                            sample_rate=rate)
+                if spectrum is not None:
+                    spectrum.request(position, min(frames, len(samples)-position))
             emit(AudioEvent("played", view, generation))
             if position >= len(samples):
                 raise sd.CallbackStop
 
         # The callback reports PCM submitted to the selected output at its DAC time.
-        with sd.OutputStream(device=device, samplerate=rate, channels=1, dtype="float32",
-                blocksize=max(128, round(rate * 0.04)), callback=callback, finished_callback=finished.set) as stream:
-            deadline = time.monotonic() + len(samples) / rate + 5
-            while not finished.wait(0.05):
-                if time.monotonic() > deadline or not stream.active:
-                    raise RuntimeError("Sortie audio interrompue. Vérifiez le périphérique de lecture.")
+        try:
+            with sd.OutputStream(device=device, samplerate=rate, channels=1, dtype="float32",
+                    blocksize=blocksize, callback=callback, finished_callback=finished.set) as stream:
+                deadline = time.monotonic() + len(samples) / rate + 5
+                while not finished.wait(.01 if self._spectrum_enabled() else .05):
+                    update_spectrum()
+                    if time.monotonic() > deadline or not stream.active:
+                        raise RuntimeError("Sortie audio interrompue. Vérifiez le périphérique de lecture.")
+        finally:
+            if spectrum is not None:
+                try:
+                    spectrum.close()
+                except Exception as error:
+                    emit(AudioEvent("spectrum_diagnostic", str(error), generation))
         if failed:
             raise RuntimeError("Sortie audio saturée. Réduisez la charge ou changez de périphérique.")

@@ -35,6 +35,8 @@ class VoiceControls:
         self.reading = self.end_pending = False
         self.tts_active = self.tts_ready = False
         self.tts_profile = None
+        self.visual_spectrum_requested = False
+        self.spectrum_diagnostic = ""
         self.playing_sample = False
         self.last_sample = None
         self.stt_details = {}
@@ -182,7 +184,33 @@ class VoiceControls:
             self.tts_profile = self.settings
             self.tts_ready = False
             self.last_speech = time.monotonic()
+            if self.visual_spectrum_requested:
+                self.speech.send({"kind": "visual_spectrum", "enabled": True})
         self.speech.generation = self.epoch
+
+    def set_visual_spectrum(self, enabled):
+        """Change only the playback analyser policy, never a device or worker.
+
+        Remember the renderer's request when Piper has not started yet. The
+        shared control bypasses the speech text queue, including mid-phrase.
+        """
+        if not isinstance(enabled, bool):
+            raise ValueError("L'activation du spectre visuel doit être booléenne.")
+        if enabled == self.visual_spectrum_requested:
+            return True
+        self.visual_spectrum_requested = enabled
+        if self.speech.alive() and getattr(self.speech, "kind", "speech") == "speech":
+            if not self.speech.send({"kind": "visual_spectrum", "enabled": enabled}):
+                self._spectrum_diagnostic("Commande de spectre visuel non transmise ; lecture audio maintenue.")
+                return False
+        return True
+
+    def _spectrum_diagnostic(self, detail):
+        """Expose a bounded, deduplicated optional-visual error in diagnostics."""
+        detail = str(detail or "")[:512]
+        if detail != self.spectrum_diagnostic:
+            self.spectrum_diagnostic = detail
+            self.record_diagnostic("spectrum_diagnostic", detail or "Analyse spectrale rétablie")
 
     def submit_phrase(self, phrase):
         if not self.reading:
@@ -493,6 +521,10 @@ class VoiceControls:
                 continue
             if event.kind == "played":
                 view = event.payload
+                if view.get("spectrum_error"):
+                    self._spectrum_diagnostic(view["spectrum_error"])
+                elif view.get("spectrum_status") == "ready":
+                    self._spectrum_diagnostic("")
                 if not self.playing_sample and self.first_pcm_at is None and self.tts_requested_at is not None:
                     self.first_pcm_at = view.get("started_at", view["emitted_at"] + view["delay"])
                     self.mark_latency("Phrase TTS → premier PCM (DAC estimé)", self.tts_requested_at, self.first_pcm_at)
@@ -504,6 +536,8 @@ class VoiceControls:
                     self.publish_timing(complete=True)
                 self.pending_visuals.append((view["emitted_at"] + view["delay"], view, self.epoch))
                 self.pending_visuals = self.pending_visuals[-64:]
+            elif event.kind == "spectrum_diagnostic":
+                self._spectrum_diagnostic(event.payload)
             elif event.kind == "segment_done":
                 # Keep this boundary behind every preceding DAC-timed callback.
                 # No audio waits for the UI; only the visual notification does.

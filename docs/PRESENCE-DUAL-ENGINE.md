@@ -76,3 +76,24 @@ Les frontières audio des tests sont des doublures explicites, pas du matériel.
 le propriétaire existant ; les bandes spectrales du PCM Piper sont raccordées
 dans le commit séparé de phase 4. À ce stade, aucune écoute matérielle GPU ni
 mesure RTX n'est déclarée validée. Le build GPU intégré est la phase 5.
+
+## Phase 4 — Événements audio et expressions
+
+Le PCM du microphone existant alimente le même modèle RMS/VAD ; le renderer
+n'ouvre aucun périphérique. Les blocs de sortie Piper rééchantillonnés alimentent
+une analyse trois bandes hors callback audio et hors thread graphique, à 25 Hz
+maximum. Chaque résultat porte l'offset et le nombre exact d'échantillons du
+bloc : un calcul en retard n'est jamais réutilisé pour un autre bloc.
+
+Les événements visuels conservent l'échéance `emitted_at + delay` PortAudio.
+Il s'agit d'une estimation DAC, pas de la sortie acoustique Bluetooth ni d'un
+alignement mot à mot. Les générations obsolètes sont rejetées et l'interruption
+annule immédiatement expressions et énergie sortante. Les erreurs FFT restent
+visibles dans le diagnostic et n'arrêtent pas la lecture.
+
+Le choix de moteur active/désactive l'analyse via un booléen partagé, y compris
+au milieu d'une phrase : aucun redémarrage Piper ni commande ajoutée au texte
+à prononcer. Canvas et une fenêtre GPU masquée n'exigent pas cette analyse.
+Les nouveaux tests couvrent blocs/DAC, annulation, reprise après erreur,
+activation à chaud et processus spawn ; aucune voix artificielle n'est
+présentée comme un essai Piper ou microphone physique.
