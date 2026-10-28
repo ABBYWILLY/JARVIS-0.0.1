@@ -81,7 +81,7 @@ class ReactorSceneTests(unittest.TestCase):
                 self.assertNotEqual(snapshots[0][field], snapshots[1][field])
 
     def test_gpu_fps_cap_respects_both_user_limit_and_profile(self):
-        for profile, cap in (("eco", 15), ("balanced", 30), ("cinematic", 60)):
+        for profile, cap in (("eco", 15), ("balanced", 60), ("cinematic", 60)):
             for limit in (15, 24, 60):
                 settings = GpuSettings.from_dict({"profile": profile, "fps_limit": limit})
                 self.assertEqual(settings.frames_per_second, min(limit, cap))

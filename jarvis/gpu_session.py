@@ -69,7 +69,7 @@ def validate_packet(packet):
     """
     if not isinstance(packet, dict):
         raise ValueError("Le paquet PRESENCE doit être un dictionnaire.")
-    allowed = {"version", "seq", "frame", "art", "visible", "hud", "window", "pcm_at", "frame_at", "expression_until"}
+    allowed = {"version", "seq", "frame", "art", "visible", "hud", "window", "pcm_at", "frame_at", "expression_until", "animation"}
     if set(packet)-allowed:
         raise ValueError("Champ de protocole PRESENCE inconnu.")
     if type(packet.get("version", PROTOCOL_VERSION)) is not int or packet.get("version", PROTOCOL_VERSION) != PROTOCOL_VERSION:
@@ -109,6 +109,23 @@ def validate_packet(packet):
     for key in ("pcm_at", "frame_at", "expression_until"):
         if packet.get(key) is not None:
             result[key] = _finite(packet[key], key)
+    animation = packet.get("animation", {})
+    animation_keys = {"active", "orbit_velocity", "orbit_target", "orbit_tau", "core_target", "core_tau"}
+    if not isinstance(animation, dict) or set(animation)-animation_keys:
+        raise ValueError("Horloge d'animation PRESENCE invalide.")
+    if not isinstance(animation.get("active", False), bool):
+        raise ValueError("L'activité de l'animation doit être booléenne.")
+    for key in ("orbit_velocity", "orbit_target"):
+        if key in animation:
+            values = animation[key]
+            if (not isinstance(values, (tuple, list)) or len(values) != 3
+                    or any(abs(_finite(value, key)) > 20. for value in values)):
+                raise ValueError("Vitesse orbitale PRESENCE invalide.")
+    for key, low, high in (("orbit_tau", .01, 5.), ("core_tau", .01, 5.), ("core_target", .2, 2.)):
+        if key in animation and not low <= _finite(animation[key], key) <= high:
+            raise ValueError("Transition PRESENCE hors limites.")
+    if animation:
+        result["animation"] = _bounded(animation)
     result["frame"] = _bounded(result["frame"])
     if len(json.dumps(result, ensure_ascii=False, allow_nan=False).encode("utf-8")) > MAX_PACKET_BYTES:
         raise ValueError("Le paquet visuel PRESENCE dépasse sa limite de taille.")
@@ -193,6 +210,8 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
         from .gpu_config import GpuSettings
         from .gpu_renderer import GpuRenderer
         from .gpu_hud import GpuHud
+        from .gpu_pacing import advance_frame, next_deadline, native_window_size, RenderGovernor
+        from .gpu_telemetry import RenderTelemetry
         stage = "context"
         if options["headless"]:
             context = moderngl.create_standalone_context(require=330, backend="egl")
@@ -207,11 +226,23 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
             glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
             glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
             glfw.window_hint(glfw.VISIBLE, False)
+            glfw.window_hint(glfw.SCALE_TO_MONITOR, True)
+            if hasattr(glfw, "SCALE_FRAMEBUFFER"):
+                glfw.window_hint(glfw.SCALE_FRAMEBUFFER, True)
             window = glfw.create_window(960, 640, "PRESENCE · 2.5D holographique — GPU", None, None)
             if not window:
                 raise RuntimeError("OpenGL 3.3 indisponible. Vérifiez le pilote graphique : " + "; ".join(errors))
+            monitor = glfw.get_primary_monitor()
+            if monitor and hasattr(glfw, "get_monitor_workarea"):
+                _x, _y, available_width, available_height = glfw.get_monitor_workarea(monitor)
+                actual = glfw.get_window_size(window)
+                fitted = (min(actual[0], max(320, available_width-40)),
+                          min(actual[1], max(240, available_height-60)))
+                if fitted != tuple(actual):
+                    glfw.set_window_size(window, *fitted)
             glfw.make_context_current(window)
-            glfw.swap_interval(0)
+            # Synchronize real swaps when the display driver supports it.
+            glfw.swap_interval(1)
             glfw.set_window_size_limits(window, 320, 240, glfw.DONT_CARE, glfw.DONT_CARE)
             context = moderngl.create_context(require=330)
         info = _context_metadata(context)
@@ -230,12 +261,23 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
         dirty = False
         last_mask = None
         last_art = None
-        requested_window = None
+        # SCALE_TO_MONITOR may make the initial native window larger than
+        # 960×640 screen units. Do not immediately undo that DPI-aware choice.
+        requested_window = (960, 640)
         last_mini = False
         normal_geometry = None
         fullscreen_geometry = None
         last_heartbeat = float("-inf")
         next_frame = 0.
+        animation_running = False
+        telemetry = RenderTelemetry()
+        governor = RenderGovernor()
+        last_visual_time = None
+        monitor_refresh = None
+        if window is not None:
+            monitor = glfw.get_primary_monitor()
+            video = glfw.get_video_mode(monitor) if monitor else None
+            monitor_refresh = getattr(video, "refresh_rate", None)
 
         def action(name):
             if name == "stop":
@@ -318,6 +360,7 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
             glfw.set_framebuffer_size_callback(window, invalidate)
             glfw.set_window_refresh_callback(window, invalidate)
             glfw.set_window_iconify_callback(window, invalidate)
+            glfw.set_window_content_scale_callback(window, invalidate)
             glfw.set_window_close_callback(window, close_window)
         heartbeat.value = time.monotonic()
         _send_status(events, {"kind": "ready", "renderer": info, "size": size,
@@ -350,8 +393,19 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                 not glfw.get_window_attrib(window, glfw.ICONIFIED)
                 and glfw.get_window_attrib(window, glfw.VISIBLE))
             if now - last_heartbeat >= .5:
+                measured = telemetry.snapshot(now, reset=True)
+                measured.update({"adaptive_level": governor.level, "frame_time_s": last_visual_time})
+                scale = tuple(glfw.get_window_content_scale(window)) if window is not None else (1., 1.)
                 _send_status(events, {"kind": "heartbeat", "at": now, "rendered_seq":
-                    rendered_seq, "frames": drawn, "visible": physical_visible, "size": size})
+                    rendered_seq, "frames": drawn, "visible": physical_visible, "size": size,
+                    "logical_size": tuple(round(value/max(.1, density)) for value, density in zip(size, scale)),
+                    "window_size": tuple(glfw.get_window_size(window)) if window is not None else tuple(size),
+                    "dpi_scale": scale,
+                    "presentation": {"monitor_refresh_hz": monitor_refresh, "vsync_requested": window is not None,
+                                     "physical_scanout_observable": False},
+                    "timing": measured, "process": {"pid": os.getpid(), **{key: value for key, value in measured.items()
+                        if key.startswith(("cpu_", "rss_", "memory_", "physical_vram"))}},
+                    "resolution": getattr(renderer, "resolution_info", {})})
                 last_heartbeat = now
             if current and physical_visible:
                 requested = current["window"]
@@ -362,7 +416,9 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                             fullscreen(False)
                         if mini:
                             normal_geometry = (*glfw.get_window_pos(window), *glfw.get_window_size(window))
-                            glfw.set_window_size(window, 420, 300)
+                            glfw.set_window_size(window, *native_window_size((420, 300),
+                                glfw.get_window_size(window), glfw.get_framebuffer_size(window),
+                                glfw.get_window_content_scale(window)))
                         elif normal_geometry is not None:
                             x, y, width, height = normal_geometry
                             glfw.set_window_pos(window, x, y)
@@ -374,7 +430,9 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                             isinstance(value, int) and not isinstance(value, bool) for value in dimensions):
                         dimensions = (max(320, min(3840, dimensions[0])), max(240, min(2160, dimensions[1])))
                         if dimensions != requested_window:
-                            glfw.set_window_size(window, *dimensions)
+                            glfw.set_window_size(window, *native_window_size(dimensions,
+                                glfw.get_window_size(window), glfw.get_framebuffer_size(window),
+                                glfw.get_window_content_scale(window)))
                             requested_window = dimensions
                     new_size = glfw.get_framebuffer_size(window)
                 else:
@@ -388,14 +446,25 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                         output = context.simple_framebuffer(size, components=3)
                     dirty = True
                 frame, mask = _fresh_frame(current, now)
+                frame, animate = advance_frame(current, frame, now)
                 if mask != last_mask:
                     dirty = True
                     last_mask = mask
+                if animate != animation_running:
+                    dirty = True
+                    animation_running = animate
+                if current["art"] != last_art:
+                    old_profile = last_art.get("profile", "balanced") if last_art is not None else None
+                    renderer.set_settings(current["art"])
+                    if old_profile != current["art"].get("profile", "balanced"):
+                        governor = RenderGovernor()
+                        if hasattr(renderer, "set_adaptive_level"):
+                            renderer.set_adaptive_level(0)
+                    last_art = dict(current["art"])
                 interval = 1 / GpuSettings.from_dict(current["art"]).frames_per_second
-                if dirty and min(size) > 0 and now >= next_frame:
-                    if current["art"] != last_art:
-                        renderer.set_settings(current["art"])
-                        last_art = dict(current["art"])
+                telemetry.target_fps = 1./interval
+                if (dirty or animate) and min(size) > 0 and now >= next_frame:
+                    started = time.monotonic()
                     destination = output if output is not None else context.screen
                     destination.viewport = (0, 0, *size)
                     # The packet's validated art block is the single settings
@@ -413,14 +482,33 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                         glfw.swap_buffers(window)
                     else:
                         context.finish()
+                    completed = time.monotonic()
+                    telemetry.record(completed-started, started, presented=window is not None, animated=animate)
+                    last_visual_time = frame["time_s"]
+                    if animate:
+                        nominal = 1./interval
+                        target = min(nominal, monitor_refresh) if monitor_refresh and monitor_refresh > 0 else nominal
+                        level = governor.observe(completed-started, completed, target)
+                        if hasattr(renderer, "set_adaptive_level"):
+                            renderer.set_adaptive_level(level)
+                    else:
+                        governor.suspend()
                     drawn += 1
                     rendered_seq = current["seq"]
                     dirty = False
-                    next_frame = now + interval
-            pause = min(.05, max(.001, next_frame-time.monotonic())) if dirty and physical_visible else .1
-            if window is not None:
-                glfw.wait_events_timeout(pause)
+                    # Advance from draw START, not after a blocking VSync swap:
+                    # adding another frame interval after swap would halve FPS.
+                    next_frame = next_deadline(next_frame if next_frame else started, started, interval)
             else:
+                animation_running = False
+                governor.suspend()
+                telemetry.pause()
+            # An incoming IPC frame does not wake GLFW, hence bounded idle
+            # polling. Animated scenes wait to their absolute next deadline.
+            pause = min(.05, max(0., next_frame-time.monotonic())) if (dirty or animation_running) and physical_visible else .05
+            if window is not None and pause > 0:
+                glfw.wait_events_timeout(pause)
+            elif window is None:
                 quit_event.wait(pause)
     except Exception as error:
         _send_status(events, {"kind": "error", "message":

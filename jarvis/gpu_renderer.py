@@ -11,7 +11,8 @@ from . import reactor_shaders as shaders
 from .gpu_config import GpuSettings
 
 
-_LIMITS = {"eco": (960, 540), "balanced": (1280, 720), "cinematic": (1920, 1080)}
+MAX_RENDER_PIXELS = 3840 * 2160
+MAX_RENDER_DIMENSION = 4096
 _PARTICLES = {"eco": 24, "balanced": 96, "cinematic": 192}
 _SURFACE_FAMILIES = frozenset(("smile", "laughter", "affection", "sadness",
                                "anger", "surprise", "thinking", "wink"))
@@ -22,10 +23,11 @@ _MAX_SEGMENTS = _MAX_MAIN - 1 + _MAX_DETAILS * (_MAX_DETAIL_POINTS - 1)
 
 
 class GpuRenderer:
-    """A bounded HDR scene, quarter-size bloom and an internal RGB capture.
+    """Native physical HDR geometry, independently scaled bloom and RGB capture.
 
-    ``size`` is the aspect-preserving internal resolution, capped at 1280×720
-    (balanced) or 1920×1080 (cinematic). Presentation scales to the target.
+    ``size`` follows the supplied physical framebuffer, optionally supersampled.
+    A shared pixel/dimension budget bounds every profile; cheaper bloom and
+    particle settings do not silently blur the principal geometry or native HUD.
     ``allocation_bytes`` estimates owned texture attachments and vertex buffer
     payloads. It is *not* physical VRAM usage and excludes driver/program costs.
     All methods must run on the thread with the caller's context current.
@@ -42,11 +44,14 @@ class GpuRenderer:
         self._targets = {}
         self._closed = False
         self._alignment_signs = None
+        self._geometry_key = None
+        self._geometry_segments = 0
         self._quality = self._validate_quality(quality)
         self.settings = GpuSettings.from_dict({"profile": quality})
         self._requested_size = self._validate_size(width, height)
         self._size = (0, 0)
         self._bloom_size = (0, 0)
+        self._adaptive_level = 0
         self.bloom = bool(bloom)
         self.particles = bool(particles)
         self._geometry = array("f", [0.0]) * (_MAX_SEGMENTS * 7)
@@ -76,7 +81,7 @@ class GpuRenderer:
             for program in (self._extract, self._blur, self._resolve, self._copy):
                 program["u_image"].value = 0
             self._resolve["u_bloom"].value = 1
-            self._replace_attachments(self._bounded_size(self._requested_size, self._quality))
+            self._replace_attachments(*self._resolution_plan(self._requested_size, self._quality))
             self._upload_art()
         except Exception as error:
             self.shutdown()
@@ -86,7 +91,7 @@ class GpuRenderer:
 
     @staticmethod
     def _validate_quality(quality):
-        if quality not in _LIMITS:
+        if quality not in _PARTICLES:
             raise ValueError("quality must be 'eco', 'balanced' or 'cinematic'")
         return quality
 
@@ -94,16 +99,26 @@ class GpuRenderer:
     def _validate_size(width, height):
         if (isinstance(width, bool) or isinstance(height, bool)
                 or not isinstance(width, int) or not isinstance(height, int)
-                or width < 1 or height < 1):
-            raise ValueError("Framebuffer dimensions must be positive integers.")
+                or width < 1 or height < 1 or width > 32768 or height > 32768):
+            raise ValueError("Framebuffer dimensions must be positive integers up to 32768.")
         return width, height
 
-    @staticmethod
-    def _bounded_size(requested, quality):
+    def _resolution_plan(self, requested, quality, settings=None, level=None):
+        """Clamp supersampling before allocating, independently of bloom quality."""
+        settings = self.settings if settings is None else settings
+        level = self._adaptive_level if level is None else level
         width, height = requested
-        max_width, max_height = _LIMITS[quality]
-        scale = min(1.0, max_width / width, max_height / height)
-        return max(1, round(width * scale)), max(1, round(height * scale))
+        scale = 1. if settings.render_scale == "auto" else int(settings.render_scale)/100
+        if settings.render_scale == "auto" and level >= 4:
+            scale *= .75  # Last resort, after bloom and secondary particles.
+        maximum = min(MAX_RENDER_DIMENSION, self.ctx.info.get("GL_MAX_TEXTURE_SIZE", MAX_RENDER_DIMENSION))
+        factor = min(scale, maximum/width, maximum/height,
+                     math.sqrt(MAX_RENDER_PIXELS/(width*height)))
+        size = (max(1, math.floor(width*factor)), max(1, math.floor(height*factor)))
+        divisor = max(8 if quality == "eco" else 4, 8 if level >= 1 else 4,
+                      16 if level >= 2 else 4)
+        bloom_size = tuple(max(1, (value+divisor-1)//divisor) for value in size)
+        return size, bloom_size
 
     def _check_open(self):
         if self._closed:
@@ -131,34 +146,41 @@ class GpuRenderer:
                 self._release_errors.append(
                     f"{type(resource).__name__}: {type(error).__name__}: {error}")
 
-    def _replace_attachments(self, size):
+    def _replace_attachments(self, size, bloom_size=None):
         """Build first, then swap: allocation failure preserves the last frame."""
-        if size == self._size:
+        bloom_size = (tuple(max(1, (value+3)//4) for value in size)
+                      if bloom_size is None else bloom_size)
+        if size == self._size and bloom_size == self._bloom_size:
             return
-        bloom_size = tuple(max(1, (value + 3) // 4) for value in size)
-        resources, targets = [], {}
+        resources, created, targets = [], [], {}
         try:
             for name, dimensions, components, dtype in (
                     ("scene", size, 4, "f2"), ("resolved", size, 3, "f1"),
                     ("bloom_a", bloom_size, 4, "f2"),
                     ("bloom_b", bloom_size, 4, "f2")):
-                texture = self.ctx.texture(dimensions, components, dtype=dtype)
-                resources.append(texture)
-                texture.filter = (self._gl.LINEAR, self._gl.LINEAR)
-                texture.repeat_x = texture.repeat_y = False
-                framebuffer = self.ctx.framebuffer(color_attachments=[texture])
-                resources.append(framebuffer)
+                previous = self._targets.get(name)
+                if previous is not None and previous[0].size == dimensions:
+                    texture, framebuffer = previous
+                else:
+                    texture = self.ctx.texture(dimensions, components, dtype=dtype)
+                    created.append(texture)
+                    texture.filter = (self._gl.LINEAR, self._gl.LINEAR)
+                    texture.repeat_x = texture.repeat_y = False
+                    framebuffer = self.ctx.framebuffer(color_attachments=[texture])
+                    created.append(framebuffer)
+                resources.extend((texture, framebuffer))
                 targets[name] = (texture, framebuffer)
             # A disabled bloom path samples a cleared texture at weight zero.
             targets["bloom_a"][1].clear()
             targets["bloom_b"][1].clear()
         except Exception:
-            self._release(resources)
+            self._release(created)
             raise
         previous = self._attachments
         self._targets, self._attachments = targets, resources
         self._size, self._bloom_size = size, bloom_size
-        self._release(previous)
+        retained = {id(resource) for resource in resources}
+        self._release([resource for resource in previous if id(resource) not in retained])
 
     @property
     def size(self):
@@ -167,6 +189,35 @@ class GpuRenderer:
     @property
     def quality(self):
         return self._quality
+
+    @property
+    def resolution_info(self):
+        width, height = self._requested_size
+        preferred = 1. if self.settings.render_scale == "auto" else int(self.settings.render_scale)/100
+        desired = (width*preferred, height*preferred)
+        return {"physical_size": self._requested_size, "requested_scale": self.settings.render_scale,
+                "internal_size": self._size, "bloom_size": self._bloom_size,
+                "effective_scale": min(self._size[0]/width, self._size[1]/height),
+                "capped": self._size[0] < math.floor(desired[0]) or self._size[1] < math.floor(desired[1]),
+                "adaptive_level": self._adaptive_level,
+                "estimated_owned_bytes": self.allocation_bytes,
+                "limits": {"max_pixels": MAX_RENDER_PIXELS, "max_dimension": MAX_RENDER_DIMENSION},
+                "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"}
+
+    @property
+    def adaptive_level(self):
+        return self._adaptive_level
+
+    def set_adaptive_level(self, level):
+        """Bounded cost steps; artist preferences remain untouched."""
+        self._check_open()
+        if type(level) is not int or not 0 <= level <= 4:
+            raise ValueError("Adaptive level must be an integer from zero to four.")
+        if level == self._adaptive_level:
+            return False
+        self._replace_attachments(*self._resolution_plan(self._requested_size, self._quality, level=level))
+        self._adaptive_level = level
+        return True
 
     @property
     def attachment_bytes(self):
@@ -189,13 +240,13 @@ class GpuRenderer:
     def resize(self, width, height):
         self._check_open()
         requested = self._validate_size(width, height)
-        self._replace_attachments(self._bounded_size(requested, self._quality))
+        self._replace_attachments(*self._resolution_plan(requested, self._quality))
         self._requested_size = requested
 
     def set_quality(self, quality):
         self._check_open()
         quality = self._validate_quality(quality)
-        self._replace_attachments(self._bounded_size(self._requested_size, quality))
+        self._replace_attachments(*self._resolution_plan(self._requested_size, quality))
         self._quality = quality
 
     def _upload_art(self):
@@ -217,8 +268,9 @@ class GpuRenderer:
             raise ValueError("GPU artwork settings must be a dictionary or GpuSettings.")
         if candidate == self.settings:
             return False
-        if candidate.profile != self.settings.profile:
-            self.set_quality(candidate.profile)
+        quality = candidate.profile if candidate.profile != self.settings.profile else self._quality
+        self._replace_attachments(*self._resolution_plan(self._requested_size, quality, settings=candidate))
+        self._quality = quality
         self.settings = candidate
         self._alignment_signs = None
         self._upload_art()
@@ -241,6 +293,8 @@ class GpuRenderer:
         if len(details) > _MAX_DETAILS:
             raise ValueError("At most eight detail contours are supported.")
         paths = (points,) + tuple(self._path(path, _MAX_DETAIL_POINTS) for path in details)
+        if paths == self._geometry_key:
+            return self._geometry_segments
         index = 0
         for path_index, path in enumerate(paths):
             count = len(path) - 1
@@ -251,7 +305,8 @@ class GpuRenderer:
                     self._geometry[index] = value
                     index += 1
         self._vertex_buffer.write(memoryview(self._geometry)[:index])
-        return index // 7
+        self._geometry_key, self._geometry_segments = paths, index // 7
+        return self._geometry_segments
 
     @staticmethod
     def _uniforms(program, values):
@@ -343,7 +398,9 @@ class GpuRenderer:
                   "u_orbit_targets": self._alignment_signs or (1., 1., 1.),
                   "u_surface_kind": 0. if surface_family is None else 2. if surface_family == "affection" else 1.,
                   "u_surface_amount": surface_amount,
-                  "u_color": color, "u_size": self._size}
+                  "u_color": color, "u_size": self._size,
+                  "u_pixel_scale": min(self._size[0]/self._requested_size[0],
+                                       self._size[1]/self._requested_size[1])}
         self.ctx.disable(self._gl.DEPTH_TEST | self._gl.CULL_FACE | self._gl.BLEND)
         for program in (self._scene, self._curve, self._filament, self._particle):
             self._uniforms(program, values)
@@ -360,7 +417,8 @@ class GpuRenderer:
             if self.particles:
                 self.ctx.enable(self._gl.PROGRAM_POINT_SIZE)
                 self._particle_vao.render(mode=self._gl.POINTS,
-                                          vertices=min(384, round(_PARTICLES[self._quality]*self.settings.particle_density/100)))
+                                          vertices=min(384, round(_PARTICLES[self._quality]*self.settings.particle_density/100
+                                              *(.5 if self._adaptive_level >= 3 else 1.))))
                 self.ctx.disable(self._gl.PROGRAM_POINT_SIZE)
         self.ctx.disable(self._gl.BLEND)
         if self.bloom:
@@ -369,10 +427,13 @@ class GpuRenderer:
             self._pass("bloom_a", self._extract_vao)
             for _ in range(2 if self._quality == "cinematic" else 1):
                 self._targets["bloom_a"][0].use(location=0)
-                self._blur["u_step"].value = (self.settings.bloom_radius / 100 / self._bloom_size[0], 0)
+                # The requested blur radius is in physical presentation pixels.
+                # Supersampling or a cheaper bloom texture must not silently
+                # shrink/enlarge the approved aura while keeping the slider.
+                self._blur["u_step"].value = (self.settings.bloom_radius / 100 * 4 / self._requested_size[0], 0)
                 self._pass("bloom_b", self._blur_vao)
                 self._targets["bloom_b"][0].use(location=0)
-                self._blur["u_step"].value = (0, self.settings.bloom_radius / 100 / self._bloom_size[1])
+                self._blur["u_step"].value = (0, self.settings.bloom_radius / 100 * 4 / self._requested_size[1])
                 self._pass("bloom_a", self._blur_vao)
         self._targets["scene"][0].use(location=0)
         self._targets["bloom_a"][0].use(location=1)
@@ -403,3 +464,4 @@ class GpuRenderer:
         self._objects.clear()
         self._targets.clear()
         self._alignment_signs = None
+        self._geometry_key = None

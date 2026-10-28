@@ -10,6 +10,7 @@ from types import MappingProxyType
 
 
 PROFILES = ("eco", "balanced", "cinematic")
+RENDER_SCALES = ("auto", "100", "125", "150", "200")
 SECTIONS = ("Noyau", "Halo et lumière", "Anneaux", "Particules", "Animations et états", "Expressions", "Performances")
 LEVELS = ("essential", "personalize", "advanced")
 
@@ -22,6 +23,7 @@ def _setting(default, label, section, level, low, high, help="", unit="percent",
 @dataclass(frozen=True)
 class GpuSettings:
     profile: str = "balanced"
+    render_scale: str = "auto"
     core_size: int = _setting(100, "Taille du noyau (%)", "Noyau", "essential", 70, 125,
                              "Rayon de la sphère ; les traits et l'occlusion suivent ce même rayon.")
     core_brightness: int = _setting(100, "Luminosité du noyau (%)", "Noyau", "personalize", 0, 200)
@@ -115,6 +117,10 @@ class GpuSettings:
             clean[key] = max(spec.low, min(spec.high, round(value)))
         profile = values.get("profile", "balanced")
         clean["profile"] = profile if isinstance(profile, str) and profile in PROFILES else "balanced"
+        scale = values.get("render_scale", "auto")
+        if type(scale) is int and scale in (100, 125, 150, 200):
+            scale = str(scale)
+        clean["render_scale"] = scale if isinstance(scale, str) and scale in RENDER_SCALES else "auto"
         return cls(**clean)
 
     def to_dict(self):
@@ -122,7 +128,7 @@ class GpuSettings:
 
     @property
     def frames_per_second(self):
-        return min(self.fps_limit, {"eco": 15, "balanced": 30, "cinematic": 60}[self.profile])
+        return min(self.fps_limit, {"eco": 15, "balanced": 60, "cinematic": 60}[self.profile])
 
     def uniforms(self):
         """Packed numeric shader values. The same mapping drives Studio metadata."""

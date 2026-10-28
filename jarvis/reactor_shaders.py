@@ -36,7 +36,11 @@ SPACE_GLSL = ART_GLSL + """
 const float CAMERA_Z = 2.6;
 const float CORE_RADIUS = .30;
 uniform float u_core_scale, u_orbit_blend;
+uniform float u_pixel_scale;
 uniform vec3 u_orbit_phase, u_audio_bands, u_orbit_targets;
+// Supersampling changes storage pixels, not the apparent size of fine ink.
+// Zero retains meaningful defaults for independent mathematical shader probes.
+float pixel_scale() { return u_pixel_scale>0.0 ? u_pixel_scale : 1.0; }
 float core_radius() { return CORE_RADIUS*ART_CORE_SIZE*(u_core_scale>0.0 ? u_core_scale : 1.0); }
 float orbit_radius(float ring) {
     return min(.85,(.48+ring*.11*ART_RING_SPACING)*ART_RING_RADIUS);
@@ -168,7 +172,7 @@ void main() {
     vec2 p = scene_plane(uv*2.0-1.0,u_size);
     float r = length(p), t = u_time*ART_SURFACE_SPEED;
     float activation = smoothstep(0.0,.85,u_reactor);
-    float px = 2.0/min(u_size.x,u_size.y);
+    float px = 2.0/min(u_size.x,u_size.y)*pixel_scale();
     float near_hit = core_front(p);
     vec3 cold = mix(u_color,vec3(.53,.83,1.0),.12);
     float radius_core = core_radius();
@@ -294,7 +298,7 @@ void main() {
     vec2 tangent = length_>.0001 ? delta/length_ : vec2(1.0,0.0);
     vec2 normal = vec2(-tangent.y,tangent.x);
     float side = (gl_VertexID & 1)==0 ? -1.0 : 1.0;
-    float margin=10.0*(u_surface_kind>0.0 ? max(1.0,ART_EXPRESSION_THICKNESS) : 1.0);
+    float margin=10.0*pixel_scale()*(u_surface_kind>0.0 ? max(1.0,ART_EXPRESSION_THICKNESS) : 1.0);
     float along = gl_VertexID<2 ? -margin : length_+margin;
     vec2 pixel = start+tangent*along+normal*side*margin;
     gl_Position = vec4(pixel*2.0/u_size,0.0,1.0);
@@ -326,7 +330,7 @@ out vec4 frag;
 void main() {
     float d = length(vec2(v_local.x-clamp(v_local.x,0.0,v_length),v_local.y));
     float thickness=v_surface>.5 ? ART_EXPRESSION_THICKNESS : 1.0;
-    float scaled=d/thickness;
+    float scaled=d/(thickness*pixel_scale());
     float core = exp(-scaled*scaled/.62);
     float shoulder = exp(-scaled*scaled/3.2)*.26;
     float halo = exp(-scaled*scaled/24.0)*.024;
@@ -369,9 +373,10 @@ void main() {
     vec2 tangent = normalize(delta+vec2(.00001,0.0));
     vec2 normal = vec2(-tangent.y,tangent.x);
     float side = (gl_VertexID & 1)==0 ? -1.0 : 1.0;
-    float along = gl_VertexID<2 ? -5.0 : length_+5.0;
-    gl_Position = vec4((start+tangent*along+normal*side*5.0)*2.0/u_size,0.0,1.0);
-    v_local = vec2(along,side*5.0);
+    float margin=5.0*pixel_scale();
+    float along = gl_VertexID<2 ? -margin : length_+margin;
+    gl_Position = vec4((start+tangent*along+normal*side*margin)*2.0/u_size,0.0,1.0);
+    v_local = vec2(along,side*margin);
     v_length = length_;
     v_depth = (first.z+last.z)*.5;
     v_surface=0.0;
@@ -409,7 +414,7 @@ void main() {
     // Slow deterministic fades, never random per-frame flicker. Three small
     // points share each orbital packet to form a restrained tapered trail.
     float fade=.5+.5*sin(u_time*.35/max(.4,ART_PARTICLE_LIFETIME)+hash(packet+81.0)*6.2831853);
-    gl_PointSize = (1.25+hash(packet+6.0)*.95*ART_PARTICLE_VARIATION)*ART_PARTICLE_SIZE
+    gl_PointSize = (1.25+hash(packet+6.0)*.95*ART_PARTICLE_VARIATION)*ART_PARTICLE_SIZE*pixel_scale()
                   *(1.0+u_rms*.15*ART_PARTICLE_AUDIO)*CAMERA_Z/(CAMERA_Z-p.z);
     float trail_visibility=trail<.5 ? 1.0 : min(1.0,ART_PARTICLE_TRAILS);
     v_power = (.08+.10*fade)*u_reactor*(.65+p.z)*(1.0-trail*.23)*(1.0-u_orbit_blend*.70)

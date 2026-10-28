@@ -77,6 +77,19 @@ class HudEglTests(unittest.TestCase):
         self.assertTrue(self.hud.caption_lines)
         self.assertLessEqual(len(self.hud.caption_lines), 2)
 
+    def test_measured_performance_is_only_displayed_in_diagnostic_mode(self):
+        data = {"state": "thinking", "shortcuts": "F9 Diagnostic", "performance": "59.8 FPS · rendu 3840×2160"}
+        immersion = self.draw(data)
+        uploaded = self.hud.upload_count
+        data["performance"] = "60.0 FPS · rendu 3840×2160"
+        self.assertEqual(immersion, self.draw(data))
+        self.assertEqual(self.hud.upload_count, uploaded)
+        data["diagnostic"] = True
+        diagnostic = self.draw(data)
+        self.assertNotEqual(immersion, diagnostic)
+        data["performance"] = "58.2 FPS · rendu 2560×1440"
+        self.assertNotEqual(diagnostic, self.draw(data))
+
     def test_atlas_is_reused_and_text_is_not_rasterized_on_unchanged_frames(self):
         self.draw()
         texture, size = self.hud.texture, self.hud._size
@@ -88,7 +101,40 @@ class HudEglTests(unittest.TestCase):
         self.assertEqual(self.hud.upload_count, 2)
         self.assertIs(self.hud.texture, texture)
         self.assertEqual(self.hud._size, size)
-        self.assertLessEqual(self.hud.allocation_bytes, 1920 * 768 * 4)
+        self.assertLessEqual(self.hud.allocation_bytes, 4096 * 1024 * 4)
+
+    def test_hidpi_text_uses_physical_pixels_and_releases_atlas_on_monitor_change(self):
+        # The HUD goes directly to presentation pixels, never the scene's
+        # adaptive/bloom resolution. A 4K monitor must not stretch 1920px text.
+        target = self.ctx.simple_framebuffer((3840, 2160))
+        self.addCleanup(target.release)
+        payload = {"state": "thinking", "caption": "Déjà net : l'été, cœur et 125 €.",
+                   "dpi_scale": 2.}
+        self.draw(payload, width=3840, height=2160, target=target)
+        first = self.hud.texture
+        self.assertEqual(self.hud._size[0], 3840)
+        self.assertEqual(self.hud.raster_info["physical_pixel_ratio"], 1.)
+        self.assertFalse(self.hud.raster_info["limited"])
+        self.assertEqual(self.hud._size[1], 344)
+        uploaded = self.hud.upload_count
+        self.draw(payload, width=3840, height=2160, target=target)
+        self.assertIs(self.hud.texture, first)
+        self.assertEqual(self.hud.upload_count, uploaded)
+        payload["dpi_scale"] = 1.5
+        self.draw(payload, width=3840, height=2160, target=target)
+        self.assertEqual(type(first.mglo).__name__, "InvalidObject")
+        self.assertEqual(self.hud._size, (3840, 258))
+        self.assertLessEqual(self.hud.allocation_bytes, 4096 * 1024 * 4)
+
+    def test_extreme_framebuffer_keeps_explicit_atlas_limit_instead_of_unbounded_allocation(self):
+        # Exercise raster allocation only: no huge presentation framebuffer.
+        spec, _top, _bottom = self.hud._raster({"dpi_scale": 3., "caption": "Texte borné"},
+                                             12000, 6000, -1)
+        self.assertEqual(spec["width"], 12000)
+        self.assertLessEqual(self.hud._size[0], 4096)
+        self.assertLessEqual(self.hud._size[1], 1024)
+        self.assertTrue(self.hud.raster_info["limited"])
+        self.assertIsNotNone(self.hud.raster_info["limit_reason"])
 
     def test_long_original_caption_is_bounded_two_lines_and_accents_change_real_pixels(self):
         original = "La colère et la rage, le cœur et l'été. " * 100

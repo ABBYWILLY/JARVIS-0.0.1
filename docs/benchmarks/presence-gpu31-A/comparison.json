@@ -1,0 +1,310 @@
+{
+  "method": "Fresh process per case, same THINKING t=4s, actual1440x960 EGL framebuffer capture,3seconds measured aftershaderwarmup/readback. NativePNGs notresized.",
+  "scope": "SoftwareMesa llvmpipe; shortsequential comparison, otherdevelopment tests mayhaveoverlapped. Nostatisticalgainclaim; physicalVRAM/Ollama/Piperimpact/RTXunknown.",
+  "historical_scope": "Renderer/shaders/adapter/config frozenfrom4ae4f71. CommonCanvas/text/audio/morph fromrunningtree; reporthashesidentifythem.",
+  "presentation": "Headless EGLcompletionFPS; nomonitorrefresh/swapchainpresentation/MP4encodingmeasured.",
+  "scales": "Factorsrelativephysical1440x960. Old3.0hasnoscalecontrol; compareitsactualnativepresentationonly.",
+  "rows": [
+    {
+      "case": "before-balanced-native",
+      "report": "docs/benchmarks/presence-gpu31-A/before-balanced-native.json",
+      "frame": "docs/assets/presence-gpu31-A/before-balanced-native.png",
+      "fps": 29.21512162834599,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        1080,
+        720
+      ],
+      "frame_times": {
+        "mean_ms": 34.22884945410426,
+        "p50_ms": 33.45797798829153,
+        "p95_ms": 37.07717599172611,
+        "p99_ms": 59.014166006818414
+      },
+      "render_times": {
+        "mean_ms": 25.565985249407028,
+        "p50_ms": 23.334020996117033,
+        "p95_ms": 37.0718880003551,
+        "p99_ms": 59.0099300025031
+      },
+      "long_frames": 1,
+      "cpu_percent": 301.67346729542703,
+      "rss_average_bytes": 116595565.71428572,
+      "owned_graphics_bytes": 9339264,
+      "sources": {
+        "gpu_renderer.py": "a4bed21773d9ff81aa98de49e7969c0af387472e3d07f419e89e1b0668143159",
+        "reactor_shaders.py": "08351b85a7bf118cf82b11e35bf3bf3270c3bd6c92d8cf862b2194d461d61975",
+        "gpu_config.py": "16f55848c533f1f40289dc92186715dafdf9a9f38c92aa01ad30f6b6af67c42a"
+      }
+    },
+    {
+      "case": "before-cinematic-native",
+      "report": "docs/benchmarks/presence-gpu31-A/before-cinematic-native.json",
+      "frame": "docs/assets/presence-gpu31-A/before-cinematic-native.png",
+      "fps": 24.255736306989963,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        1440,
+        960
+      ],
+      "frame_times": {
+        "mean_ms": 41.22736112165856,
+        "p50_ms": 37.669740995625034,
+        "p95_ms": 52.41018900414929,
+        "p99_ms": 87.00150399818085
+      },
+      "render_times": {
+        "mean_ms": 41.22361454053159,
+        "p50_ms": 37.66710699710529,
+        "p95_ms": 52.40691399376374,
+        "p99_ms": 86.99851999699604
+      },
+      "long_frames": 74,
+      "cpu_percent": 397.74223395309775,
+      "rss_average_bytes": 122334061.71428572,
+      "owned_graphics_bytes": 16596864,
+      "sources": {
+        "gpu_renderer.py": "a4bed21773d9ff81aa98de49e7969c0af387472e3d07f419e89e1b0668143159",
+        "reactor_shaders.py": "08351b85a7bf118cf82b11e35bf3bf3270c3bd6c92d8cf862b2194d461d61975",
+        "gpu_config.py": "16f55848c533f1f40289dc92186715dafdf9a9f38c92aa01ad30f6b6af67c42a"
+      }
+    },
+    {
+      "case": "after-balanced-native",
+      "report": "docs/benchmarks/presence-gpu31-A/after-balanced-native.json",
+      "frame": "docs/assets/presence-gpu31-A/after-balanced-native.png",
+      "fps": 25.008272415526104,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        1440,
+        960
+      ],
+      "frame_times": {
+        "mean_ms": 39.986768513412436,
+        "p50_ms": 38.99507499590982,
+        "p95_ms": 52.8207699971972,
+        "p99_ms": 71.05319999391213
+      },
+      "render_times": {
+        "mean_ms": 39.98261167017565,
+        "p50_ms": 38.99211100360844,
+        "p95_ms": 52.817625997704454,
+        "p99_ms": 71.04741199873388
+      },
+      "long_frames": 76,
+      "cpu_percent": 390.71381439459986,
+      "rss_average_bytes": 122295442.28571428,
+      "owned_graphics_bytes": 16596864,
+      "sources": {
+        "gpu_renderer.py": "1988f122dce6928b86a04c0c6fcb679c6b0e655dc71ce7a5483278a65e533268",
+        "reactor_shaders.py": "243fb29bb67a8637d224a076da892c42185b490165b13a790dee28631d24f6ee",
+        "gpu_config.py": "25d2facbdca50fc395ce1495bdc30bf97ebbe15b3a9fdcf175cc9cb945930a90"
+      }
+    },
+    {
+      "case": "after-balanced-125",
+      "report": "docs/benchmarks/presence-gpu31-A/after-balanced-125.json",
+      "frame": "docs/assets/presence-gpu31-A/after-balanced-125.png",
+      "fps": 17.981963892173926,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        1800,
+        1200
+      ],
+      "frame_times": {
+        "mean_ms": 55.61127838963229,
+        "p50_ms": 56.854155991459265,
+        "p95_ms": 72.49489799141884,
+        "p99_ms": 78.1389829935506
+      },
+      "render_times": {
+        "mean_ms": 55.60723446305255,
+        "p50_ms": 56.85139200068079,
+        "p95_ms": 72.49109199619852,
+        "p99_ms": 78.13605898991227
+      },
+      "long_frames": 54,
+      "cpu_percent": 401.96863146283863,
+      "rss_average_bytes": 144223085.7142857,
+      "owned_graphics_bytes": 25928064,
+      "sources": {
+        "gpu_renderer.py": "1988f122dce6928b86a04c0c6fcb679c6b0e655dc71ce7a5483278a65e533268",
+        "reactor_shaders.py": "243fb29bb67a8637d224a076da892c42185b490165b13a790dee28631d24f6ee",
+        "gpu_config.py": "25d2facbdca50fc395ce1495bdc30bf97ebbe15b3a9fdcf175cc9cb945930a90"
+      }
+    },
+    {
+      "case": "after-balanced-150",
+      "report": "docs/benchmarks/presence-gpu31-A/after-balanced-150.json",
+      "frame": "docs/assets/presence-gpu31-A/after-balanced-150.png",
+      "fps": 13.495781484166901,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        2160,
+        1440
+      ],
+      "frame_times": {
+        "mean_ms": 74.09722817260999,
+        "p50_ms": 76.93986500089522,
+        "p95_ms": 85.49235100508668,
+        "p99_ms": 87.66871200350579
+      },
+      "render_times": {
+        "mean_ms": 74.09225107474457,
+        "p50_ms": 76.93753100465983,
+        "p95_ms": 85.48801500000991,
+        "p99_ms": 87.66469600959681
+      },
+      "long_frames": 41,
+      "cpu_percent": 401.628082332572,
+      "rss_average_bytes": 156515181.7142857,
+      "owned_graphics_bytes": 37332864,
+      "sources": {
+        "gpu_renderer.py": "1988f122dce6928b86a04c0c6fcb679c6b0e655dc71ce7a5483278a65e533268",
+        "reactor_shaders.py": "243fb29bb67a8637d224a076da892c42185b490165b13a790dee28631d24f6ee",
+        "gpu_config.py": "25d2facbdca50fc395ce1495bdc30bf97ebbe15b3a9fdcf175cc9cb945930a90"
+      }
+    },
+    {
+      "case": "after-cinematic-native",
+      "report": "docs/benchmarks/presence-gpu31-A/after-cinematic-native.json",
+      "frame": "docs/assets/presence-gpu31-A/after-cinematic-native.png",
+      "fps": 27.121524291119197,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        1440,
+        960
+      ],
+      "frame_times": {
+        "mean_ms": 36.87108398724643,
+        "p50_ms": 33.304912998573855,
+        "p95_ms": 46.81280099612195,
+        "p99_ms": 54.739975996199064
+      },
+      "render_times": {
+        "mean_ms": 36.86673164622512,
+        "p50_ms": 33.301828007097356,
+        "p95_ms": 46.80964599538129,
+        "p99_ms": 54.73653100489173
+      },
+      "long_frames": 82,
+      "cpu_percent": 402.70824309850724,
+      "rss_average_bytes": 122311826.28571428,
+      "owned_graphics_bytes": 16596864,
+      "sources": {
+        "gpu_renderer.py": "1988f122dce6928b86a04c0c6fcb679c6b0e655dc71ce7a5483278a65e533268",
+        "reactor_shaders.py": "243fb29bb67a8637d224a076da892c42185b490165b13a790dee28631d24f6ee",
+        "gpu_config.py": "25d2facbdca50fc395ce1495bdc30bf97ebbe15b3a9fdcf175cc9cb945930a90"
+      }
+    },
+    {
+      "case": "after-cinematic-125",
+      "report": "docs/benchmarks/presence-gpu31-A/after-cinematic-125.json",
+      "frame": "docs/assets/presence-gpu31-A/after-cinematic-125.png",
+      "fps": 17.627063995338755,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        1800,
+        1200
+      ],
+      "frame_times": {
+        "mean_ms": 56.730945111700784,
+        "p50_ms": 59.22875599935651,
+        "p95_ms": 69.25576699723024,
+        "p99_ms": 77.77629799966235
+      },
+      "render_times": {
+        "mean_ms": 56.72669433395775,
+        "p50_ms": 59.226362995104864,
+        "p95_ms": 69.25040899659507,
+        "p99_ms": 77.77260300645139
+      },
+      "long_frames": 54,
+      "cpu_percent": 399.7206427466533,
+      "rss_average_bytes": 144276333.7142857,
+      "owned_graphics_bytes": 25928064,
+      "sources": {
+        "gpu_renderer.py": "1988f122dce6928b86a04c0c6fcb679c6b0e655dc71ce7a5483278a65e533268",
+        "reactor_shaders.py": "243fb29bb67a8637d224a076da892c42185b490165b13a790dee28631d24f6ee",
+        "gpu_config.py": "25d2facbdca50fc395ce1495bdc30bf97ebbe15b3a9fdcf175cc9cb945930a90"
+      }
+    },
+    {
+      "case": "after-cinematic-150",
+      "report": "docs/benchmarks/presence-gpu31-A/after-cinematic-150.json",
+      "frame": "docs/assets/presence-gpu31-A/after-cinematic-150.png",
+      "fps": 12.756664440042368,
+      "physical": [
+        1440,
+        960
+      ],
+      "internal": [
+        2160,
+        1440
+      ],
+      "frame_times": {
+        "mean_ms": 78.39039779560736,
+        "p50_ms": 82.23909999651369,
+        "p95_ms": 88.52689299965277,
+        "p99_ms": 89.34249299636576
+      },
+      "render_times": {
+        "mean_ms": 78.38574015365269,
+        "p50_ms": 82.23548499518074,
+        "p95_ms": 88.52259699779097,
+        "p99_ms": 89.3216419935925
+      },
+      "long_frames": 39,
+      "cpu_percent": 401.83379607151926,
+      "rss_average_bytes": 156486509.7142857,
+      "owned_graphics_bytes": 37332864,
+      "sources": {
+        "gpu_renderer.py": "1988f122dce6928b86a04c0c6fcb679c6b0e655dc71ce7a5483278a65e533268",
+        "reactor_shaders.py": "243fb29bb67a8637d224a076da892c42185b490165b13a790dee28631d24f6ee",
+        "gpu_config.py": "25d2facbdca50fc395ce1495bdc30bf97ebbe15b3a9fdcf175cc9cb945930a90"
+      }
+    }
+  ],
+  "sha256": {
+    "docs/benchmarks/presence-gpu31-A/after-balanced-native.json": "0b3557f221c3d69c4c2930c8ac8160155db4049ed35eaaead3388d3a9cd1b777",
+    "docs/benchmarks/presence-gpu31-A/before-cinematic-native.json": "9665ce7a7ad449fde697156dc2c00382439fe5db5e4d07d1797039ffe8f36426",
+    "docs/benchmarks/presence-gpu31-A/after-balanced-150.json": "7fe57597faa7e6b7c255bedfe87a0624cab8b71964ea55ebf0a1958cdaff0ff4",
+    "docs/benchmarks/presence-gpu31-A/after-cinematic-150.json": "cffe53208f07a75b39a5c2c49ee90bc5518dcd7cf7300499b2c9842fe04ea8cb",
+    "docs/benchmarks/presence-gpu31-A/after-cinematic-125.json": "33f09ff6280da8e77e90f4d86f9351d6f24385ddb6831f3068b62b7e5887a96a",
+    "docs/benchmarks/presence-gpu31-A/before-balanced-native.json": "3a3121e64dd9c8a30009c704a13d935d8be0d2e71607ec8676acf98c50e918bf",
+    "docs/benchmarks/presence-gpu31-A/after-cinematic-native.json": "a35418c8d9a51d0dd48a8ea582c7cc42be0bc4d11d436737f1083bd8a0010e7a",
+    "docs/benchmarks/presence-gpu31-A/after-balanced-125.json": "04a87c5851133f33aaa54ba2effb053b8675d7e770d1e229834a16ffedb1418d",
+    "docs/assets/presence-gpu31-A/after-balanced-150.png": "66345a13a1e9cba39a50f05447b17892be7fc851446571801d75e5bde4ebf24d",
+    "docs/assets/presence-gpu31-A/after-cinematic-125.png": "fb84fd5f6fdbca05488c155414cce304f13ad1c3c8f4b9a2ec85cbe85a076127",
+    "docs/assets/presence-gpu31-A/before-balanced-native.png": "dc9d6a61de311b9cad5244a99537adfa0cc8b7f714df0869582aaf50b42fb10c",
+    "docs/assets/presence-gpu31-A/presence-gpu31-hud-4k-after.png": "6e96fe69daa89e378f2f39c983c9217ca9cd8e36e61c04f76e184e75dbb924ce",
+    "docs/assets/presence-gpu31-A/presence-gpu31-hud-4k-before.png": "a3a13535b95eeb2c84757a9c77d1971d738280c52d5d9d49bba4d4b1517c40ba",
+    "docs/assets/presence-gpu31-A/after-balanced-native.png": "101aeec199e2e5ab388a7f5ac7d845ac5eaa710f3f1d62beb0329afd33a9347f",
+    "docs/assets/presence-gpu31-A/after-cinematic-native.png": "2b970e86ad7a67ad4e924402451399e423e8b3eeae104671325249f6c6dbd97b",
+    "docs/assets/presence-gpu31-A/after-cinematic-150.png": "850a36ad5b4b787388dcaf009669a825ff02516d8492294b258b0e3b8efcf2eb",
+    "docs/assets/presence-gpu31-A/after-balanced-125.png": "4543321efb64c9b64204788567c3aaa82399f51054fd6d50fdbbcc41ea09ac70",
+    "docs/assets/presence-gpu31-A/before-cinematic-native.png": "2b970e86ad7a67ad4e924402451399e423e8b3eeae104671325249f6c6dbd97b",
+    "docs/assets/presence-gpu31-A/presence-gpu31-hud-4k.json": "d7790671c6c718ed059d1a2112005a48557263e7dd974177ce448b9e60a68f7b"
+  }
+}

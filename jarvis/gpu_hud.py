@@ -11,6 +11,8 @@ BUTTONS = ("command", "studio", "microphone", "stop")
 _LABELS = ("COMMAND OS", "Studio", "Micro", "Arrêt")
 _STATES = {"silent": "Repos", "listening": "Écoute", "user_speaking": "Voix détectée",
            "thinking": "Réflexion", "jarvis_speaking": "Parole", "dormant": "Sommeil"}
+_MAX_ATLAS_WIDTH = 4096
+_MAX_ATLAS_HEIGHT = 1024
 
 
 def layout(width, height, scale=1.):
@@ -115,6 +117,7 @@ class GpuHud:
         self._fonts = {}
         self.texture = self.program = self.vao = None
         self._size = self._key = None
+        self.raster_info = {}
         self._closed = False
         self.upload_count = 0
         self.caption_lines = ()
@@ -181,19 +184,33 @@ class GpuHud:
             raise ValueError("Le HUD attend un état structuré.")
         dpi = hud.get("dpi_scale", 1.)
         spec = layout(width, height, dpi)
-        # Cap both dimensions even for very large monitors. Two screen bands
-        # share one atlas; no full-frame RGBA buffer or per-frame rasterization.
-        atlas_width = min(1920, width)
+        # Rasterize in physical pixels, independent of the scene/bloom render
+        # scale. The old 1920px cap enlarged every glyph 2x on a 4K display.
+        # Only two screen bands share the atlas, bounded to 16 MiB, not a
+        # full-frame RGBA buffer and never a fresh upload on unchanged frames.
+        driver_limit = int(self.ctx.info.get("GL_MAX_TEXTURE_SIZE", _MAX_ATLAS_WIDTH))
+        atlas_width = min(_MAX_ATLAS_WIDTH, max(1, driver_limit), width)
         ratio = atlas_width / width
         top = max(1, round(spec["header_height"] * ratio))
         bottom = max(1, round(spec["footer_height"] * ratio))
-        atlas_height = min(768, top + bottom)
+        atlas_height = min(_MAX_ATLAS_HEIGHT, max(2, driver_limit), top + bottom)
         top = min(top, atlas_height - 1)
         bottom = atlas_height - top
         scale = spec["scale"] * ratio
+        self.raster_info = {"framebuffer_size": (width, height),
+                            "atlas_size": (atlas_width, atlas_height),
+                            "physical_pixel_ratio": ratio,
+                            "dpi_scale": spec["scale"],
+                            "limited": atlas_width < width,
+                            "limit_reason": ("HUD texture width bound" if atlas_width < width else None),
+                            "allocation_bytes_estimate": atlas_width * atlas_height * 4}
+        diagnostic = hud.get("diagnostic") is True
         strings = tuple(str(hud.get(key, ""))[:limit] for key, limit in (
             ("state", 64), ("engine", 120), ("microphone", 180), ("caption", 4096),
-            ("caption_note", 160), ("operation", 200), ("preview", 160), ("shortcuts", 200)))
+            ("caption_note", 160), ("operation", 200), ("preview", 160), ("shortcuts", 200),
+            ("performance", 300)))
+        if not diagnostic:
+            strings = strings[:-1] + ("",)
         marks = tuple((mark[0], mark[1]) for mark in hud.get("caption_marks", ())[:64]
                       if isinstance(mark, (list, tuple)) and len(mark) == 2
                       and all(type(value) is int for value in mark) and 0 <= mark[0] < mark[1] <= 4096)
@@ -202,7 +219,7 @@ class GpuHud:
         if len(accent) != 3 or not all(type(value) is int and 0 <= value <= 255 for value in accent):
             accent = (93, 227, 247)
         self._accent = tuple(value / 255 for value in accent)
-        key = (atlas_width, atlas_height, top, focused, round(scale, 3), strings, marks)
+        key = (atlas_width, atlas_height, top, focused, round(scale, 3), strings, marks, diagnostic)
         if key == self._key:
             return spec, top, bottom
         image = self._Image.new("RGBA", (atlas_width, atlas_height), (0, 0, 0, 0))
@@ -210,7 +227,7 @@ class GpuHud:
         pad = max(5, round(12 * scale))
         heading, body, small = self._font(17 * scale), self._font(19 * scale), self._font(12 * scale)
         cyan, white, muted = (93, 227, 247, 255), (229, 241, 250, 255), (162, 184, 203, 255)
-        state, engine, microphone, caption, note, operation, preview, shortcuts = strings
+        state, engine, microphone, caption, note, operation, preview, shortcuts, performance = strings
         title = "PRESENCE · 2.5D GPU · " + _STATES.get(state, state or "Repos")
         draw.text((pad, 4), title, font=heading, fill=cyan)
         second = "Micro : " + (microphone or "désactivé")
@@ -225,8 +242,9 @@ class GpuHud:
             if notice:
                 draw.text((pad, min(top - 11, round(42 * scale))), notice[0], font=small,
                           fill=(255, 207, 118, 255))
-        elif shortcuts:
-            notice = _lines(shortcuts, small, atlas_width - pad * 2, 1)
+        elif diagnostic and performance or shortcuts:
+            notice = _lines(performance if diagnostic and performance else shortcuts,
+                            small, atlas_width - pad * 2, 1)
             if notice:
                 draw.text((pad, min(top - 11, round(42 * scale))), notice[0], font=small, fill=muted)
         # Opaque black remains black; subtle UI bands are intentional overlays.

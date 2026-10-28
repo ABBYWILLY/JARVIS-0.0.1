@@ -1,3 +1,21 @@
+# PRESENCE GPU 3.1 — phase A, 28 octobre 2026
+
+Base4ae4f71 propre, application/prototype Windows verts. Direction3.0 conservée.
+A corrigeplafondbalanced30, snapshotdirty/attente100ms/VSync, caps720/1080/HUD1920.
+Renduclockisolé60nominal, IPC25Hz, natifphysique+Auto/100/125/150/200bornés,
+bloomindépendant/adaptationhystérésis, mesuresvraisdraws etDPI/CPU/RAM/PID.
+152testsciblésréussis14.434s etvraiGLFWMini/masquage/retourCanvasOK.
+Preuves: PRESENCE-GPU-3.1-EVIDENCE.md. Mesa1440x960natif25–27FPS,
+125%~18FPS,150%~13FPS:60nonatteintsici,aucuneextrapolationRTX/Ollama.
+
+Reste danslamissionautorisée : BtogglevisibleCanvas/GPU+IPC/CtrlF7 ;
+CauraPCMcompressée etsignaturesécouteconvergente/parolerayonnante ;
+DStudiochampsmanquants/référence3.0, testscomplets, preuvesvidéo, CIduSHAfinal.
+Ne pas refaireA,nimodifiermain/audiomoteurs/voix/modèles. Spécificationcomplète
+PRESENCE-GPU-3.1-SPEC.md ; guidePRESENCE-GPU-3.1.md. Validationmatérielleenattente.
+
+---
+
 # PRESENCE — intégration double moteur, 28 octobre 2026
 
 Base approuvée A–D : 901f360, conservée. Contrats 06ebcff ; paramètres/Studio

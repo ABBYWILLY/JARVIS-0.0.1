@@ -532,7 +532,7 @@ def _run(args):
                     degraded = True
                     report["adaptive_reason"] = "device_global_memory_pressure" if pressure and pressure > .94 else "frame_over_50ms"
             fps = min(scene.gpu_settings.frames_per_second,
-                      15 if degraded or renderer.quality == "eco" else 30 if renderer.quality == "balanced" else 60)
+                      15 if degraded or renderer.quality == "eco" else 60)
             remaining = 1 / fps - (time.perf_counter() - frame_start)
             if remaining > 0:
                 time.sleep(remaining)

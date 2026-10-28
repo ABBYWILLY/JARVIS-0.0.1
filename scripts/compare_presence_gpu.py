@@ -75,26 +75,43 @@ def renderer_source(revision):
 
 @contextmanager
 def scene_source(revision):
-    """Freeze the selected state adapter; shared Canvas/morph code is unchanged.
+    """Freeze adapter AND its artistic preferences; alias unchanged common code.
 
-    Its temporary module belongs to jarvis so relative, model-free imports use
-    the existing common modules. No old files are installed over the worktree.
+    Historical defaults must not silently use a newer gpu_config. The private
+    package owns both files and aliases explicitly shared Canvas/text/audio
+    modules, without replacing any application module or worktree file.
     """
     validate_revision(revision)
-    raw = ((REPO / "jarvis/presence_gpu.py").read_bytes() if revision == "current" else
-           subprocess.check_output(["git", "show", revision + ":jarvis/presence_gpu.py"], cwd=REPO))
+    sources = {"presence_gpu.py": ((REPO / "jarvis/presence_gpu.py").read_bytes() if revision == "current" else
+               subprocess.check_output(["git", "show", revision + ":jarvis/presence_gpu.py"], cwd=REPO))}
+    if revision == "current":
+        if (REPO / "jarvis/gpu_config.py").exists():
+            sources["gpu_config.py"] = (REPO / "jarvis/gpu_config.py").read_bytes()
+    elif subprocess.run(["git", "cat-file", "-e", revision + ":jarvis/gpu_config.py"],
+                        cwd=REPO, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        sources["gpu_config.py"] = subprocess.check_output(["git", "show", revision + ":jarvis/gpu_config.py"], cwd=REPO)
     with tempfile.TemporaryDirectory(prefix="jarvis-gpu-scene-") as folder:
-        path = Path(folder) / "presence_gpu.py"
-        path.write_bytes(raw)
+        path = Path(folder)
+        (path / "__init__.py").write_text("")
+        for filename, raw in sources.items():
+            (path / filename).write_bytes(raw)
         name = "jarvis._gpu_comparison_scene_" + uuid.uuid4().hex
-        spec = importlib.util.spec_from_file_location(name, path)
+        spec = importlib.util.spec_from_file_location(name, path / "__init__.py",
+                                                     submodule_search_locations=[str(path)])
         module = importlib.util.module_from_spec(spec)
         sys.modules[name] = module
         try:
             spec.loader.exec_module(module)
-            yield module.ReactorScene, hashlib.sha256(raw).hexdigest()
+            for common in ("audio", "audio_spectrum", "expressions", "morphing", "presence", "richtext"):
+                sys.modules[name + "." + common] = importlib.import_module("jarvis." + common)
+            adapter = importlib.import_module(name + ".presence_gpu")
+            adapter.ReactorScene.snapshot_source_sha256 = {
+                filename: hashlib.sha256(raw).hexdigest() for filename, raw in sources.items()}
+            yield adapter.ReactorScene, hashlib.sha256(sources["presence_gpu.py"]).hexdigest()
         finally:
-            sys.modules.pop(name, None)
+            for imported in tuple(sys.modules):
+                if imported == name or imported.startswith(name + "."):
+                    del sys.modules[imported]
 
 
 def compatible_frame(snapshot, parameters):
@@ -120,7 +137,7 @@ def measure(args):
             target = context.simple_framebuffer((args.width, args.height))
             scene = scene_factory(reduced_motion=args.case == "reduced")
             if hasattr(scene, "set_settings"):
-                scene.set_settings({"profile": quality})
+                scene.set_settings({"profile": quality, "render_scale": args.render_scale})
             parameters = frozenset(inspect.signature(factory.render).parameters)
             scene.update_state("silent" if args.case == "idle" else "thinking", now=0.)
             for index in range(121):
@@ -131,12 +148,19 @@ def measure(args):
             frame, omitted = compatible_frame(snapshot, parameters)
             renderer.render(**frame, target=target)
             context.finish()
-            save_png(args.output / "frame.png", renderer.size, renderer.read_rgb())
+            # Native presentation pixels are captured with no image resize. A
+            # supersampled internal buffer may differ from this real target.
+            save_png(args.output / "frame.png", (args.width, args.height),
+                     target.read(components=3, alignment=1))
             timings = FrameTimings()
             sampler = ProcessSampler(interval=.5).start()
             started = time.monotonic()
             last_expression = 3.6
-            interval = 1 / (15 if quality == "eco" else 45 if quality == "cinematic" else 30)
+            default_fps = (scene.gpu_settings.frames_per_second if hasattr(scene, "gpu_settings") else
+                           15 if quality == "eco" else 45 if quality == "cinematic" else 30)
+            target_fps = args.target_fps or default_fps
+            interval = 1 / target_fps
+            render_samples, frame_samples = [], []
             static = args.case in {"idle", "reduced"}
             while time.monotonic() - started < args.seconds:
                 frame_start = time.monotonic()
@@ -153,7 +177,10 @@ def measure(args):
                 remaining = (args.seconds - (time.monotonic() - started) if static else interval - rendered)
                 if remaining > 0:
                     time.sleep(remaining)
-                timings.record(rendered, time.monotonic() - frame_start)
+                inclusive = time.monotonic() - frame_start
+                timings.record(rendered, inclusive)
+                render_samples.append(rendered * 1000)
+                frame_samples.append(inclusive * 1000)
                 if static:
                     break
             process = sampler.stop()
@@ -162,12 +189,19 @@ def measure(args):
                       "environment": {"os": platform.platform(), "python": sys.version},
                       "source_sha256": hashes, "context": info, "size": renderer.size,
                       "scene_revision": scene_revision, "scene_source_sha256": scene_hash,
+                      "scene_sources_sha256": scene_factory.snapshot_source_sha256,
+                      "physical_framebuffer_size": [args.width, args.height],
+                      "requested_render_scale": args.render_scale,
+                      "resolution_info": getattr(renderer, "resolution_info", None),
+                      "pacing": {"target_fps": target_fps, "source": "explicit_override" if args.target_fps else
+                                 "frozen_revision_profile", "presentation": "headless EGL completion; no monitor swap or scanout measured",
+                                 "export_fps": None},
                       "omitted_snapshot_fields": omitted,
                       "shared_scene_sha256": {name: hashlib.sha256((REPO / "jarvis" / name).read_bytes()).hexdigest()
                                               for name in ("presence.py", "morphing.py")},
-                      "reference_scope": ("Renderer, shaders and state adapter from each revision; shared Canvas/morph modules unchanged."
+                      "reference_scope": ("Renderer, shaders, state adapter and artistic config frozen from each revision; common Canvas/text/audio/morph modules use the running tree and recorded hashes. This is not a historical whole-app benchmark."
                                           if args.historical_scene else
-                                          "Renderer/shaders snapshot; current shared state adapter. Unsupported fields explicitly listed."),
+                                          "Renderer/shaders/config snapshot; current state adapter. Unsupported fields explicitly listed."),
                       "capture_time_seconds": 4., "capture_origin": "actual OpenGL RGB framebuffer",
                       "capture_benchmark_note": "Capture/readback/shader warm-up excluded from measurement.",
                       "expression_policy": ("Offline smile every 1.5s, existing controller owns duration; no audio or live Piper."
@@ -186,6 +220,15 @@ def measure(args):
                                        "No Ollama, microphone, Whisper or Piper is active."]}
             report["timing"]["render_scope"] = "wall_submission_and_driver_finish"
             report["timing"]["frame_scope"] = "wall_frame_including_pacing_wait"
+            def distribution(samples):
+                ordered = sorted(samples)
+                nearest = lambda fraction: ordered[max(0, math.ceil(len(ordered)*fraction)-1)] if ordered else None
+                return {"mean_ms": sum(samples)/len(samples) if samples else None,
+                        "p50_ms": nearest(.5), "p95_ms": nearest(.95), "p99_ms": nearest(.99)}
+            report["timing"]["render_distribution"] = distribution(render_samples)
+            report["timing"]["frame_distribution"] = distribution(frame_samples)
+            report["timing"]["long_frames_over_1_5_budget"] = sum(value > interval*1500 for value in frame_samples)
+            report["timing"]["long_frame_threshold_ms"] = interval*1500
             renderer.shutdown()
             if renderer.release_errors:
                 raise RuntimeError("Renderer cleanup failed: " + "; ".join(renderer.release_errors))
@@ -213,11 +256,14 @@ def parse_args(argv=None):
     parser.add_argument("--width", type=int, default=960)
     parser.add_argument("--height", type=int, default=640)
     parser.add_argument("--backend", choices=("egl", "default"), default="egl")
+    parser.add_argument("--target-fps", type=int, default=None, help="Explicit benchmark pacing override, 1–120; default uses frozen profile")
+    parser.add_argument("--render-scale", default="auto", choices=("auto", "100", "125", "150", "200"))
     parser.add_argument("--output", type=Path, required=True, help="New output directory, never overwritten")
     args = parser.parse_args(argv)
     if (not math.isfinite(args.seconds) or not .1 <= args.seconds <= 60
-            or not 64 <= args.width <= 1920 or not 64 <= args.height <= 1080):
-        parser.error("Duration must be .1–60s; dimensions 64–1920 by 64–1080.")
+            or not 64 <= args.width <= 3840 or not 64 <= args.height <= 2160
+            or args.target_fps is not None and not 1 <= args.target_fps <= 120):
+        parser.error("Duration must be .1–60s; dimensions 64–3840 by 64–2160; pacing 1–120 FPS.")
     if args.output.exists():
         parser.error("Output directory already exists; choose a new path.")
     return args

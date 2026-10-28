@@ -9,7 +9,7 @@ import subprocess
 import sys
 import unittest
 
-from jarvis.gpu_config import FIELD_SPECS, UNIFORM_KEYS, GpuSettings
+from jarvis.gpu_config import FIELD_SPECS, RENDER_SCALES, UNIFORM_KEYS, GpuSettings
 from jarvis import morphing
 from jarvis.morphing import ENTER_SECONDS, HOLD_SECONDS, RETURN_SECONDS
 
@@ -45,7 +45,7 @@ class GpuSettingsTests(unittest.TestCase):
 
     def test_every_slider_has_a_bounded_default_and_a_documented_category(self):
         defaults = GpuSettings()
-        numeric = {entry.name for entry in fields(defaults) if entry.name != "profile"}
+        numeric = {entry.name for entry in fields(defaults) if isinstance(entry.default, int)}
         self.assertEqual(set(FIELD_SPECS), numeric)
         for key, spec in FIELD_SPECS.items():
             with self.subTest(key=key):
@@ -100,6 +100,26 @@ class GpuSettingsTests(unittest.TestCase):
                 self.assertEqual(GpuSettings.from_dict({"profile": profile}).profile, "balanced")
         with self.assertRaises(FrozenInstanceError):
             GpuSettings().halo_intensity = 0
+
+    def test_render_scale_is_a_validated_independent_enum_and_migrates_safely(self):
+        self.assertEqual(GpuSettings.from_dict({}).render_scale, "auto")
+        for scale in RENDER_SCALES:
+            with self.subTest(scale=scale):
+                candidate = GpuSettings.from_dict({"render_scale": scale, "halo_radius": 160})
+                self.assertEqual(candidate.render_scale, scale)
+                self.assertEqual(candidate.halo_radius, 160)
+                self.assertNotIn("render_scale", UNIFORM_KEYS)
+                self.assertEqual(candidate, GpuSettings.from_dict(candidate.to_dict()))
+        self.assertEqual(GpuSettings.from_dict({"render_scale": 125}).render_scale, "125")
+        for scale in (True, None, "150%", "999", 1.25, [], {}):
+            with self.subTest(scale=scale):
+                self.assertEqual(GpuSettings.from_dict({"render_scale": scale}).render_scale, "auto")
+
+    def test_animated_nominal_budget_is_sixty_except_explicit_eco_or_lower_limit(self):
+        for profile, nominal in (("eco", 15), ("balanced", 60), ("cinematic", 60)):
+            for limit in (15, 30, 60):
+                self.assertEqual(GpuSettings(profile=profile, fps_limit=limit).frames_per_second,
+                                 min(limit, nominal))
 
     def test_uniform_payload_is_finite_bounded_and_has_no_optional_import_side_effect(self):
         self.assertEqual(len(UNIFORM_KEYS), len(set(UNIFORM_KEYS)))

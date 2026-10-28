@@ -13,7 +13,7 @@ import unittest
 from array import array
 from unittest import mock
 
-from jarvis.gpu_renderer import GpuRenderer
+from jarvis.gpu_renderer import GpuRenderer, MAX_RENDER_DIMENSION, MAX_RENDER_PIXELS
 from jarvis.gpu_config import FIELD_SPECS, GpuSettings
 from jarvis.morphing import CATALOGUE
 from jarvis import reactor_shaders as shaders
@@ -102,12 +102,11 @@ class GpuRendererTests(unittest.TestCase):
             self.assertIs(self.renderer._vertex_buffer, geometry)
             self.assertEqual(tuple(self.renderer._attachments), attachments)
             self.assertEqual(self.renderer.allocation_bytes, allocated)
-        for profile, maximum in (("eco", (960, 540)), ("balanced", (1280, 720)),
-                                 ("cinematic", (1920, 1080))):
-            self.renderer.resize(3840, 2160)
+        for profile in ("eco", "balanced", "cinematic"):
+            self.renderer.resize(1440, 960)
             self.renderer.set_settings({"profile": profile})
-            self.assertLessEqual(self.renderer.size[0], maximum[0])
-            self.assertLessEqual(self.renderer.size[1], maximum[1])
+            self.assertEqual(self.renderer.size, (1440, 960))
+            self.assertLessEqual(self.renderer.allocation_bytes, 100 * 1024**2)
 
     def test_halo_radius_changes_spread_and_intensity_changes_light_independently(self):
         self.renderer.bloom = self.renderer.particles = False
@@ -303,29 +302,130 @@ class GpuRendererTests(unittest.TestCase):
         self.renderer.resize(256, 192)
         self.assertEqual(self.renderer.allocation_bytes, allocated)
 
-    def test_quality_bounds_internal_resolution_without_changing_aspect(self):
+    def test_profile_preserves_physical_geometry_and_portrait_aspect(self):
         self.renderer.resize(3840, 2160)
-        self.assertEqual(self.renderer.size, (1280, 720))
+        self.assertEqual(self.renderer.size, (3840, 2160))
         balanced = self.renderer.allocation_bytes
         self.renderer.set_quality("cinematic")
         self.assertEqual(self.renderer.quality, "cinematic")
-        self.assertEqual(self.renderer.size, (1920, 1080))
-        self.assertGreater(self.renderer.allocation_bytes, balanced)
+        self.assertEqual(self.renderer.size, (3840, 2160))
+        self.assertEqual(self.renderer.allocation_bytes, balanced)
         self.renderer.resize(900, 1600)
-        self.assertEqual(self.renderer.size, (608, 1080))
+        self.assertEqual(self.renderer.size, (900, 1600))
         self.renderer.set_quality("balanced")
-        self.assertEqual(self.renderer.size, (405, 720))
+        self.assertEqual(self.renderer.size, (900, 1600))
         self.renderer.resize(1, 1)
         self.assertEqual(len(self.frame()), 3)
 
-    def test_eco_profile_caps_resources_and_still_renders_the_same_core(self):
-        self.renderer.resize(3840, 2160)
+    def test_eco_profile_reduces_secondary_cost_without_blurring_native_core(self):
+        self.renderer.resize(640, 360)
         balanced = self.renderer.allocation_bytes
+        core_texture = self.renderer._targets["scene"][0]
         self.renderer.set_quality("eco")
         self.assertEqual(self.renderer.quality, "eco")
-        self.assertEqual(self.renderer.size, (960, 540))
+        self.assertEqual(self.renderer.size, (640, 360))
+        self.assertIs(self.renderer._targets["scene"][0], core_texture)
         self.assertLess(self.renderer.allocation_bytes, balanced)
         self.assertGreater(max(self.frame(1., 1.)), 170)
+
+    def test_supersampling_is_relative_to_physical_framebuffer_with_explicit_caps(self):
+        for setting, expected in (("auto", (256, 192)), ("100", (256, 192)),
+                                  ("125", (320, 240)), ("150", (384, 288)), ("200", (512, 384))):
+            with self.subTest(scale=setting):
+                self.renderer.set_settings({"render_scale": setting})
+                self.assertEqual(self.renderer.size, expected)
+                self.assertEqual(self.renderer.resolution_info["physical_size"], (256, 192))
+                self.assertFalse(self.renderer.resolution_info["capped"])
+                self.assertEqual(len(self.frame(1., 1.)), expected[0]*expected[1]*3)
+                # Presentation/HUD target remains physical, not supersampled.
+                self.assertEqual(len(self.target.read(components=3)), 256*192*3)
+        size, bloom = self.renderer._resolution_plan((7680, 4320), "cinematic")
+        self.assertLessEqual(size[0]*size[1], MAX_RENDER_PIXELS)
+        self.assertLessEqual(max(size), MAX_RENDER_DIMENSION)
+        self.assertAlmostEqual(size[0]/size[1], 16/9, delta=.002)
+
+    def test_supersampling_preserves_apparent_fine_strokes_particles_and_engraving(self):
+        self.renderer.bloom = False
+        # Isolate fine ink from the unchanged volumetric material. Read the
+        # actual physical presentation target, not an artificially resized PNG.
+        for kind in ("line", "particles", "glyph"):
+            energies, bright_pixels = [], []
+            for scale in ("100", "200"):
+                self.renderer.set_settings({"render_scale": scale, "core_brightness": 0,
+                    "halo_intensity": 0, "ring_brightness": 0, "particle_brightness": 200,
+                    "particle_size": 200, "particle_density": 200})
+                self.renderer.particles = kind == "particles"
+                kwargs = {}
+                if kind == "glyph":
+                    symbol = CATALOGUE["smile"]
+                    kwargs.update(points=symbol.contour, details=symbol.details,
+                                  surface_family="smile", surface_amount=1.)
+                self.frame(4.2, 0. if kind == "line" else 1., **kwargs)
+                raw = self.target.read(components=3, alignment=1)
+                energies.append(sum(raw))
+                bright_pixels.append(sum(value > 80 for value in raw))
+            with self.subTest(layer=kind):
+                self.assertGreater(energies[0], 1000)
+                self.assertAlmostEqual(energies[1]/energies[0], 1., delta=.15)
+                self.assertAlmostEqual(bright_pixels[1]/bright_pixels[0], 1., delta=.15)
+
+    def test_bloom_radius_keeps_its_physical_scale_across_internal_resolutions(self):
+        for scale, adaptive in (("100", 0), ("200", 0), ("100", 2), ("auto", 4)):
+            with self.subTest(scale=scale, adaptive=adaptive):
+                self.renderer.set_settings({"render_scale": scale, "bloom_radius": 150})
+                self.renderer.set_adaptive_level(adaptive)
+                self.frame(2., 1.)
+                # Last blur pass is vertical. Inspect the real program uniform
+                # used for its framebuffer, not an unrelated settings field.
+                step = self.renderer._blur["u_step"].value
+                self.assertAlmostEqual(step[0], 0.)
+                self.assertAlmostEqual(step[1], 1.5*4/192, places=6)
+
+    def test_adaptation_reduces_bloom_then_particles_before_auto_main_resolution(self):
+        self.renderer.resize(640, 360)
+        core = self.renderer._targets["scene"][0]
+        settings = self.renderer.settings
+        bloom_sizes = []
+        for level in range(4):
+            self.renderer.set_adaptive_level(level)
+            self.assertEqual(self.renderer.size, (640, 360))
+            self.assertIs(self.renderer._targets["scene"][0], core)
+            bloom_sizes.append(self.renderer.resolution_info["bloom_size"])
+            self.assertIs(self.renderer.settings, settings)
+        self.assertLess(bloom_sizes[1][0], bloom_sizes[0][0])
+        self.assertLess(bloom_sizes[2][0], bloom_sizes[1][0])
+        self.assertEqual(bloom_sizes[3], bloom_sizes[2])
+        self.renderer.set_adaptive_level(4)
+        self.assertEqual(self.renderer.size, (480, 270))
+        self.assertTrue(self.renderer.resolution_info["capped"])
+        self.renderer.set_settings({"render_scale": "100"})
+        self.assertEqual(self.renderer.size, (640, 360))
+        self.renderer.set_adaptive_level(0)
+        self.assertEqual(self.renderer.resolution_info["bloom_size"], bloom_sizes[0])
+        for invalid in (-1, 5, True, 2.5):
+            with self.subTest(level=invalid), self.assertRaises(ValueError):
+                self.renderer.set_adaptive_level(invalid)
+
+    def test_animated_material_reuses_unchanged_geometry_upload(self):
+        with mock.patch.object(self.renderer._vertex_buffer, "write", wraps=self.renderer._vertex_buffer.write) as write:
+            first = self.frame(1., 1.)
+            second = self.frame(1.2, 1.)
+            self.assertNotEqual(first, second)
+            self.assertEqual(write.call_count, 1)
+            self.frame(1.2, 1., points=flat_line(.1))
+            self.assertEqual(write.call_count, 2)
+
+    def test_failed_scale_or_adaptive_allocation_preserves_preference_and_live_frame(self):
+        before, original = self.renderer.settings, self.renderer.size
+        with mock.patch.object(self.ctx, "texture", side_effect=RuntimeError("allocation denied")):
+            with self.assertRaisesRegex(RuntimeError, "allocation denied"):
+                self.renderer.set_settings({"render_scale": "200"})
+            self.assertEqual(self.renderer.settings, before)
+            self.assertEqual(self.renderer.size, original)
+            with self.assertRaisesRegex(RuntimeError, "allocation denied"):
+                self.renderer.set_adaptive_level(1)
+            self.assertEqual(self.renderer.adaptive_level, 0)
+        self.assertGreater(max(self.frame()), 170)
 
     def test_spectral_bands_change_object_light_without_changing_allocations(self):
         baseline = self.frame(2., 1., orbit_phase=(.3, -.5, .8))

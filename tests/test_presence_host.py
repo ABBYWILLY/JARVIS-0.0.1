@@ -87,6 +87,25 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
         self.assertEqual(self.store.messages(self.app.session_id), saved)
         self.assertEqual(self.store.messages(self.app.session_id)[1]["id"], mid)
 
+    def test_gpu_animation_clock_and_measured_diagnostics_are_separate_from_audio(self):
+        child = self.ready_gpu()
+        self.presence.update_event("thinking")
+        packet = child.frames[-1]
+        self.assertTrue(packet["animation"]["active"])
+        self.assertEqual(packet["animation"]["orbit_target"], self.presence._gpu_scene._orbit_targets())
+        self.assertEqual(packet["frame"]["rms"], 0.)
+        self.assertIn("non mesurés", packet["hud"]["performance"])
+        child.events.append({"kind": "heartbeat", "size": (1920, 1080), "visible": True,
+            "resolution": {"internal_size": (1920, 1080)},
+            "timing": {"actual_draw_fps": 58.4, "frame_p95_ms": 19.2}})
+        self.pump_until(lambda: bool(self.presence.gpu_diagnostics))
+        self.assertIn("58.4 FPS dessinés", self.presence.gpu_runtime_summary())
+        self.assertIn("1920 × 1080", self.presence.gpu_runtime_summary())
+        self.assertIn("frame_p95_ms", self.presence.semantic_diagnostics())
+        self.presence.set_options(reduced_motion=True)
+        self.assertFalse(child.frames[-1]["animation"]["active"])
+        self.assertFalse(self.voice.capture.alive())
+
     def test_failure_falls_back_once_and_manual_retry_preserves_preference(self):
         child = self.ready_gpu()
         child.events.append({"kind": "error", "message": "Shader test failure"})

@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 from scripts.compare_presence_gpu import (REPO, compatible_frame, parse_args,
                                          renderer_source, scene_source, validate_revision)
@@ -31,9 +33,33 @@ class GpuComparisonTests(unittest.TestCase):
 
     def test_unbounded_or_nonfinite_measurements_are_rejected(self):
         for options in (("--seconds", "nan"), ("--seconds", "inf"), ("--seconds", "61"),
-                        ("--width", "99999"), ("--height", "0")):
+                        ("--width", "99999"), ("--height", "0"), ("--target-fps", "0"),
+                        ("--target-fps", "121"), ("--render-scale", "250")):
             with self.subTest(options=options), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 parse_args(["--output", "/tmp/nonexistent-comparison-output", *options])
+
+    def test_hidpi_scale_and_explicit_pacing_are_recordable_without_fixed_resolution(self):
+        args = parse_args(["--output", "/tmp/nonexistent-comparison-output", "--width", "2560",
+                           "--height", "1440", "--render-scale", "150", "--target-fps", "60"])
+        self.assertEqual((args.width, args.height), (2560, 1440))
+        self.assertEqual(args.render_scale, "150")
+        self.assertEqual(args.target_fps, 60)
+
+    def test_historical_scene_does_not_take_current_artistic_defaults(self):
+        # CI checkouts can be shallow. Simulate the two historical files while
+        # still loading a real adapter/private package, independent of git depth.
+        adapter_source = (REPO / "jarvis/presence_gpu.py").read_bytes()
+        old_config = b"class GpuSettings:\n    frames_per_second = 30\n"
+        def git_show(command, **_options):
+            return old_config if command[-1].endswith(":jarvis/gpu_config.py") else adapter_source
+        with patch("jarvis.gpu_config.GpuSettings", side_effect=AssertionError("current defaults used")), \
+                patch("scripts.compare_presence_gpu.subprocess.check_output", side_effect=git_show), \
+                patch("scripts.compare_presence_gpu.subprocess.run", return_value=SimpleNamespace(returncode=0)):
+            with scene_source("4ae4f71") as (scene_factory, _digest):
+                scene = scene_factory()
+                self.assertEqual(scene.gpu_settings.frames_per_second, 30)
+                self.assertIn("gpu_config.py", scene_factory.snapshot_source_sha256)
+        self.assertFalse(any(name.startswith("jarvis._gpu_comparison_scene_") for name in sys.modules))
 
     def test_snapshot_matches_exact_sources_and_cleans_imports(self):
         before = {name: (REPO / "jarvis" / name).read_bytes()

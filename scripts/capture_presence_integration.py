@@ -9,6 +9,7 @@ Requires Tk/X11, EGL, optional GPU requirements, NumPy and ffmpeg.
 import argparse
 from dataclasses import asdict
 import hashlib
+import importlib.util
 import json
 import math
 from pathlib import Path
@@ -84,11 +85,67 @@ def capture_widget(window, path):
     ImageGrab.grab(bbox=(x, y, x + window.winfo_width(), y + window.winfo_height())).save(path)
 
 
+def capture_hud_comparison(output):
+    """Compare actual 4K text rasterization, with no bitmap resampling."""
+    import moderngl
+    from jarvis.presence_gpu import context_info, save_png
+    output.mkdir(parents=True, exist_ok=False)
+    width, height = 3840, 2160
+    context = moderngl.create_standalone_context(require=330, backend="egl")
+    target = context.simple_framebuffer((width, height), components=3)
+    report = {"physical_framebuffer_size": [width, height], "dpi_scale": 2.,
+              "method": "Actual EGL HUD drawn on a black native 3840x2160 framebuffer; no resize, crop or bitmap sharpening",
+              "context": context_info(context), "audio_and_models": "not_opened",
+              "hardware_validation": "pending", "captures": {}}
+    values = {"state": "thinking", "microphone": "désactivé · aucune capture matérielle",
+              "caption": "Heureux de vous revoir 😊 — cœur, été et 12,50 €.",
+              "caption_marks": [(0, 7)], "caption_note": "Comparaison de netteté HiDPI · rendu natif · aucune voix ni microphone",
+              "preview": "DÉMO HORS LIGNE · texte rasterisé à DPI 200 %", "dpi_scale": 2.}
+    try:
+        for name, revision in (("before", "4ae4f71"), ("after", "current")):
+            raw = ((REPO / "jarvis/gpu_hud.py").read_bytes() if revision == "current" else
+                   subprocess.check_output(["git", "show", revision + ":jarvis/gpu_hud.py"], cwd=REPO))
+            with tempfile.TemporaryDirectory(prefix="jarvis-hud-capture-") as directory:
+                path = Path(directory) / "gpu_hud.py"
+                path.write_bytes(raw)
+                module_name = "_jarvis_gpu31_hud_capture_" + name
+                spec = importlib.util.spec_from_file_location(module_name, path)
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                hud = None
+                try:
+                    spec.loader.exec_module(module)
+                    hud = module.GpuHud(context)
+                    target.clear(0., 0., 0., 1.)
+                    hud.render(values, width, height, target=target)
+                    context.finish()
+                    image = output / ("presence-gpu31-hud-4k-" + name + ".png")
+                    save_png(image, (width, height), target.read(components=3, alignment=1))
+                    report["captures"][name] = {"revision": revision, "source_sha256": hashlib.sha256(raw).hexdigest(),
+                        "path": image.name, "sha256": digest(image), "atlas_size": hud._size,
+                        "raster_info": getattr(hud, "raster_info", None),
+                        "allocation_bytes_estimate": hud.allocation_bytes}
+                finally:
+                    if hud is not None:
+                        hud.shutdown()
+                    sys.modules.pop(module_name, None)
+        (output / "presence-gpu31-hud-4k.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps({"output": str(output), "physical_size": [width, height],
+                          "atlas_before": report["captures"]["before"]["atlas_size"],
+                          "atlas_after": report["captures"]["after"]["atlas_size"]}))
+    finally:
+        target.release()
+        context.release()
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True, help="New directory; existing data is never overwritten")
     parser.add_argument("--fps", type=int, default=12)
+    parser.add_argument("--hud-comparison", action="store_true", help="Capture native 4K before/after HUD text only; no video or audio")
     args = parser.parse_args(argv)
+    if args.hud_comparison:
+        return capture_hud_comparison(args.output)
     if not 8 <= args.fps <= 30:
         parser.error("Choose 8–30 frames/s for this offline recording.")
     ffmpeg = shutil.which("ffmpeg")

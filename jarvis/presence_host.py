@@ -1,5 +1,6 @@
 """One conversation model, two permanent visual engines, isolated GPU failures."""
 from dataclasses import asdict
+import json
 import math
 import time
 import tkinter as tk
@@ -19,6 +20,7 @@ class IntegratedPresence(PresenceView):
         self._gpu_size = (960, 640)
         self._gpu_seq = 0
         self._gpu_bands = (0., 0., 0.)
+        self.gpu_diagnostics = {}
         self._ignore_unmap = False
         self._preview_restore = None
         self._preview_art = None
@@ -143,6 +145,29 @@ class IntegratedPresence(PresenceView):
         if callable(setter):
             setter(enabled)
 
+    def gpu_runtime_summary(self):
+        """Measured renderer diagnostics, never monitor Hz presented as FPS."""
+        timing = self.gpu_diagnostics.get("timing", {})
+        resolution = self.gpu_diagnostics.get("resolution", {})
+        fps = timing.get("actual_draw_fps")
+        parts = [f"{fps:.1f} FPS dessinés" if isinstance(fps, (int, float)) else "FPS non mesurés"]
+        size = resolution.get("render_size", resolution.get("internal_size", resolution.get("main_size")))
+        if isinstance(size, (list, tuple)) and len(size) == 2:
+            parts.append(f"rendu {size[0]} × {size[1]} px")
+        physical = self.gpu_diagnostics.get("size")
+        if isinstance(physical, (list, tuple)) and len(physical) == 2:
+            parts.append(f"écran {physical[0]} × {physical[1]} px")
+        return " · ".join(parts)
+
+    def semantic_diagnostics(self):
+        # Reuse the existing copyable diagnostic surface. Sampling lives in
+        # the child; opening/copying this text performs no benchmark or I/O.
+        result = super().semantic_diagnostics()
+        if self.gpu_diagnostics:
+            result += "\nPRESENCE GPU · mesures du processus (pas de validation RTX)\n"
+            result += json.dumps(self.gpu_diagnostics, ensure_ascii=False, indent=2)
+        return result
+
     def _gpu_failed(self, reason):
         reason = str(reason)[:512]
         visible = self._preview_restore[1] if self._preview_restore is not None else self._gpu_desired
@@ -195,6 +220,9 @@ class IntegratedPresence(PresenceView):
                     size = event.get("size")
                     if isinstance(size, (tuple, list)) and len(size) == 2 and min(size) > 0:
                         self._gpu_size = tuple(size)
+                    self.gpu_diagnostics = {key: event[key] for key in (
+                        "timing", "process", "resolution", "presentation", "size", "logical_size", "dpi_scale")
+                        if key in event}
                     if self._gpu_visible and not before:
                         self._render()
                 elif kind == "action":
@@ -304,16 +332,25 @@ class IntegratedPresence(PresenceView):
                  if self.semantic.active else now)
         self._gpu.submit({"seq": self._gpu_seq, "frame": frame, "art": art.to_dict(),
             "visible": self._gpu_desired, "pcm_at": self.model.signal_at, "frame_at": now,
+            "animation": {"active": bool(scene.moving(now) and self.model.motion_allowed),
+                "orbit_velocity": tuple(scene.orbit_velocity), "orbit_target": scene._orbit_targets(),
+                "orbit_tau": (.18/(art.expression_ring_speed/100) if self.semantic.active else
+                              art.ring_acceleration_ms/1000),
+                "core_target": 1.-art.thinking_contraction/100 if self.state == "thinking" else 1.,
+                "core_tau": art.transition_ms/1000},
             "expression_until": until, "window": {"width": 960, "height": 640, "mini": self.settings.mini_mode},
             "hud": {"state": self.state, "microphone": self.microphone_state,
                 "caption": self.caption_text if self.settings.subtitles else "",
                 "caption_copy": self.caption_text, "caption_marks": marks,
                 "caption_accent": scene.color, "caption_note": "Synchronisation approximative par bloc PCM Piper",
                 "operation": self.operation_detail, "diagnostic": self.settings.diagnostic_mode,
+                "performance": self.gpu_runtime_summary(),
                 "preview": self._preview_text or "", "engine": ENGINE_LABELS["gpu"]}})
         self._update_engine_text()
         if self._visible() and (scene.moving(now) or self._accent.active(now)):
-            self.after_id = self.app.root.after(round(1000/art.frames_per_second), self._tick)
+            # Actual drawing is paced in the isolated GPU process. Tk sends
+            # bounded state/audio anchors, not one IPC packet per display frame.
+            self.after_id = self.app.root.after(round(1000/min(25, art.frames_per_second)), self._tick)
 
     def _update_engine_text(self):
         if self.active_engine == "canvas" and self.window is not None:

@@ -48,6 +48,11 @@ class GpuPacketTests(unittest.TestCase):
                       {"details": [[(0., 0.), (1., 1.)]]*9}):
             with self.subTest(frame=frame), self.assertRaises(ValueError):
                 validate_packet({**packet(), "frame": {**packet()["frame"], **frame}})
+        for animation in ({"active": 1}, {"unknown": 1}, {"orbit_tau": 0.},
+                          {"core_target": float("nan")}, {"orbit_velocity": (1., 2.)},
+                          {"orbit_target": (0., 0., 30.)}):
+            with self.subTest(animation=animation), self.assertRaises(ValueError):
+                validate_packet({**packet(), "animation": animation})
 
     def test_fresh_release_envelope_is_not_cut_when_original_pcm_expires(self):
         value = {**packet(), "frame_at": 10., "pcm_at": 9., "expression_until": 11.}
@@ -206,6 +211,35 @@ class RealGpuSessionTests(SessionWaitMixin, unittest.TestCase):
         self.assertEqual(max(item.get("frames", 0) for item in later), hidden_count)
         session.submit(packet(3))
         self.wait_until(session, lambda items: any(item.get("frames", 0) > hidden_count for item in items))
+
+    def test_animated_child_draws_new_time_frames_between_lower_rate_parent_snapshots(self):
+        session = GpuSession(allow_software=True, headless=True, startup_timeout=10.)
+        self.addCleanup(session.stop)
+        session.start()
+        self.wait_until(session, lambda items: any(item["kind"] == "ready" for item in items))
+        started, sent, events = time.monotonic(), 0, []
+        next_send = started
+        while time.monotonic()-started < 1.25:
+            now = time.monotonic()
+            if now >= next_send:
+                session.submit({**packet(sent), "frame_at": now, "pcm_at": started-1,
+                    "window": {"width": 480, "height": 360},
+                    "frame": {**packet()["frame"], "time_s": now-started,
+                              "orbit_phase": (now-started, 0., 0.)},
+                    "animation": {"active": True, "orbit_velocity": (1., 0., 0.),
+                                  "orbit_target": (1., 0., 0.)}})
+                next_send += .08  # Deliberately lower than the audio/IPC 25Hz budget.
+                sent += 1
+            events.extend(session.poll())
+            time.sleep(.003)
+        events.extend(self.wait_until(session, lambda items: any(item.get("timing", {}).get("animated_frames_drawn", 0) > 0 for item in items)))
+        beats = [item for item in events if item["kind"] == "heartbeat"]
+        self.assertGreater(max(item["frames"] for item in beats), sent)
+        sampled = [item["timing"] for item in beats if item["timing"]["animated_frames_drawn"] > 0]
+        self.assertTrue(sampled)
+        self.assertTrue(all(item["swap_calls"] == 0 for item in sampled))  # EGL is not a display.
+        self.assertTrue(all(item["physical_vram_bytes"] is None for item in sampled))
+        self.assertGreater(max(item["frame_time_s"] for item in sampled), .5)
 
 
 if __name__ == "__main__":

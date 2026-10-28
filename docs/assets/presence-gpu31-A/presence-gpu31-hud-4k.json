@@ -1,0 +1,58 @@
+{
+  "physical_framebuffer_size": [
+    3840,
+    2160
+  ],
+  "dpi_scale": 2.0,
+  "method": "Actual EGL HUD drawn on a black native 3840x2160 framebuffer; no resize, crop or bitmap sharpening",
+  "context": {
+    "vendor": "Mesa",
+    "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+    "acceleration": "software",
+    "hardware_validation": "pending",
+    "required_version": "OpenGL 3.3"
+  },
+  "audio_and_models": "not_opened",
+  "hardware_validation": "pending",
+  "captures": {
+    "before": {
+      "revision": "4ae4f71",
+      "source_sha256": "5d969209ce36afc9335b61a8ff8a053537202897100940d17e1ca4baf1269096",
+      "path": "presence-gpu31-hud-4k-before.png",
+      "sha256": "a3a13535b95eeb2c84757a9c77d1971d738280c52d5d9d49bba4d4b1517c40ba",
+      "atlas_size": [
+        1920,
+        172
+      ],
+      "raster_info": null,
+      "allocation_bytes_estimate": 1320960
+    },
+    "after": {
+      "revision": "current",
+      "source_sha256": "079ec47cc7536a1ad1f0079f5b09ed7faca1ae397cd268c9fb3dbeb235537ce8",
+      "path": "presence-gpu31-hud-4k-after.png",
+      "sha256": "6e96fe69daa89e378f2f39c983c9217ca9cd8e36e61c04f76e184e75dbb924ce",
+      "atlas_size": [
+        3840,
+        344
+      ],
+      "raster_info": {
+        "framebuffer_size": [
+          3840,
+          2160
+        ],
+        "atlas_size": [
+          3840,
+          344
+        ],
+        "physical_pixel_ratio": 1.0,
+        "dpi_scale": 2.0,
+        "limited": false,
+        "limit_reason": null,
+        "allocation_bytes_estimate": 5283840
+      },
+      "allocation_bytes_estimate": 5283840
+    }
+  }
+}
