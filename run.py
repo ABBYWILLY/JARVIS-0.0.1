@@ -4,6 +4,10 @@ import sys
 
 
 def main():
+    if "--gpu-smoke-test" in sys.argv:
+        from jarvis.config import data_directory
+        from jarvis.gpu_smoke import run_smoke
+        return run_smoke(data_directory())
     import tkinter as tk
     from tkinter import messagebox
     from jarvis.config import data_directory

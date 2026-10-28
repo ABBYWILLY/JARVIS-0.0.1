@@ -97,3 +97,67 @@ au milieu d'une phrase : aucun redémarrage Piper ni commande ajoutée au texte
 Les nouveaux tests couvrent blocs/DAC, annulation, reprise après erreur,
 activation à chaud et processus spawn ; aucune voix artificielle n'est
 présentée comme un essai Piper ou microphone physique.
+
+## Phase 5 — Build et recette Windows
+
+Suite locale Linux/Tk 9/EGL réel requis : **745 tests, 736 réussis, 9 ignorés**
+en 93,544 s. Les tests ignorés nécessitent les dépendances audio natives ou un
+modèle/matériel explicitement activé. Cette réussite ne remplace pas la CI.
+
+[Captures, vidéo et mesures du vrai renderer](PRESENCE-INTEGRATED-DEMO.md).
+Le scénario est hors ligne, explicitement synthétique. Il ne valide pas votre
+microphone, les sorties Bluetooth, la voix Piper ou la RTX 3070.
+
+Depuis PowerShell dans le dépôt, après mise à jour de la branche :
+
+```powershell
+git switch feat/jalon-2-voice-presence
+git pull --ff-only
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-voice.txt -r requirements-gpu.txt
+.\.venv\Scripts\python.exe run.py
+```
+
+Les modèles vocaux et Ollama déjà installés sont réutilisés, sans téléchargement
+automatique. Canvas fonctionne sans `requirements-gpu.txt`. Les erreurs GPU
+replient vers Canvas avec un motif et un nouvel essai manuel.
+
+Compilation des deux moteurs dans le même EXE :
+
+```powershell
+.\scripts\build-windows.ps1 -WithVoice -WithGpu
+```
+
+Résultat : `dist\jalon-2\Jarvis.exe`, empreinte SHA-256 et diagnostics.
+Sans `-WithGpu`, le build Canvas reste possible. GitHub Actions « Windows
+Jarvis » compile les deux moteurs, exécute la suite puis les smoke tests source
+et EXE. La sonde distingue pilote absent, vrai rendu effectué et erreur de
+packaging ; un pilote absent n'est jamais annoncé comme une frame réussie.
+Les rapports JSON sont livrés dans l'artefact. Le prototype autonome reste
+compilé séparément. Ni EXE ni PowerShell n'ont été exécutés sous ce Linux.
+
+### À votre retour sur Windows 11 — validation matérielle en attente
+
+1. Dans Centre de contrôle → PRESENCE, choisir 2D classique. Parler puis se
+   taire : vérifier RMS réel, onde et transcription. Tester une réponse Piper.
+2. Choisir 2.5D holographique. Vérifier le moteur actif, le RMS/VAD, THINKING,
+   la voix et le halo. Le micro ne doit pas demander une nouvelle ouverture.
+3. Pendant une lecture, basculer 2.5D → 2D → 2.5D. Vérifier continuité audio,
+   conversation/historique conservés et une seule fenêtre PRESENCE visible.
+4. Faire lire « Heureux de te revoir 😊 », « Je t'aime ❤️ », « C'est drôle 😂 » :
+   traits gravés, sous-titres, puis arrêt/interruption sans expression résiduelle.
+   Les symboles restent exclus des exemples techniques et blocs de code.
+5. Ouvrir chaque Studio : aperçu, Avant/Après, Annuler puis Appliquer. Modifier
+   halo rayon/lumière et taille des particules indépendamment. Redémarrer JARVIS
+   et vérifier les deux configurations et le choix de moteur.
+6. Tester Mini, fenêtre masquée, petites fenêtres et vos DPI. Vérifier clavier
+   Tab/Entrée, F6 Studio, M micro, Ctrl+Espace arrêt, D sommeil, F9 diagnostic,
+   F10 Mini, F11 plein écran et Échap. Ctrl+C copie le sous-titre GPU affiché.
+7. Comparer Canvas/GPU Éco/Équilibré/Cinématique avec le même modèle Ollama :
+   TTFT, tokens/s, latence vocale et CPU/RAM/VRAM du Gestionnaire des tâches.
+   Aucun gain RTX, coût énergétique ou impact Ollama n'a été mesuré ici.
+
+Le HUD GPU offre commandes clavier et copie Unicode ; sa lecture par les
+technologies d'assistance Windows reste à vérifier. COMMAND OS conserve ses
+widgets Tk. Les sous-titres et expressions suivent les blocs PCM : précision
+approximative, délai acoustique Bluetooth inconnu, aucune promesse mot à mot.

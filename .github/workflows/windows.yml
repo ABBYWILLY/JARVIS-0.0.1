@@ -16,15 +16,27 @@ jobs:
         with:
           python-version: '3.12.10'
           architecture: x64
-      - name: Tests, compilation vocale et démarrage de l’EXE Jalon 2
+      - name: Tests, compilation vocale et double moteur PRESENCE
         shell: powershell
-        run: .\scripts\build-windows.ps1 -PythonExecutable (Get-Command python).Source -WithVoice
+        run: |
+          try {
+            .\scripts\build-windows.ps1 -PythonExecutable (Get-Command python).Source -WithVoice -WithGpu
+          } catch {
+            $Detail = $_.Exception.Message + [Environment]::NewLine + $_.InvocationInfo.PositionMessage
+            $Detail = $Detail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Windows build::$Detail"
+            throw
+          }
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Jarvis-Jalon2-Windows-x64-${{ github.sha }}
           path: |
             dist/jalon-2/Jarvis.exe
             dist/jalon-2/Jarvis.exe.sha256
+            dist/jalon-2/diagnostics/
+            docs/PRESENCE-DUAL-ENGINE.md
+            requirements-gpu.txt
             docs/VOICE.md
             scripts/install_voice_models.py
             requirements-voice.txt

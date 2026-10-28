@@ -1,3 +1,38 @@
+# PRESENCE — intégration double moteur, 28 octobre 2026
+
+Base approuvée A–D : 901f360, conservée. Contrats 06ebcff ; paramètres/Studio
+GPU ec82831 ; intégration 8195c89 ; PCM Piper a841190. Canvas reste le choix
+initial et une alternative complète permanente, jamais retirée. Centre PRESENCE :
+Automatique/2D/2.5D, choix persistant et repli expliqué sans relance automatique.
+Deux configurations artistiques dans le même SQLite ; aucun modèle téléchargé,
+aucune modification de main ou des autres lots.
+
+Studio GPU : 66 commandes réellement reliées, six essentielles d'abord,
+Avant/Après/Annuler/Appliquer, aperçu hors ligne prioritaire après événements réels.
+Processus graphique isolé, files bornées, même état/captions/expressions parent.
+Basculement sans ouverture micro ni redémarrage Piper ; analyse spectrale des
+blocs PCM rééchantillonnés à leur échéance DAC, commandes par booléen partagé.
+Annulation immédiate et traces d'erreurs. Halo rayon/intensité indépendants.
+
+Suite Linux Tk9 + EGL réel requis : 745 tests exécutés, 736 réussis, 9 ignorés,
+93,544 s. Tests phase2 :92 ; phase3 :48 ; phase4 :74 (campagnes recouvrantes).
+Les ignorés concernent dépendances natives manquantes et essais réels opt-in.
+Pas de preuve de fonctionnement micro/Piper/RTX physique. Vidéo9s/108frames,
+9captures réelles Tk/OpenGL, PCM synthétique clairement marqué :
+PRESENCE-INTEGRATED-DEMO.md et assets/presence-integrated-demo/.
+Mesa llvmpipe GL+HUD capture :18,86ms moyen/P9527,89ms, ressources propres
+estimées8 041 344octets ; pas mesureRTX, puissance, TTFT ou latenceOllama.
+
+Build Windows optionnel -WithVoice -WithGpu, tests source/EXE et rapports
+séparant indisponibilité du pilote et erreur de packaging. Vérifier Actions du
+SHA final : CI des étapes intermédiaires app échouée, détails non accessibles ;
+prototype intermédiaire vert. Le nouveau build publie les erreurs détaillées.
+Ne pas annoncer l'EXE validé tant que la CI correspondante n'est pas verte.
+Recette exacte et limitations : PRESENCE-DUAL-ENGINE.md.
+Validation matérielle Windows11/RTX3070/micro/Piper/Bluetooth en attente.
+
+---
+
 # PRESENCE GPU 3.0 — D, 27 octobre 2026
 
 C publié : 27c3f4e ; CI Windows application 40578074554 et prototype 40578074556

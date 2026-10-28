@@ -63,7 +63,7 @@ jobs:
           fi
           python -c 'import tkinter'
       - name: Test real OpenGL shaders, resources, reports and CLI without a GUI
-        run: python -m unittest -v tests.test_gpu_renderer tests.test_gpu_benchmark tests.test_presence_gpu
+        run: python -m unittest -v tests.test_gpu_renderer tests.test_gpu_benchmark tests.test_presence_gpu tests.test_gpu_session tests.test_gpu_hud tests.test_gpu_smoke
       - name: Compile shaders and render one real headless EGL frame
         shell: bash
         run: |

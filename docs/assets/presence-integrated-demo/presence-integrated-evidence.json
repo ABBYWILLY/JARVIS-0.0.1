@@ -1,0 +1,1471 @@
+{
+  "context": {
+    "vendor": "Mesa",
+    "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+    "acceleration": "software",
+    "hardware_validation": "pending",
+    "required_version": "OpenGL 3.3"
+  },
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "resolution": [
+    960,
+    640
+  ],
+  "video_seconds": 9,
+  "video_fps": 12,
+  "frames": 108,
+  "hardware_validation": "pending",
+  "method": "Actual IntegratedPresence queue_expressions/update_event/complete_segment, validated latest packet, actual EGL GpuRenderer+GpuHud; explicit audio and transport doubles",
+  "audio_source": "Synthetic 16kHz PCM tones; no microphone, Piper or Ollama",
+  "metrics": {
+    "scope": "Offline capture including GUI setup, readback, image saves and video pipe; not a live Jarvis/Ollama benchmark",
+    "render_scope": "Real EGL GpuRenderer + GpuHud and context.finish; readback/encoding excluded",
+    "mean_render_ms": 18.862401425158843,
+    "p95_render_ms": 27.890653000213206,
+    "wall_seconds_including_capture": 3.753370801998244,
+    "process_cpu_seconds_including_capture": 8.110045245,
+    "renderer_hud_owned_bytes_estimate_excluding_capture_framebuffer": 8041344,
+    "maximum_process_rss_bytes_including_capture": 162557952,
+    "real_vram_measurement": null,
+    "ollama_impact": "not measured",
+    "audio_latency": "not measured"
+  },
+  "snapshots": {
+    "thinking": "presence-integrated-thinking.png",
+    "parole": "presence-integrated-speaking.png",
+    "expression": "presence-integrated-smile.png",
+    "interruption": "presence-integrated-interruption.png",
+    "retour au repos": "presence-integrated-idle.png"
+  },
+  "source_sha256": {
+    "jarvis/presence_host.py": "28cd07669a2674f2f1c32a60691bf014f1d8368a9f0b32a7c336c2a745cc1561",
+    "jarvis/presence.py": "74f4dd72c17e6c1eef39fc519562f9c2a54ba4e2516e63612b915e73a32b2c5b",
+    "jarvis/presence_gpu.py": "cb7b1b5db7cef52d09d12c8678520bfe10aa7721181e3601bc0a18e861c92e5e",
+    "jarvis/gpu_config.py": "16f55848c533f1f40289dc92186715dafdf9a9f38c92aa01ad30f6b6af67c42a",
+    "jarvis/gpu_renderer.py": "a4bed21773d9ff81aa98de49e7969c0af387472e3d07f419e89e1b0668143159",
+    "jarvis/reactor_shaders.py": "08351b85a7bf118cf82b11e35bf3bf3270c3bd6c92d8cf862b2194d461d61975",
+    "jarvis/gpu_hud.py": "5d969209ce36afc9335b61a8ff8a053537202897100940d17e1ca4baf1269096",
+    "jarvis/gpu_session.py": "271972b6e88a6aed06eab082a94e47e45df7949312e6ea25896f2cdccb28341f",
+    "scripts/capture_presence_integration.py": "951e8b2759c2a6e60b50960d6e20594488e2d09519fa26e4ebc95086f610e962"
+  },
+  "artifacts_sha256": {
+    "presence-integrated-classic-thinking.png": "ab7b5f22c8be11fabe933804eef5d440a4ddfdea03ce626db755166ac40fb488",
+    "presence-integrated-demo.mp4": "746d08b356495d13d787e428e4d0297ae6280ade5b9ffb4dd9036ed1508a7c0e",
+    "presence-integrated-engine-selector.png": "58d135acccab96e401410ab8b89767596a85d8cb890b0576061e7cfc292edd9e",
+    "presence-integrated-idle.png": "d9a9bda18044c28bccc9fe0ec7e58b4ba5ee4d6bbc53b42b46f55d5dfbe011bd",
+    "presence-integrated-interruption.png": "3c0e42946743ebdbe6b4f2da1365050087ff2860ce1148e7500ff5b0071cecfa",
+    "presence-integrated-smile.png": "4ae914ea82848a8a0ec0e40ba960c9bb6e2623d48903644684d31c39d5c3b61f",
+    "presence-integrated-speaking.png": "6946acbd1431b88e6815cccfbb29b27c0f480668189a28f0f5b13d031efac106",
+    "presence-integrated-studio-2d.png": "b8b56fd92178be8e7f52b0255ba58679b8c9c5b834d23c2e3eaefbbcfdff74db",
+    "presence-integrated-studio-gpu.png": "701a96bab099b6e4a9b8e504544c8f4c1fee691a622052f2b1ff813c3b5fce54",
+    "presence-integrated-thinking.png": "c4d6e2acfcb6019ac33cb1b92b0242e3b4fcea88c6c4081b08c46a5d3bb97c2d"
+  },
+  "trace": [
+    {
+      "time_s": 0.0,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.0833,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.1667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.25,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.3333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.4167,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.5,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.5833,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.6667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.75,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.031218052528269317,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.8333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.040582409545680896,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 0.9167,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05293110944942281,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.0,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06427998365598918,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.0833,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.07110720849502467,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.1667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.07103736744342777,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.25,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06397881352189161,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.3333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05220027292558556,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.4167,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.03961200547144351,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.5,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.03056409156286253,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.5833,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.028048396950211614,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.6667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.032818962398495966,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.75,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.043314395049673333,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.8333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05600891630845679,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 1.9167,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06653652979286219,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.0,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.0833,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.1667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.25,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.3333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.4167,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.5,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.5833,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.6667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.75,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.8333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 2.9167,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.0,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.0833,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.1667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.25,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.3333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.4167,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.5,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036890435215565745,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 3.5833,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.048850304584560404,
+      "bands": [
+        0.033731974915638355,
+        0.01686606200841339,
+        0.006746420297418176
+      ]
+    },
+    {
+      "time_s": 3.6667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06128599041427602,
+      "bands": [
+        0.049615872870975984,
+        0.024808047257919782,
+        0.009923211888596187
+      ]
+    },
+    {
+      "time_s": 3.75,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0700329740023215,
+      "bands": [
+        0.059023535623202436,
+        0.02951190160073862,
+        0.011804751392773776
+      ]
+    },
+    {
+      "time_s": 3.8333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.07207908534665623,
+      "bands": [
+        0.06249730686652122,
+        0.031248795874691367,
+        0.012499508253461465
+      ]
+    },
+    {
+      "time_s": 3.9167,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06664307650957975,
+      "bands": [
+        0.06144229347888942,
+        0.030721286364305326,
+        0.01228850481864843
+      ]
+    },
+    {
+      "time_s": 4.0,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05580909900743259,
+      "bands": [
+        0.057927815248313676,
+        0.028964038507022418,
+        0.011585606549476084
+      ]
+    },
+    {
+      "time_s": 4.0833,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.04325374871373381,
+      "bands": [
+        0.052164260002177214,
+        0.026082247294648878,
+        0.010432891184415781
+      ]
+    },
+    {
+      "time_s": 4.1667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.032920419617890155,
+      "bands": [
+        0.04538513497027586,
+        0.022692669439084476,
+        0.009077061076472544
+      ]
+    },
+    {
+      "time_s": 4.25,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.028203014535677647,
+      "bands": [
+        0.03935717692431842,
+        0.01967867707429973,
+        0.007871464925540063
+      ]
+    },
+    {
+      "time_s": 4.3333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.030682543602715967,
+      "bands": [
+        0.03573813527992237,
+        0.017869148355026784,
+        0.007147653911138353
+      ]
+    },
+    {
+      "time_s": 4.4167,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.03946934071069944,
+      "bands": [
+        0.03548758398543317,
+        0.017743872126044436,
+        0.007097543498204287
+      ]
+    },
+    {
+      "time_s": 4.5,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.051707694148051354,
+      "bands": [
+        0.04355459456007265,
+        0.021777394294774485,
+        0.008710951722922338
+      ]
+    },
+    {
+      "time_s": 4.5833,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06353477740893804,
+      "bands": [
+        0.05344406175894508,
+        0.02672214918046816,
+        0.01068885251466018
+      ]
+    },
+    {
+      "time_s": 4.6667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.07098684050233578,
+      "bands": [
+        0.060628241990209865,
+        0.030314256228841725,
+        0.012125693815830682
+      ]
+    },
+    {
+      "time_s": 4.75,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.07150444626953223,
+      "bands": [
+        0.062454817144315826,
+        0.031227549948920356,
+        0.01249101021210497
+      ]
+    },
+    {
+      "time_s": 4.8333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06481308320013157,
+      "bands": [
+        0.06087724383853816,
+        0.030438760029375758,
+        0.012175494394931848
+      ]
+    },
+    {
+      "time_s": 4.9167,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05309176122280526,
+      "bands": [
+        0.05678400299665394,
+        0.02839213015415684,
+        0.01135684319168333
+      ]
+    },
+    {
+      "time_s": 5.0,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.04047060647015294,
+      "bands": [
+        0.050648210526558296,
+        0.02532421956495473,
+        0.01012968014928248
+      ]
+    },
+    {
+      "time_s": 5.0833,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.031146723443599023,
+      "bands": [
+        0.04387687736276967,
+        0.021938537319223836,
+        0.008775408434775114
+      ]
+    },
+    {
+      "time_s": 5.1667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.028057302598337195,
+      "bands": [
+        0.0382697718128995,
+        0.019134971861798508,
+        0.007653983121747918
+      ]
+    },
+    {
+      "time_s": 5.25,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.032234575154440684,
+      "bands": [
+        0.035370614389234174,
+        0.01768538687408049,
+        0.0070741494500973865
+      ]
+    },
+    {
+      "time_s": 5.3333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.04228608103529072,
+      "bands": [
+        0.03682826660402673,
+        0.01841421714972332,
+        0.007365680900165037
+      ]
+    },
+    {
+      "time_s": 5.4167,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.054751883238031984,
+      "bands": [
+        0.04584991694050399,
+        0.0229250620268998,
+        0.009170017860822
+      ]
+    },
+    {
+      "time_s": 5.5,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.03239976484559906,
+        0.016199955600926363,
+        0.006479977329208882
+      ]
+    },
+    {
+      "time_s": 5.5833,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.13594377128189505,
+      "rms": 0.0,
+      "bands": [
+        0.022895238030906186,
+        0.011447670726650396,
+        0.004579064820196227
+      ]
+    },
+    {
+      "time_s": 5.6667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.44454605496124494,
+      "rms": 0.0,
+      "bands": [
+        0.01617888052600934,
+        0.00808947680463319,
+        0.0032357882694559153
+      ]
+    },
+    {
+      "time_s": 5.75,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.776963305898491,
+      "rms": 0.0,
+      "bands": [
+        0.011432778061254709,
+        0.0057164148527062185,
+        0.0022865642081001157
+      ]
+    },
+    {
+      "time_s": 5.8333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.9843519788677829,
+      "rms": 0.0,
+      "bands": [
+        0.008078952928033479,
+        0.004039494711144299,
+        0.0016157966598487111
+      ]
+    },
+    {
+      "time_s": 5.9167,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.005708978173603796,
+        0.002854501981103164,
+        0.0011417999270734189
+      ]
+    },
+    {
+      "time_s": 6.0,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.004034239594663645,
+        0.0020171289090676063,
+        0.0008068509521163439
+      ]
+    },
+    {
+      "time_s": 6.0833,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0028507884620056676,
+        0.0014254006697952337,
+        0.0005701598357951114
+      ]
+    },
+    {
+      "time_s": 6.1667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0020145047572536676,
+        0.0010072569285883948,
+        0.00040290246607639684
+      ]
+    },
+    {
+      "time_s": 6.25,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0014235463174350955,
+        0.0007117763739400491,
+        0.0002847103337946356
+      ]
+    },
+    {
+      "time_s": 6.3333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0010059465536560385,
+        0.0005029755488594628,
+        0.0002011900670622417
+      ]
+    },
+    {
+      "time_s": 6.4167,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0007108503997723115,
+        0.00035542680541326255,
+        0.00014217061441448495
+      ]
+    },
+    {
+      "time_s": 6.5,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0005023212108084969,
+        0.0002511617399472135,
+        0.00010046461983695396
+      ]
+    },
+    {
+      "time_s": 6.5833,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.8924198546903899,
+      "rms": 0.0,
+      "bands": [
+        0.0003549644185456401,
+        0.00017748301099565245,
+        0.0
+      ]
+    },
+    {
+      "time_s": 6.6667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.5966776533148181,
+      "rms": 0.0,
+      "bands": [
+        0.0002508349950711118,
+        0.00012541806407161474,
+        0.0
+      ]
+    },
+    {
+      "time_s": 6.75,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.2592592592592593,
+      "rms": 0.0,
+      "bands": [
+        0.00017725211729165867,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 6.8333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.02900821774766127,
+      "rms": 0.0,
+      "bands": [
+        0.00012525490342951877,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 6.9167,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.0,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.0833,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.1667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.047899798849973495,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.25,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06046919421521167,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.3333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.069530468201195,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.4167,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.07193334646078951,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.5,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.06714804246670968,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.5833,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05692495146469103,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.6667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.04441801874829907,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.75,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0336986904963791,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.8333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.028333234500520704,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 7.9167,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.030086025475954,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.0,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.0833,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.1667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.25,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.3333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.4167,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.5,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.5833,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.6667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.75,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.8333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "time_s": 8.9167,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "semantic_diagnostics": "Semantic Morphing · trace locale (48 étapes maximum)\ndetected · expression · réponse 1 / segment 1 · smile\nscheduled · segment_end · réponse 1 / segment 1 · smile\ntriggered · segment_end · réponse 1 / segment 1 · smile"
+}
