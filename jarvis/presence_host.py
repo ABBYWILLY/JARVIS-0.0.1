@@ -86,12 +86,26 @@ class IntegratedPresence(PresenceView):
         self._engine_bar.place(x=12, y=8, anchor="nw")
         self._engine_bar.lift()
         bar_width = self._engine_bar.winfo_reqwidth()
+        bar_bottom = 8 + self._engine_bar.winfo_reqheight()
         if self.settings.mini_mode:
             self.state_label.place(x=12+bar_width+12, y=12, relx=0, rely=0)
+            self.state_label.configure(wraplength=max(50, width-bar_width-36))
+            self.mic_label.place(x=12, y=max(44, bar_bottom+5, 16+self.state_label.winfo_reqheight()),
+                                 relx=0, rely=0)
         elif width > bar_width+self.identity.winfo_reqwidth()+self.header_controls.winfo_reqwidth()+64:
             self.identity.place(x=bar_width+24, y=8, relx=0, rely=0)
         else:
             self.identity.place_forget()
+        if not self.settings.mini_mode:
+            # Native theme metrics can exceed the nominal font/DPI height.
+            # Reserve the actual switch box instead of covering state/mic text.
+            self.state_label.configure(wraplength=0)
+            state_y = max(round(height*.105), bar_bottom+5)
+            mic_y = max(round(height*.15), state_y+self.state_label.winfo_reqheight()+4)
+            self.state_label.place(x=0, y=state_y, relx=.045, rely=0)
+            self.mic_label.place(x=0, y=mic_y, relx=.045, rely=0)
+            self.tone_label.place(x=0, y=max(round(height*.195), mic_y+self.mic_label.winfo_reqheight()+4),
+                                  relx=.045, rely=0, anchor="nw")
 
     def _save_engine(self, candidate):
         values = {**self._saved_engine, **candidate.to_dict()}
@@ -196,7 +210,7 @@ class IntegratedPresence(PresenceView):
             parts.append(f"rendu {size[0]} × {size[1]} px")
         physical = self.gpu_diagnostics.get("size")
         if isinstance(physical, (list, tuple)) and len(physical) == 2:
-            parts.append(f"écran {physical[0]} × {physical[1]} px")
+            parts.append(f"fenêtre {physical[0]} × {physical[1]} px")
         return " · ".join(parts)
 
     def semantic_diagnostics(self):

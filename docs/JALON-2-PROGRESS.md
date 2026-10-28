@@ -1,22 +1,30 @@
-# PRESENCE GPU 3.1 — phases A, B et C, 28 octobre 2026
+# PRESENCE GPU 3.1 — livraison logicielle A–D, 28 octobre 2026
 
-A publiée5cd8866 et CI Windows verte : cadence découplée, natif/HiDPI,
-échelles bornées et diagnostic réel. B publiée0714a65 : toggle direct dans
-les deux moteurs, IPC validé et Ctrl+F7. Ses deux erreurs CI provenaient du
-test comparant la barre de titre Windows à une limite de pixels client :
-référence corrigée vers le Canvas, sans réduire les exigences de visibilité.
+Base artistique4ae4f71 conservée. A :5cd8866 (cadence/HiDPI, CI verte).
+B :0714a65 (sélecteur direct Canvas/GPU, IPC et Ctrl+F7).
+C :e92cf0d (aura PCM compressée, réception/émission distinctes, interruptions).
+D finalise le Studio existant :69 curseurs (66 conservés, trois nouveaux),
+échelle Auto/100/125/150/200 %, référence artistique3.0 et recherche/favoris.
+Aucun modèle, moteur vocal ou source de configuration supplémentaire.
 
-C termine l'aura PCM à trois enveloppes, les signatures réception/émission,
-le seuil/compression graphique et l'annulation. Aucun changement du son,
-des moteurs STT/TTS ni du VAD. 66 réglages conservés, trois nouveaux seulement.
-Référence artistique3.0 conservée, sphère et huit gravures testées. Correction
-également du format RGB des accents du HUD. 189 tests ciblés réussis en29,156s.
+Suite finale Linux/Tk9/EGL :802 exécutés,793 réussis,9 ignorés,97,466s.
+Tk8.6 :51 exécutés,50 réussis,1 EGL ignoré faute de dépendance facultative.
+Les échecs CI B/C provenaient de la même assertion de hauteur fixe60px.
+D vérifie les boîtes natives réelles, l'ancrage et l'absence de chevauchement ;
+le placement réserve la hauteur réellement demandée par les contrôles.
+Suivre les deux workflows Windows/prototype du SHA final avant d'annoncer l'EXE.
 
-Reste D : exposer render_scale dans le Studio existant, bouton Référence3.0,
-preuves vidéo/captures de C et des toggles, tests complets puis CI finale.
-Guide/spécification/preuves : PRESENCE-GPU-3.1*.md. Mesa natif1440×96025–27FPS :
-60FPS non démontrés ici ; matériel RTX3070/Ollama/micro/Piper à valider surPC.
-Ne pas refaire A/B/C, ne pas modifier main ou les autres lots.
+Preuves A conservées ; C/D :15 PNG natifs,5 MP4 et manifeste SHA-256,
+scénario12s/360images et toggle3s/90images, cadence d'export30i/s clairement
+séparée des FPS réels. Guide :PRESENCE-GPU-3.1.md et EVIDENCE associé.
+Mesa logiciel1440×960 natif25–27FPS,125%~18,150%~13 :60FPS non atteints ici.
+Capture finale GL+HUD28,44ms moyen/P9549,33ms, pas un benchmarklive JARVIS.
+Ni VRAM physique, watts, impact Ollama, ni latence acoustique ne sont mesurés.
+
+Validation matérielle Windows11/RTX3070/micro/Piper/Bluetooth en attente.
+Tester F9 avec/sans Ollama, DPI multiécran, vrais PCM/VAD/Piper/interruption,
+retour Canvas et persistance. Ne pas refaire A–D ; ne pas modifier main,
+les moteurs STT/TTS, les modèles ou les lots cognitifs/vocaux non concernés.
 
 ---
 

@@ -1,0 +1,9460 @@
+{
+  "context": {
+    "vendor": "Mesa",
+    "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+    "acceleration": "software",
+    "hardware_validation": "pending",
+    "required_version": "OpenGL 3.3"
+  },
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "resolution": [
+    960,
+    640
+  ],
+  "video_seconds": 12,
+  "video_fps": 30,
+  "frames": 360,
+  "hardware_validation": "pending",
+  "video_fps_scope": "Offline animation encoding cadence, not measured live draw/presentation FPS",
+  "method": "Actual IntegratedPresence queue_expressions/update_event/complete_segment, validated latest packet, actual EGL GpuRenderer+GpuHud; explicit audio and transport doubles",
+  "audio_source": "Synthetic 16kHz PCM tones; no microphone, Piper or Ollama",
+  "metrics": {
+    "scope": "Offline capture including GUI setup, readback, image saves and video pipe; not a live Jarvis/Ollama benchmark",
+    "render_scope": "Real EGL GpuRenderer + GpuHud and context.finish; readback/encoding excluded",
+    "mean_render_ms": 28.436359656067605,
+    "p95_render_ms": 49.32919099519495,
+    "wall_seconds_including_capture": 18.08835463800642,
+    "process_cpu_seconds_including_capture": 39.028166483,
+    "renderer_hud_owned_bytes_estimate_excluding_capture_framebuffer": 8041344,
+    "maximum_process_rss_bytes_including_capture": 164368384,
+    "real_vram_measurement": null,
+    "ollama_impact": "not measured",
+    "audio_latency": "not measured"
+  },
+  "snapshots": {
+    "écoute": "presence-gpu31-écoute.png",
+    "thinking": "presence-gpu31-thinking.png",
+    "parole": "presence-gpu31-speaking.png",
+    "expression": "presence-gpu31-smile.png",
+    "interruption": "presence-gpu31-interruption.png",
+    "retour au repos": "presence-gpu31-idle.png"
+  },
+  "source_sha256": {
+    "jarvis/presence_host.py": "e87ea5de30a97f5c571e99aa53977cec3b1e8eab6e3a72b39a805a986d53f7c2",
+    "jarvis/presence.py": "74f4dd72c17e6c1eef39fc519562f9c2a54ba4e2516e63612b915e73a32b2c5b",
+    "jarvis/presence_gpu.py": "189d534833fef2f3d273a84ccccba68daadb3080c7d134058ebde3600f97cf49",
+    "jarvis/gpu_config.py": "1e86ecfed84d565e3ab969d6a1b59fc618c97fbbba99146ec978f42f0e9af6f3",
+    "jarvis/gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+    "jarvis/reactor_shaders.py": "3834d1703b910cab653fded15fab870b09ad892058579022671f1eadca75d960",
+    "jarvis/gpu_hud.py": "bc007ca2608649cb0ae4673ee43d67060677ffbb091ce2dc7955d96055649f76",
+    "jarvis/gpu_session.py": "7ef7cc22e1f5e396d1d73097f3ae19a7fb3db66e08c89aa068b3ede33da6f168",
+    "jarvis/gpu_studio.py": "ba677449be2efa3bc7014d597c20180a9a4cf4b489363f9a7ad9979454d94a8d",
+    "jarvis/gpu_pacing.py": "b6f82ccf492b1dfe539a202b558a46835fa3ddc8a71290bf0e1f191c2661fee4",
+    "scripts/capture_presence_integration.py": "b2e320c4fd6f7d560405c8dc29e1bf85409fd877c5f703ff2cfb2fa01e8f21d0"
+  },
+  "artifacts_sha256": {
+    "presence-gpu31-demo.mp4": "fe07d727b43e83678e6172aa836e8add96fa869e0c698829cd87374d8e71c680",
+    "presence-gpu31-idle.png": "e163bcea117ea66a5cf01f8ea6b02fa21502db534ad5efff8b7abb3961080f11",
+    "presence-gpu31-interruption.png": "db344faf651655a510d5b66055c0fd290946c97074bcfbf70abed248c88c28d2",
+    "presence-gpu31-listening.mp4": "4cc3a5c24f1641a5a1febc804b35cc7ddaffd1ac4a707dbcec13927661f0e8a1",
+    "presence-gpu31-smile.png": "9eac771ec7c6dedd9565e079c4ab2908ee5d0d51ff22202bad2a990e1fab4ad4",
+    "presence-gpu31-speaking.mp4": "d46e6c1f239f6ee5e552c4eac178e5a2095bd2bfe21344e00f74500bf8e9ac34",
+    "presence-gpu31-speaking.png": "4b2ed5ab8d6883db3575d187ab26371cde2d31701799a592f6a607bde9fe5f07",
+    "presence-gpu31-studio-reference.png": "07d466e98c872703bfdb503a2546bc4b53f438c658234e96d6d0fd211b2d43e0",
+    "presence-gpu31-studio-scale.png": "2aeea05a7032ca0c1db7030a0007697a08b2329d704a84483ee99a57e0923510",
+    "presence-gpu31-thinking.mp4": "c28c8794e3cacc2dc7c159abbfe6d31fe0f5ade5d37f69373c7a8e1e2fac2b3e",
+    "presence-gpu31-thinking.png": "4b587466ef83c094c06101352836e21215b651a792a585bf3f67a204cc8e9284",
+    "presence-gpu31-toggle-canvas-return.png": "82dfd10db1a078efddc44c5ab705b97478c5cbbd0a065c0553c2bd2c8edd2fbf",
+    "presence-gpu31-toggle-canvas.png": "d907544a1fe2eb1bba631d3310e3105c93f3f3d00d7aff5e527f178d8282bd48",
+    "presence-gpu31-toggle-gpu.png": "0d295de2ea630d86c901be1be78ca0fc16a26d852ee3ac5b1d8633565fa41b5f",
+    "presence-gpu31-toggle.mp4": "5849cdb768a1f69d7fcef1004ac0b96a03a4bbb621dd301a17847eb8456c120b",
+    "presence-gpu31-écoute.png": "67beaff143584edc79140b1399eaae3382d7bf6d63a4e83ff931fc0c73488a9c",
+    "presence-integrated-classic-thinking.png": "9f8f7984cf4a0514af4c554d4bdb6da2c603282da69e33439a837243af04f7bc",
+    "presence-integrated-engine-selector.png": "58d135acccab96e401410ab8b89767596a85d8cb890b0576061e7cfc292edd9e",
+    "presence-integrated-studio-2d.png": "5f74838d96683fd1710e622dccd976ba27d1376f49087cb99a8f4b60f7cc8b7b",
+    "presence-integrated-studio-gpu.png": "fbf03b54e67baa65d144baa0b54a6a97a01728d91a6720a57bef54d0c5595d74"
+  },
+  "trace": [
+    {
+      "time_s": 0.0,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.0333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.0667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.1,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.1333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.1667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.2,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.2333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.2667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.3,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.3333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.3667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.4,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.4333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.4667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.5,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.5333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.5667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.6,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.6333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.6667,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.7,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.7333,
+      "state": "silent",
+      "stage": "repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.7667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.1690496100628801,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.8,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.3095214495191695,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.8333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.4262465792347365,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.8667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.5232393713258912,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.9,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.6038355696965828,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.9333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.6708070121867717,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 0.9667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.7264569584120324,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.0,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.7726993029462684,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.0333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.811124397165492,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.0667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.843053744175057,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.1,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.8695854475336359,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.1333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.8916319767745997,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.1667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9099515488514186,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.2,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9251742044048525,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.2333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9378234759778836,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.2667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9483343931188877,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.3,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9570684438192725,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.3333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9643260066510171,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.3667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9703566813184449,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.4,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9753678727825315,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.4333,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9795319242853184,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.4667,
+      "state": "listening",
+      "stage": "micro ouvert · silence",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 1,
+      "visual_mix": [
+        0.9829920445036229,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.5,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9858672327493948,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.5333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9882563715431685,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.4346505934540349,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.5667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9902416273545191,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.7077349458340703,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.6,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9918912764457415,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.5804988661920335,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.6333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9932620530006966,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.4658604182476768,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 1.6667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9944011003140059,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.36381960190090773,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 1.7,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9953475921227044,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.27437641724081957,
+      "input_energy": 0.6437380803854856
+    },
+    {
+      "time_s": 1.7333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9961340798605273,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.19753086418931814,
+      "input_energy": 0.6074704476458846
+    },
+    {
+      "time_s": 1.7667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9967876121526393,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.1332829428134985,
+      "input_energy": 0.46248245908842567
+    },
+    {
+      "time_s": 1.8,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 2.0256129854057338e-12,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9973306650658222,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.08163265305726479,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.8333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9977819150955722,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.04257999496571365,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.8667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9981568814839011,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.016124968504747643,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.9,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9984684599503473,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0022675736974650264,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.9333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9987273661986397,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 1.9667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9989425044465124,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.0,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9991212736575438,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.0333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.999269822003147,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 2.0667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9993932583087914,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 2.1,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9994958277551399,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6437380803854856
+    },
+    {
+      "time_s": 2.1333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9995810578765381,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6074704476458846
+    },
+    {
+      "time_s": 2.1667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9996518798791764,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.46248245908842567
+    },
+    {
+      "time_s": 2.2,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9997107294498566,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.2333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9997596305235804,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.2667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9998002648898402,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.3,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.999834030032342,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.3333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9998620871906567,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.3667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9998854012973082,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.4,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.4333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 2.4667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 2.5,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6437380803854856
+    },
+    {
+      "time_s": 2.5333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6074704476458846
+    },
+    {
+      "time_s": 2.5667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.46248245908842567
+    },
+    {
+      "time_s": 2.6,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.6333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.6667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.7,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.7333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.7667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.8,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 2.8333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 2.8667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 2.9,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6437380803854856
+    },
+    {
+      "time_s": 2.9333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6074704476458846
+    },
+    {
+      "time_s": 2.9667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.46248245908842567
+    },
+    {
+      "time_s": 3.0,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 6.152808898390402e-12,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.0333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.0667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.1,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.1333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.1667,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.2,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.2333,
+      "state": "user_speaking",
+      "stage": "écoute",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 3.2667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.8309503899371199,
+        0.1690496100628801,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.3,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.6904785504808305,
+        0.3095214495191695,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.4346505934540349,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.3333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.5737534207652635,
+        0.4262465792347365,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.7077349458340703,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.3667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.47676062867410884,
+        0.5232393713258912,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.5804988661920335,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.4,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.3961644303034172,
+        0.6038355696965828,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.4658604182476768,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.4333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.3291929878132282,
+        0.6708070121867717,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.36381960190090773,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.4667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.27354304158796755,
+        0.7264569584120324,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.27437641724081957,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.5,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.22730069705373154,
+        0.7726993029462684,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.19753086418931814,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.5333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.1888756028345079,
+        0.811124397165492,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.1332829427882004,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.5667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.15694625582494293,
+        0.843053744175057,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.08163265305726479,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.6,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.13041455246636408,
+        0.8695854475336359,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.04257999495141473,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.6333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.1083680232254002,
+        0.8916319767745997,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.016124968504747643,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.6667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.09004845114858129,
+        0.9099515488514186,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0022675736941652636,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.7,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0748257955951473,
+        0.9251742044048525,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.7333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.062176524022116285,
+        0.9378234759778836,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.7667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.05166560688111223,
+        0.9483343931188877,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.8,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.04293155618072739,
+        0.9570684438192725,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.8333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.035673993348982795,
+        0.9643260066510171,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.8667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.02964331868155499,
+        0.9703566813184449,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.9,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.024632127217468432,
+        0.9753678727825315,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.9333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.020468075714681417,
+        0.9795319242853184,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 3.9667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.017007955496377018,
+        0.9829920445036229,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.0,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.014132767250605114,
+        0.9858672327493948,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.0333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.011743628456831474,
+        0.9882563715431685,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.0667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00975837264548077,
+        0.9902416273545191,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.1,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.008108723554258429,
+        0.9918912764457415,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.1333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00673794699930335,
+        0.9932620530006966,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.1667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.005598899685994128,
+        0.9944011003140059,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.2,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.004652407877295639,
+        0.9953475921227044,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.2333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.003865920139472803,
+        0.9961340798605273,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.2667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0032123878473606904,
+        0.9967876121526393,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.3,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.002669334934177831,
+        0.9973306650658222,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.3333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.002218084904427845,
+        0.9977819150955722,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.3667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0018431185160989521,
+        0.9981568814839011,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.4,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00153154004965275,
+        0.9984684599503473,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.4333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0012726338013603839,
+        0.9987273661986397,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.4667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00105749555348757,
+        0.9989425044465124,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.5,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.000878726342456227,
+        0.9991212736575438,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.5333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0007301779968529905,
+        0.999269822003147,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.5667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0006067416912084975,
+        0.9993932583087914,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.6,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0005041722448600492,
+        0.9994958277551399,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.6333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.000418942123461931,
+        0.9995810578765381,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.6667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00034812012082363316,
+        0.9996518798791764,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.7,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00028927055014335524,
+        0.9997107294498566,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.7333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0002403694764195138,
+        0.9997596305235804,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.7667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00019973511015977633,
+        0.9998002648898402,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.8,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00016596996765798206,
+        0.999834030032342,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.8333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00013791280934325137,
+        0.9998620871906567,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.8667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.00011459870269183377,
+        0.9998854012973082,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.9,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.9333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 4.9667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.0,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.0333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.0667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.1,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.1333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.1667,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.2,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.2333,
+      "state": "thinking",
+      "stage": "thinking",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 3,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.2667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.3,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0241036469586133,
+        0.012051877035819059,
+        0.004820747507152178
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.8309503898699425,
+        0.16904961013005748
+      ],
+      "voice_envelopes": [
+        0.33329476119723556,
+        0.2958190703708982,
+        0.18399566686479268
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.3333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.03494329855698275,
+        0.017471728309428645,
+        0.0069886859034085
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.6904785504808305,
+        0.3095214495191695
+      ],
+      "voice_envelopes": [
+        0.3971429185138128,
+        0.438537846563251,
+        0.3014922790336689
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.3667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.03464533396509381,
+        0.017322745241827826,
+        0.006929092758169997
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.5737534207188789,
+        0.4262465792811211
+      ],
+      "voice_envelopes": [
+        0.37974645670742607,
+        0.446476836898998,
+        0.3412509573232592
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.4,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 7.284054866099099e-12,
+      "bands": [
+        0.03015269078638872,
+        0.015076413504181575,
+        0.006030560755390876
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.47676062867410884,
+        0.5232393713258912
+      ],
+      "voice_envelopes": [
+        0.306687280216799,
+        0.38857983067764557,
+        0.31447947303835233
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.4333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.026242632341060217,
+        0.013121375449206382,
+        0.005248546135908658
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.39616443027138964,
+        0.6038355697286104
+      ],
+      "voice_envelopes": [
+        0.24768391166443313,
+        0.33819063458933796,
+        0.2898082388828855
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.4667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.02283961179811828,
+        0.011419857490756816,
+        0.004567939476906321
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.32919298781322814,
+        0.6708070121867719
+      ],
+      "voice_envelopes": [
+        0.20003216325030013,
+        0.294335671337904,
+        0.26707248812119555
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.5,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.019877878875775908,
+        0.009938984339418089,
+        0.003975590672749524
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.2735430415658532,
+        0.7264569584341468
+      ],
+      "voice_envelopes": [
+        0.16154810404105882,
+        0.2561676124528999,
+        0.24612038009563422
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.5333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.017300209482219494,
+        0.00865014382002165,
+        0.00346005486218861
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.2273006970353556,
+        0.7726993029646444
+      ],
+      "voice_envelopes": [
+        0.1304679682267127,
+        0.22294900706915588,
+        0.2268119862309848
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.5667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.015056800074959804,
+        0.007528434048823192,
+        0.0030113712994001727
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.18887560283450788,
+        0.8111243971654921
+      ],
+      "voice_envelopes": [
+        0.10536731975800893,
+        0.19403803345856446,
+        0.20901835548884634
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.6,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.013104305396796773,
+        0.006552182299311409,
+        0.0026208709004588377
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.15694625581225474,
+        0.8430537441877453
+      ],
+      "voice_envelopes": [
+        0.08509576889140003,
+        0.16887609826629696,
+        0.19262065314842347
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.6333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.021985875704053623,
+        0.010992987877147203,
+        0.004397191620714707
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.13041455246636405,
+        0.869585447533636
+      ],
+      "voice_envelopes": [
+        0.2493445896193881,
+        0.299574840041834,
+        0.2651107968270515
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.6667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.033788063809493576,
+        0.016894107928013054,
+        0.006757638068455863
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.10836802321663928,
+        0.8916319767833607
+      ],
+      "voice_envelopes": [
+        0.3750275214112681,
+        0.4403745861938272,
+        0.35819343179032126
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.7,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.04253488587171409,
+        0.021267537962723942,
+        0.008507009094386994
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.09004845114858127,
+        0.9099515488514187
+      ],
+      "voice_envelopes": [
+        0.4308284716532595,
+        0.5360414534987671,
+        0.43477337297630314
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.7333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.044997457621991005,
+        0.02249883046382718,
+        0.008999525246766208
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.07482579558909808,
+        0.9251742044109019
+      ],
+      "voice_envelopes": [
+        0.4286652149367539,
+        0.5695780909189709,
+        0.4770662910709292
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.7667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.043395717197236644,
+        0.021697956546293286,
+        0.008679175958453633
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.06217652402211627,
+        0.9378234759778837
+      ],
+      "voice_envelopes": [
+        0.40520419880868985,
+        0.5548504953567119,
+        0.47369345516496747
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.8,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.03776836567095966,
+        0.018884268081763186,
+        0.007553701436287178
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.05166560687693536,
+        0.9483343931230647
+      ],
+      "voice_envelopes": [
+        0.327247223663277,
+        0.48290010523618737,
+        0.4365317223581276
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.8333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.03287074249881617,
+        0.016435445441356274,
+        0.006574173131776519
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.04293155618072738,
+        0.9570684438192727
+      ],
+      "voice_envelopes": [
+        0.26428834084188124,
+        0.4202799017081911,
+        0.402285365258817
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.8667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.02860821995241268,
+        0.014304174547293304,
+        0.005721665428332744
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.035673993346098755,
+        0.9643260066539013
+      ],
+      "voice_envelopes": [
+        0.21344207696108583,
+        0.3657799902171158,
+        0.3707256696522061
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.9,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.024898441187470054,
+        0.012449276791548588,
+        0.004979706895385116
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.02964331868155498,
+        0.9703566813184451
+      ],
+      "voice_envelopes": [
+        0.17237809309555568,
+        0.3183473697113462,
+        0.34164186424121057
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.9333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.021669728999550518,
+        0.010834913410121938,
+        0.0043339620383340645
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.024632127215477063,
+        0.975367872784523
+      ],
+      "voice_envelopes": [
+        0.1392143826538274,
+        0.2770655872559687,
+        0.31483971290023194
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 5.9667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.018859700951027555,
+        0.009429893043397843,
+        0.003771954322907393
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.02046807571468141,
+        0.9795319242853187
+      ],
+      "voice_envelopes": [
+        0.11243101714062187,
+        0.2411370312742161,
+        0.29014021757196296
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.0,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.01641406405903835,
+        0.008207069077401201,
+        0.0032828251118475604
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.01700795549500202,
+        0.982992044504998
+      ],
+      "voice_envelopes": [
+        0.09080048607857066,
+        0.20986752062607156,
+        0.2673784227353154
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.0333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.023791334374219437,
+        0.011895721274518671,
+        0.004758284706998867
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.01413276724946256,
+        0.9858672327505374
+      ],
+      "voice_envelopes": [
+        0.2508282200608781,
+        0.3219354791325153,
+        0.31745006471598053
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.0667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.034772933501121026,
+        0.01738654498978716,
+        0.006954612744428271
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.011743628456831471,
+        0.9882563715431686
+      ],
+      "voice_envelopes": [
+        0.3754133703530233,
+        0.4525722155789898,
+        0.3948371007334448
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.1,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.043072127922149095,
+        0.021536160196738003,
+        0.008614457906857116
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.009758372644691862,
+        0.9902416273553082
+      ],
+      "voice_envelopes": [
+        0.4309288197107898,
+        0.542695206247054,
+        0.46042826900865697
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.1333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.045290520776460355,
+        0.022645362700455016,
+        0.009058138097158285
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.008108723554258427,
+        0.9918912764457416
+      ],
+      "voice_envelopes": [
+        0.4287462570969034,
+        0.5732076835157809,
+        0.4950277482131691
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.1667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.043650777306143015,
+        0.021825487174632643,
+        0.008730188171269625
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.006737946998758626,
+        0.9932620530012414
+      ],
+      "voice_envelopes": [
+        0.40526964931059495,
+        0.5580094195323348,
+        0.49024581774503245
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.2,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 7.644407107654078e-12,
+      "bands": [
+        0.03799035079349037,
+        0.018995261142495876,
+        0.007598098627055561
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.005598899685994127,
+        0.9944011003140059
+      ],
+      "voice_envelopes": [
+        0.32730008221575524,
+        0.48564939508263344,
+        0.4517855352935174
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.2333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.033063941637723276,
+        0.016532045445508597,
+        0.00661281310426008
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.004652407876919519,
+        0.9953475921230804
+      ],
+      "voice_envelopes": [
+        0.2643310299467983,
+        0.4226726766144852,
+        0.416342501057957
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.2667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.028776365941753295,
+        0.014388247920292705,
+        0.005755294752138719
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.003865920139472802,
+        0.9961340798605272
+      ],
+      "voice_envelopes": [
+        0.21347655315648273,
+        0.36786248140366296,
+        0.38368000888023257
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.3,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0250447827980291,
+        0.01252244792609727,
+        0.00500897532710375
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.003212387847100987,
+        0.996787612152899
+      ],
+      "voice_envelopes": [
+        0.17240593642181867,
+        0.3201598132629746,
+        0.35357992238364455
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.3333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.021797093722956358,
+        0.010898596058395951,
+        0.004359435078408763
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0026693349341778303,
+        0.9973306650658221
+      ],
+      "voice_envelopes": [
+        0.13923686923345016,
+        0.2786430017099785,
+        0.32584121826453627
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.3667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.01897054961785993,
+        0.009485317626223936,
+        0.0037941241392972155
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0022180849042485254,
+        0.9977819150957514
+      ],
+      "voice_envelopes": [
+        0.11244917753116865,
+        0.2425098940617681,
+        0.3002786436531034
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.4,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.016510538395606587,
+        0.00825530646275293,
+        0.0033021200514184806
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0018431185160989515,
+        0.998156881483901
+      ],
+      "voice_envelopes": [
+        0.09081515261173388,
+        0.21106235706801815,
+        0.27672147900012006
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.4333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.023843960696833415,
+        0.01192203455423508,
+        0.004768810010937684
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0015315400495289338,
+        0.9984684599504711
+      ],
+      "voice_envelopes": [
+        0.25083203439800655,
+        0.32258725711100744,
+        0.32399130754868
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.4667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.034801640926651174,
+        0.017400898767144048,
+        0.006960354251035566
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0012726338013603834,
+        0.9987273661986397
+      ],
+      "voice_envelopes": [
+        0.37541436235076237,
+        0.45292775757490317,
+        0.3994167432605035
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.5,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.043087787695422555,
+        0.02154399011860928,
+        0.008617589873240654
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0010574955534020775,
+        0.9989425044465979
+      ],
+      "voice_envelopes": [
+        0.4309290777004432,
+        0.5428891528285527,
+        0.4636345596492576
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.5333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.045299063114014854,
+        0.022649633888452553,
+        0.009059846571067218
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.000878726342385187,
+        0.9991212736576148
+      ],
+      "voice_envelopes": [
+        0.4287464654512387,
+        0.5733134805252826,
+        0.4972725303482019
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.5667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.043658211914400634,
+        0.021829204495489345,
+        0.008731675098489515
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0007301779968529903,
+        0.9992698220031471
+      ],
+      "voice_envelopes": [
+        0.40526981758896663,
+        0.5581014972918112,
+        0.49231449444306147
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.6,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 1.1461975082278568e-12,
+      "bands": [
+        0.03799682131383339,
+        0.018998496417226073,
+        0.007599392735970447
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0006067416911594459,
+        0.9993932583088406
+      ],
+      "voice_envelopes": [
+        0.3273002180886282,
+        0.4857295326039564,
+        0.45369192218679916
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.6333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.033069573093571766,
+        0.016534861186103634,
+        0.006613939399647618
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0005041722448600491,
+        0.99949582775514
+      ],
+      "voice_envelopes": [
+        0.2643311397038338,
+        0.42274242230638975,
+        0.41809932997757804
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.6667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.028781267135275738,
+        0.014390698528081624,
+        0.0057562749945140965
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00041894212342806193,
+        0.999581057876572
+      ],
+      "voice_envelopes": [
+        0.2134766417775194,
+        0.3679231827815415,
+        0.38529901277257345
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.7,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.025049048429456457,
+        0.01252458075140863,
+        0.005009828456584088
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0003481201208236331,
+        0.9996518798791765
+      ],
+      "voice_envelopes": [
+        0.1724060080091934,
+        0.32021264319244847,
+        0.3550719137884675
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.7333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.021800806206137148,
+        0.010900452308339444,
+        0.004360177577825491
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00028927055011996943,
+        0.9997107294498802
+      ],
+      "voice_envelopes": [
+        0.13923692703518772,
+        0.27868898088696736,
+        0.32721616141623966
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.7667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.018973780684916758,
+        0.00948693316702226,
+        0.0037947703551285813
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00024036947641951377,
+        0.9997596305235806
+      ],
+      "voice_envelopes": [
+        0.11244922422295653,
+        0.24254991089108036,
+        0.3015457211284364
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.8,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 4.027082910817758e-12,
+      "bands": [
+        0.016513350472618628,
+        0.008256712507586132,
+        0.003302682468927074
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00019973511014362893,
+        0.9998002648898565
+      ],
+      "voice_envelopes": [
+        0.09081519031204736,
+        0.2110971846912197,
+        0.27788915295035543
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.8333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0238454946700401,
+        0.011922801544289867,
+        0.004769116806727935
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00016596996765798206,
+        0.9998340300323422
+      ],
+      "voice_envelopes": [
+        0.25083204416968924,
+        0.32260625538955034,
+        0.32480881720313803
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.8667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.03480247770570993,
+        0.01740131715855618,
+        0.0069605216074740475
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00013791280933210195,
+        0.999862087190668
+      ],
+      "voice_envelopes": [
+        0.37541436491783736,
+        0.4529381210929567,
+        0.39998909659675463
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.9,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.04308824415205581,
+        0.02154421834795294,
+        0.008617681164909182
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.00011459870269183379,
+        0.9998854012973083
+      ],
+      "voice_envelopes": [
+        0.43092907835659205,
+        0.5428948060531101,
+        0.4640352745582753
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.9333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.04529931210908334,
+        0.02264975838654704,
+        0.009059896370267408
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.4287464659811515,
+        0.5733165643341996,
+        0.49755307811033433
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 6.9667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.043658428620965355,
+        0.021829312849259302,
+        0.008731718439964769
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.40526981801692985,
+        0.5581041812069616,
+        0.4925730329482412
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.0,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 7.997619060090352e-12,
+      "bands": [
+        0.037997009919702326,
+        0.01899859072058491,
+        0.0075994304572854976
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.3273002184342559,
+        0.48573186848167377,
+        0.45393017808358516
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.0333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.033069737239917824,
+        0.016534943259645996,
+        0.006613972229039773
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.26433113995830926,
+        0.4227444552528915,
+        0.4183188944422928
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.0667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.028781409997644468,
+        0.014390769959587433,
+        0.005756303567094845
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.21347664200294988,
+        0.36792495212745663,
+        0.3855013521957142
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.1,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.02504917276458955,
+        0.012524642919254935,
+        0.005009853323703833
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.17240600817517115,
+        0.32021418307853144,
+        0.3552583794656318
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.1333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.021800914419399624,
+        0.010900506415214164,
+        0.004360199220559037
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.13923692718222133,
+        0.2786903211047982,
+        0.32738799868326734
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.1667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.018973874864444313,
+        0.009486980256997945,
+        0.0037947891911046315
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.11244922433121302,
+        0.24255107730108996,
+        0.30170407757653256
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.2,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.01651343243992856,
+        0.008256753491425529,
+        0.0033026988624504537
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.09081519040794783,
+        0.21109819985949105,
+        0.2780350861841326
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.2333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.023845539385172358,
+        0.011922823901956606,
+        0.004769125749787877
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.25083204422769845,
+        0.3226068091947484,
+        0.3249109877190513
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.2667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.03480250209413684,
+        0.017401329352824513,
+        0.006960526485177696
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.3754143649071783,
+        0.4529384231498488,
+        0.4000606279972802
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.3,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.04308825745846563,
+        0.02154422500118779,
+        0.008617683826201112
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.4309290783652923,
+        0.5428949708523704,
+        0.464085355010021
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.3333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.045299319366968745,
+        0.022649762015506072,
+        0.009059897821849926
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.4287464659890326,
+        0.5733166542218047,
+        0.4975881403290579
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.3667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.04365843493701473,
+        0.0218293160072982,
+        0.008731719703179375
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.4052698180141018,
+        0.5581042594321761,
+        0.49260534449819793
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.4,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 1.8636541742483582e-12,
+      "bands": [
+        0.03799701541831518,
+        0.01899859346990371,
+        0.0075994315570121875
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.3273002184625029,
+        0.48573193659246355,
+        0.45395995477581197
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.4333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.03306974202549655,
+        0.016534945652446127,
+        0.0066139731861591024
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.26433113998112184,
+        0.42274451453139594,
+        0.4183463351227628
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.4667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.02878141416265196,
+        0.014390772042100552,
+        0.0057563044000994625
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.21347664202137356,
+        0.3679250037190048,
+        0.38552664012692384
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.5,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.02504917638949855,
+        0.012524644731717594,
+        0.005009854048688348
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.1724060081900503,
+        0.32021422797993143,
+        0.35528168353294676
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.5333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0218009175729257,
+        0.010900507991984299,
+        0.004360199851266614
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.13923692718124966,
+        0.27869036016669896,
+        0.3274094745111489
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.5667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.018973877610186474,
+        0.009486981629875204,
+        0.0037947897402551205
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.11244922434091771,
+        0.24255111131233464,
+        0.30172386861465983
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.6,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.016513434828614594,
+        0.008256754685773922,
+        0.0033026993401894496
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.09081519040731408,
+        0.21109822944751871,
+        0.2780533245852955
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.6333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.023845540685861692,
+        0.011922824552304197,
+        0.004769126009926718
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.2508320441944653,
+        0.3226068252994768,
+        0.32492375673685325
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.6667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.034802502807136475,
+        0.01740132970932593,
+        0.006960526627778156
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.3754143649242809,
+        0.45293843197629335,
+        0.4000695678451127
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.7,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.043088257844772646,
+        0.02154422519434216,
+        0.008617683903462802
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.4309290783582678,
+        0.5428949756385911,
+        0.4640916139360681
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.7333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.04529931957839963,
+        0.022649762121221984,
+        0.00905989786413626
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.4287464659825049,
+        0.5733166568423271,
+        0.49759252232866513
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.7667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.04365843512169601,
+        0.02182931609963925,
+        0.008731719740115768
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.40526981801802286,
+        0.5581042617190722,
+        0.4926093827275718
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.8,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 8.344266117931362e-12,
+      "bands": [
+        0.03799701557748879,
+        0.018998593549490867,
+        0.007599431588847028
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.32730021843513857,
+        0.4857319385533544,
+        0.45396367618579775
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.8333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.033069742166034394,
+        0.016534945722715362,
+        0.006613973214266777
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.2643311399836793,
+        0.42274451626364,
+        0.4183497645992755
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.8667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.028781414283220414,
+        0.014390772102385048,
+        0.005756304424213244
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.2134766420035256,
+        0.3679250052043112,
+        0.38552980054376956
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.9,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.025049176495951068,
+        0.012524644784944089,
+        0.005009854069978931
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.1724060081917184,
+        0.3202142292920459,
+        0.35528459602455187
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.9333,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.021800917665573957,
+        0.010900508038308634,
+        0.004360199869796335
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.13923692718259684,
+        0.27869036130866465,
+        0.32741215851482863
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 7.9667,
+      "state": "jarvis_speaking",
+      "stage": "parole",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.018973877690820543,
+        0.009486981670192417,
+        0.003794789756381995
+      ],
+      "visual_state": 4,
+      "visual_mix": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "voice_envelopes": [
+        0.1124492243420057,
+        0.24255111230621562,
+        0.3017263420555242
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.0,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.01651343489879242,
+        0.008256754720862989,
+        0.0033026993542250673
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.8309503898699425
+      ],
+      "voice_envelopes": [
+        0.09081519040819275,
+        0.2110982303125179,
+        0.2780556039822112
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.0333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.02413250013652259,
+      "rms": 0.0,
+      "bands": [
+        0.014372050700452391,
+        0.007186057788505301,
+        0.0028744209098947146
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.6904785504250095
+      ],
+      "voice_envelopes": [
+        0.07334331434597069,
+        0.18372400941545752,
+        0.2562418593590501
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.0667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.09017934257745154,
+      "rms": 0.0,
+      "bands": [
+        0.012508351085939305,
+        0.006254203774806023,
+        0.0025016795904147806
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.5737534207188789
+      ],
+      "voice_envelopes": [
+        0.05923284128541974,
+        0.1598995481286901,
+        0.23613942517168507
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.1,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.18861454048585477,
+      "rms": 0.0,
+      "bands": [
+        0.010886327229189885,
+        0.0054431881854601905,
+        0.0021772736035891257
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.47676062863556556
+      ],
+      "voice_envelopes": [
+        0.0478370730543512,
+        0.1391645303820475,
+        0.2176140473609766
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.1333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.3099121068867332,
+      "rms": 0.0,
+      "bands": [
+        0.009474639761383649,
+        0.004737341265323385,
+        0.0018949350521692617
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.3961644302713896
+      ],
+      "voice_envelopes": [
+        0.03863372934608975,
+        0.12111833175440473,
+        0.20054200426753943
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.1667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.44454605499139516,
+      "rms": 0.0,
+      "bands": [
+        0.00824601325246304,
+        0.004123025237805119,
+        0.001649208829704629
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.3291929877866148
+      ],
+      "voice_envelopes": [
+        0.03120101100984744,
+        0.10541227887456725,
+        0.18480928029198215
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.2,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.5829903977932357,
+      "rms": 0.0,
+      "bands": [
+        0.007176709223400478,
+        0.0035883708098129294,
+        0.0014353472226011038
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.27354304156585313
+      ],
+      "voice_envelopes": [
+        0.025198268575279605,
+        0.0917429127139474,
+        0.17031080450205202
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.2333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.7157191485185344,
+      "rms": 0.0,
+      "bands": [
+        0.00624606748706525,
+        0.0031230478411506113,
+        0.001249218177950677
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.22730069703535555
+      ],
+      "voice_envelopes": [
+        0.020350389893849758,
+        0.07984612535266367,
+        0.15694974886150267
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.2667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.8332063201623496,
+      "rms": 0.0,
+      "bands": [
+        0.005436106973392709,
+        0.0027180657562018637,
+        0.001087225468266169
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.18887560283450786
+      ],
+      "voice_envelopes": [
+        0.01643519147488642,
+        0.06949205715866275,
+        0.14463688161528554
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.3,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.925925925932663,
+      "rms": 0.0,
+      "bands": [
+        0.004731178311085121,
+        0.0023655998339965787,
+        0.0009462392075610588
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.15694625581225471
+      ],
+      "voice_envelopes": [
+        0.01327323555961039,
+        0.060480655592500134,
+        0.1332899713086403
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.3333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.9843519788594656,
+      "rms": 0.0,
+      "bands": [
+        0.004117661466597197,
+        0.0020588400270211645,
+        0.0008235353789200144
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.13041455246636402
+      ],
+      "voice_envelopes": [
+        0.010719606309822898,
+        0.05263780999846858,
+        0.12283323764783266
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.3667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0035837025868895203,
+        0.0017918593820013039,
+        0.0007167432028523784
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.10836802321663926
+      ],
+      "voice_envelopes": [
+        0.008657268147680554,
+        0.045811987554091,
+        0.11319684536185916
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.4,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0031189849715038947,
+        0.0015594995254227038,
+        0.0006237993315356146
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.09004845114858125
+      ],
+      "voice_envelopes": [
+        0.006991701898525584,
+        0.03987130550918629,
+        0.10431643784453937
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.4333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.002714529740125784,
+        0.0013572709968624128,
+        0.0005429079821784242
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.07482579558909806
+      ],
+      "voice_envelopes": [
+        0.005646572867952948,
+        0.03470098303492004,
+        0.09613270731528803
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.4667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.002362522351917956,
+        0.0011812665082640914,
+        0.00047250624075747605
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.062176524022116264
+      ],
+      "voice_envelopes": [
+        0.004560232346690901,
+        0.03020112354699255,
+        0.0885909987634821
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.5,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.002056161618150072,
+        0.001028085449912022,
+        0.0004112338644301803
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.051665606876935354
+      ],
+      "voice_envelopes": [
+        0.0036828921790582002,
+        0.026284784570152906,
+        0.08164094490640891
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.5333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0017895282965349664,
+        0.0008947681873026606,
+        0.00035790700030347526
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.042931556177256615
+      ],
+      "voice_envelopes": [
+        0.0029743429218931036,
+        0.022876297923960766,
+        0.07523612983533448
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.5667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.001557470724103254,
+        0.0007787388773238105,
+        0.0003114953119230463
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.035673993346098755
+      ],
+      "voice_envelopes": [
+        0.0024021110007361513,
+        0.01990980771939795,
+        0.06933377901603442
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.6,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.001355505280910342,
+        0.0006777556998834702,
+        0.0002711020719401408
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.029643318679158495
+      ],
+      "voice_envelopes": [
+        0.0019399704105560306,
+        0.017327997944290238,
+        0.0638944736125324
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.6333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.001179729762012156,
+        0.0005898675437021739,
+        0.00023594683644179713
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.02463212721547706
+      ],
+      "voice_envelopes": [
+        0.0015667407513768677,
+        0.01508098506059364,
+        0.05888188724610077
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.6667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0010267479816516685,
+        0.0005133763082360838,
+        0.00020535036573165243
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.020468075713026685
+      ],
+      "voice_envelopes": [
+        0.0012653165060865137,
+        0.013125354187787229,
+        0.054262543370555714
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.7,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0008936041556598726,
+        0.00044680409472937633,
+        0.00017872150076096632
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.017007955495002017
+      ],
+      "voice_envelopes": [
+        0.0010218830775400019,
+        0.011423320285321467,
+        0.05000559171685585
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.7333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0007777257917562509,
+        0.0003888646512355776,
+        0.00015554574114591888
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.014132767249462557
+      ],
+      "voice_envelopes": [
+        0.0008252836496181917,
+        0.0099419980951481,
+        0.04608260224345779
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.7667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0006768739865057041,
+        0.0003384385209838454,
+        0.0001353753045217511
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.01174362845683147
+      ],
+      "voice_envelopes": [
+        0.0006665078592261881,
+        0.00865276676667567,
+        0.042467375281325964
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.8,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0005891001667126622,
+        0.000294551412978389,
+        0.000117820474789171
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00975837264469186
+      ],
+      "voice_envelopes": [
+        0.000538278840946815,
+        0.007530716863694191,
+        0.039135766545750704
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.8333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0005127084410991821,
+        0.00025635537775254414,
+        0.00010254207242176112
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.008108723554258426
+      ],
+      "voice_envelopes": [
+        0.0004347197210464488,
+        0.006554169089935483,
+        0.036065525901517535
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.8667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.00044622283341948465,
+        0.00022311242385208519,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.006737946998758625
+      ],
+      "voice_envelopes": [
+        0.0003510842735647234,
+        0.0057042554161023775,
+        0.033236148753750944
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.9,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0003883587651689703,
+        0.00019418025912536858,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.005598899685994126
+      ],
+      "voice_envelopes": [
+        0.0002835393960486954,
+        0.004964554531263476,
+        0.030628739118826458
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.9333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.00033799823581111434,
+        0.0001689998807807612,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.004652407876919518
+      ],
+      "voice_envelopes": [
+        0.00022898943404065246,
+        0.004320774561184544,
+        0.028225883417668754
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 8.9667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.00029416822192399045,
+        0.00014708477491114804,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0038659201394728015
+      ],
+      "voice_envelopes": [
+        0.00018493430414919906,
+        0.003760476935472431,
+        0.026011534188377292
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.0,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 1.0,
+      "rms": 0.0,
+      "bands": [
+        0.0002560218770876487,
+        0.00012801151639518874,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.003212387847100987
+      ],
+      "voice_envelopes": [
+        0.00014935491234013238,
+        0.0032728360577752255,
+        0.023970902904865428
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.0333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.9879416882520433,
+      "rms": 0.0,
+      "bands": [
+        0.000222822169977353,
+        0.00011141158790700678,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0026693349339620307
+      ],
+      "voice_envelopes": [
+        0.00012062061683338178,
+        0.00284843014460026,
+        0.022090361218725638
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.0667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.9334689198822441,
+      "rms": 0.0,
+      "bands": [
+        0.00019392764400141205,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.002218084904248526
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.002479059184734953,
+        0.020357349939127033
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.1,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.8437499999818101,
+      "rms": 0.0,
+      "bands": [
+        0.0001687800235922686,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0018431185159499468
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.002157586505218147,
+        0.01876029515434071
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.1333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.7283109155181301,
+      "rms": 0.0,
+      "bands": [
+        0.00014689342776384452,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.001531540049528934
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0018778008836765304,
+        0.017288530940566253
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.1667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.5966776532850111,
+      "rms": 0.0,
+      "bands": [
+        0.0001278449822416775,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0012726338012574987
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0016342965392092317,
+        0.015932228123985512
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.2,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.45837620028643766,
+      "rms": 0.0,
+      "bands": [
+        0.00011126664912226076,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0010574955534020777
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0014223686874637296,
+        0.014682328641825854
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.2333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.3229325432962553,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0008787263423851871
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0012379226379158424,
+        0.013530485043354079
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.2667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.19987266932177594,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0007301779968529903
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0010773946804818935,
+        0.01246900474584333
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.3,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.09872256515015243,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0006067416911594459
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0009376832298782251,
+        0.011490798655639116
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.3333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.029008217758754506,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0005041722448600491
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0008160888999887247,
+        0.010589333827398165
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.3667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": "smile",
+      "surface_amount": 0.0002556139813119085,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00041894212342806193
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0007102623481182629,
+        0.009758589830398763
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.4,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.0003481201208236331
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0006181588834157971,
+        0.008993018544279573
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.4333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00028927055011996943
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0005379989607151055,
+        0.008287507103018288
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.4667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00024036947641951377
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0004682337979981648,
+        0.007637343751361118
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.5,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00019973511014362893
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.00040751545185714914,
+        0.0070381863749029005
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.5333,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00016596996764456438
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.000354670773900408,
+        0.006486033503342124
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.5667,
+      "state": "silent",
+      "stage": "expression",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0,
+        0.0,
+        0.00013791280933210195
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.000308678744065971,
+        0.005977197585728514
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.6,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.16904961013005748,
+        0.0,
+        0.00011459870268256916
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.6333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.3095214495191695,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.43465059329700045,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 9.6667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.4262465792811211,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.7077349458340703,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 9.7,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.5232393713258912,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.5804988662448296,
+      "input_energy": 0.6437380803854856
+    },
+    {
+      "time_s": 9.7333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.6038355697286104,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.4658604182476768,
+      "input_energy": 0.6074704476458846
+    },
+    {
+      "time_s": 9.7667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.6708070121867719,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.3638196019427046,
+      "input_energy": 0.46248245908842567
+    },
+    {
+      "time_s": 9.8,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.7264569584341468,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.27437641724081957,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.8333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.7726993029462685,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.19753086422011584,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.8667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.8111243971654921,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.1332829428134985,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.9,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.8430537441750571,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0816326530770633,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.9333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.869585447533636,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.04257999496571365,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 9.9667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.8916319767745998,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.016124968513546983,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.0,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 1.8686028890132776e-12,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9099515488514187,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0022675736974650264,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.0333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.037070180196148085,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9251742044109019,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.4632716849637037
+    },
+    {
+      "time_s": 10.0667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9378234759778837,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 10.1,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05983828274399691,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9483343931230647,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6437380803854856
+    },
+    {
+      "time_s": 10.1333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0544524139984484,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9570684438192727,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6074704476458846
+    },
+    {
+      "time_s": 10.1667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.036988549181039616,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9643260066539013,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.46248245908842567
+    },
+    {
+      "time_s": 10.2,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 2.4242844062442235e-11,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9703566813184451,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.2333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.975367872784523,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.2667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9795319242853187,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.3,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.982992044504998,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.3333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9858672327493949,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.3667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9882563715431686,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.4,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 8.00027113957755e-12,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9902416273545193,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.4333,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.03707018019611406,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9918912764457416,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.46327168496337495
+    },
+    {
+      "time_s": 10.4667,
+      "state": "user_speaking",
+      "stage": "interruption",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.05433250596149581,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 2,
+      "visual_mix": [
+        0.9932620530006967,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.6066223186325304
+    },
+    {
+      "time_s": 10.5,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.8253514901839484,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.5333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.6858261425480899,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.5667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.5698875005794061,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.6,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.4735482407884646,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.6333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.3934950953372118,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.6667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.3269749028823663,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.7,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.2716999230497542,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.7333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.22576915698582664,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.7667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.1876029690331475,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.8,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.15588876025885265,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.8333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.12953582612390782,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.8667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.10763784521978628,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.9,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.08944170945737277,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.9333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.07432162334423803,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 10.9667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.061757581898654344,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.0,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.05131748675611173,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.0333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.04264228562713666,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.0667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.03543362386967925,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.1,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.029443583569014872,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.1333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.024466157247819083,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.1667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.020330162903694587,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.2,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.016893356792310188,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.2333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.014037541412782193,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.2667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.011664500510709832,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.3,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.009692621247012478,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.3333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.008054087404717832,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.3667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.006692547068996876,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.4,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.005561174596655483,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.4333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.004621060199225694,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.4667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0038398717744694954,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.5,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0031907429480460153,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.5333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.002651349096653606,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.5667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0022031395657237446,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.6,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0018306996810760414,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.6333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0015212206138478976,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.6667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0012640588621551038,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.7,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0010503702044112556,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.7333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0008728055308633041,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.7667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0007252580962101375,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.8,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.000602653497802146,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.8333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0005007751589956625,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.8667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0004161193136046282,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.9,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0003457745059001325,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.9333,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.00028732146048480187,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    },
+    {
+      "time_s": 11.9667,
+      "state": "silent",
+      "stage": "retour au repos",
+      "surface_family": null,
+      "surface_amount": 0.0,
+      "rms": 0.0,
+      "bands": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "visual_state": 0,
+      "visual_mix": [
+        0.0002387498796271489,
+        0.0,
+        0.0
+      ],
+      "voice_envelopes": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "receipt": 0.0,
+      "input_energy": 0.0
+    }
+  ],
+  "semantic_diagnostics": "Semantic Morphing · trace locale (48 étapes maximum)\ndetected · expression · réponse 1 / segment 1 · smile\nscheduled · segment_end · réponse 1 / segment 1 · smile\ntriggered · segment_end · réponse 1 / segment 1 · smile",
+  "toggle_walkthrough": {
+    "video": "presence-gpu31-toggle.mp4",
+    "duration_s": 3,
+    "encoded_fps": 30,
+    "frames": 90,
+    "scope": "Actual Tk and EGL/HUD frames; capture transport double, native IPC tested separately; not a FPS benchmark",
+    "transitions": [
+      {
+        "frame": 30,
+        "command": "Tk engine_buttons[gpu].invoke",
+        "active": "gpu"
+      },
+      {
+        "frame": 60,
+        "command": "GpuHud.hit_test → validated action → parent",
+        "active": "canvas"
+      }
+    ]
+  }
+}

@@ -8,11 +8,13 @@ import tkinter as tk
 from tkinter import ttk
 import unicodedata
 
-from .gpu_config import FIELD_SPECS, GpuSettings, LEVELS, PROFILES, SECTIONS
+from .gpu_config import FIELD_SPECS, GpuSettings, LEVELS, PROFILES, RENDER_SCALES, SECTIONS
 
 
 LEVEL_LABELS = {"essential": "Essentiel", "personalize": "Personnaliser", "advanced": "Avancé"}
 PROFILE_LABELS = {"eco": "Éco", "balanced": "Équilibré", "cinematic": "Cinématique"}
+SCALE_LABELS = {value: "Auto" if value == "auto" else value + " %" for value in RENDER_SCALES}
+SCALE_TERMS = "render_scale échelle rendu gpu résolution définition pixels natif supersampling dpi performance"
 ESSENTIAL_SECTION = "Réglages essentiels"
 PREVIEW_STATES = ("Repos", "Écoute", "THINKING", "Parole", "Sourire 😊", "Rire 😂", "Cœur ❤️", "Interruption")
 
@@ -38,6 +40,9 @@ def find_settings(query="", section=ESSENTIAL_SECTION, level="essential"):
         elif spec.section != section or LEVELS.index(spec.level) > rank:
             continue
         matches.append(key)
+    if (words and all(word in _search_text(SCALE_TERMS) for word in words)
+            or not words and section == "Performances" and rank >= LEVELS.index("personalize")):
+        matches.append("render_scale")
     # Searches remain usable even for a very broad term; every field remains
     # reachable by its section or direct focus instead of making a 66-row page.
     return tuple(matches[:24])
@@ -158,8 +163,23 @@ class GpuStudio:
             key for key, label in PROFILE_LABELS.items() if label == self.profile.get())))
         ttk.Button(self.profile_row, text="Charger ce préréglage", command=lambda: self.load_preset(next(
             key for key, label in PROFILE_LABELS.items() if label == self.profile.get()))).pack(fill="x", pady=4)
-        ttk.Label(self.profile_row, text="Préréglage : style GPU 3.0 approuvé et plafond de qualité choisi.",
+        ttk.Button(self.profile_row, name="reference_30", text="Charger le style de référence 3.0",
+                   command=self.load_reference).pack(fill="x", pady=4)
+        ttk.Label(self.profile_row, text="Le profil limite le coût graphique ; le style 3.0 conserve le noyau approuvé.",
                   wraplength=560).pack(fill="x")
+
+        scale_row = self.rows["render_scale"] = ttk.Frame(self.fields)
+        ttk.Label(scale_row, text="Échelle de rendu GPU").pack(anchor="w", pady=(7, 0))
+        self.render_scale = tk.StringVar(value=SCALE_LABELS[self.draft.render_scale])
+        scale_choice = self.controls["render_scale"] = ttk.Combobox(scale_row, name="render_scale",
+            state="readonly", textvariable=self.render_scale, values=tuple(SCALE_LABELS.values()))
+        scale_choice.pack(fill="x", pady=3)
+        scale_choice.bind("<<ComboboxSelected>>", lambda _event: self.change(render_scale=next(
+            key for key, label in SCALE_LABELS.items() if label == self.render_scale.get())))
+        ttk.Label(scale_row, wraplength=560, justify="left", text=
+            "Facteur des pixels physiques, pas une résolution fixe. Auto permet l'adaptation ; "
+            "125–200 % coûtent davantage. Plafonds : 8,29 Mpx et 4096 pixels par dimension. "
+            "F9 affiche le rendu effectivement utilisé.").pack(fill="x", pady=(0, 6))
 
         for key, spec in FIELD_SPECS.items():
             row = self.rows[key] = ttk.Frame(self.fields)
@@ -259,8 +279,10 @@ class GpuStudio:
         if self.closed or key not in self.controls:
             return False
         self.query.set("")
-        if key == "profile":
+        if key in {"profile", "render_scale"}:
             self.section.set("Performances")
+            if key == "render_scale":
+                self.level.set(LEVEL_LABELS["personalize"])
         else:
             spec = FIELD_SPECS[key]
             self.section.set(spec.section)
@@ -279,6 +301,7 @@ class GpuStudio:
             for key, variable in self.variables.items():
                 variable.set(getattr(self.draft, key))
             self.profile.set(PROFILE_LABELS[self.draft.profile])
+            self.render_scale.set(SCALE_LABELS[self.draft.render_scale])
         finally:
             self._syncing = False
 
@@ -311,7 +334,17 @@ class GpuStudio:
     def restore(self):
         self.change(**GpuSettings().to_dict())
         self._sync()
-        self.status.set("Style GPU 3.0 approuvé dans le brouillon · Appliquer pour enregistrer")
+        self.status.set("Réglages GPU 3.1 par défaut dans le brouillon · Appliquer pour enregistrer")
+
+    def load_reference(self):
+        # This is an artwork preset, not a second renderer or a performance
+        # migration. Keep the chosen profile, scale and user frame limit.
+        reference = GpuSettings.reference_30(profile=self.draft.profile).to_dict()
+        reference.update(render_scale=self.draft.render_scale, fps_limit=self.draft.fps_limit)
+        self.change(**reference)
+        self._sync()
+        self.status.set("Style approuvé 3.0 dans le brouillon · cadence et échelle conservées · Appliquer pour enregistrer")
+        return True
 
     def compare(self):
         if self.closed:

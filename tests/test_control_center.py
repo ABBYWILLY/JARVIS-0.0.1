@@ -15,6 +15,11 @@ from tests.test_jarvis import display_available
 
 
 class SettingsSearchTests(unittest.TestCase):
+    def test_gpu_render_scale_search_opens_the_single_persisted_studio_control(self):
+        matches = find_routes("échelle rendu", level="essential")
+        self.assertEqual([route.key for route in matches], ["gpu_render_scale"])
+        self.assertEqual((matches[0].owner, matches[0].control), ("gpu", "render_scale"))
+
     def test_five_families_search_accent_and_advanced_revelation(self):
         self.assertEqual(len(FAMILIES), 5)
         self.assertEqual(len({r.key for r in ROUTES}), len(ROUTES))
@@ -58,7 +63,8 @@ class SettingsSearchTests(unittest.TestCase):
         self.assertEqual(routes["presence_engine"].family, FAMILIES[0])
         self.assertIn(routes["presence_engine"], find_routes("2.5d", level="essential"))
         gpu_fields = {route.control for route in ROUTES if route.owner == "gpu"}
-        self.assertEqual(gpu_fields, {key for key, spec in FIELD_SPECS.items() if spec.level == "essential"})
+        self.assertEqual(gpu_fields, {key for key, spec in FIELD_SPECS.items() if spec.level == "essential"}
+                         | {"render_scale"})
         old_favorites = ["presence", "gpu", "wave_thickness", "halo"]
         self.assertEqual(navigation_preferences({"favorites": old_favorites})[0], tuple(old_favorites))
 

@@ -80,6 +80,8 @@ ROUTES = (
           "gpu particules densité quantité", level="personalize", owner="gpu", control="particle_density"),
     Route("gpu_particle_size", FAMILIES[0], "GPU · Taille des particules", "Ajuster la taille des particules sans modifier leur quantité.",
           "gpu particules taille", level="personalize", owner="gpu", control="particle_size"),
+    Route("gpu_render_scale", FAMILIES[0], "GPU · Échelle de rendu", "Choisir Auto ou 100–200 % des pixels physiques dans le Studio existant.",
+          "gpu échelle rendu résolution définition pixels dpi natif supersampling performance", level="personalize", owner="gpu", control="render_scale"),
     Route("voice_speed", FAMILIES[2], "Vitesse de la voix", "Régler la vitesse Piper dans Voix et périphériques.",
           "vitesse débit voix piper", level="personalize", owner="voice", control="speed"),
     Route("turn_silence", FAMILIES[2], "Silence de fin de tour", "Ajuster l’attente de fin de parole dans les réglages vocaux existants.",

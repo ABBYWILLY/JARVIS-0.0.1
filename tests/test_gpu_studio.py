@@ -93,11 +93,53 @@ class GpuStudioTkTests(unittest.TestCase):
         self.root.update()
 
     def test_opening_creates_one_control_per_implemented_field_and_writes_nothing(self):
-        self.assertEqual(set(self.studio.controls), set(FIELD_SPECS) | {"profile"})
+        self.assertEqual(set(self.studio.controls), set(FIELD_SPECS) | {"profile", "render_scale"})
         self.assertEqual(self.store.get_preference("presence_gpu"), {"future_gpu": "preserved", "halo_radius": 110})
         self.assertEqual(self.view.write_calls, 0)
         visible = {key for key, row in self.studio.rows.items() if row.winfo_manager()}
         self.assertEqual(visible, set(find_settings()))
+
+    def test_scale_control_search_preview_and_persistence_share_the_existing_draft(self):
+        self.assertEqual(find_settings("render_scale"), ("render_scale",))
+        self.assertIn("render_scale", find_settings("résolution"))
+        self.assertTrue(self.studio.focus_control("render_scale"))
+        self.root.update()
+        control = self.studio.controls["render_scale"]
+        self.assertIs(self.root.focus_get(), control)
+        self.assertTrue(self.studio.rows["render_scale"].winfo_manager())
+        self.assertEqual(tuple(control.cget("values")), ("Auto", "100 %", "125 %", "150 %", "200 %"))
+        self.studio.render_scale.set("150 %")
+        control.event_generate("<<ComboboxSelected>>")
+        self.root.update()
+        self.assertEqual(self.studio.draft.render_scale, "150")
+        self.assertEqual(self.view.gpu_settings.render_scale, "auto")
+        self.assertTrue(self.studio.preview())
+        self.assertEqual(self.view.actual_gpu_settings.render_scale, "150")
+        self.studio.comparison.set("before")
+        self.assertTrue(self.studio.compare())
+        self.assertEqual(self.view.actual_gpu_settings.render_scale, "auto")
+        self.assertTrue(self.studio.apply())
+        self.assertEqual(LocalGpuView(self.root, self.store).gpu_settings.render_scale, "150")
+        self.assertEqual(self.store.get_preference("presence")["background"], "#123456")
+
+    def test_reference_30_is_reversible_and_keeps_performance_choices(self):
+        self.studio.change(profile="eco", render_scale="125", fps_limit=24, core_size=110)
+        self.assertTrue(self.studio.load_reference())
+        self.assertEqual(self.studio.draft.profile, "eco")
+        self.assertEqual(self.studio.draft.render_scale, "125")
+        self.assertEqual(self.studio.draft.fps_limit, 24)
+        for key in ("converging_intensity", "radiating_intensity", "pulse_radius"):
+            self.assertEqual(getattr(self.studio.draft, key), 0)
+        self.assertEqual(self.view.write_calls, 0)
+        self.studio.cancel()
+        self.assertEqual(self.view.gpu_settings.converging_intensity, 100)
+
+    def test_only_three_new_sliders_extend_the_preserved_66_controls(self):
+        self.assertEqual(len(FIELD_SPECS), 69)
+        for key in ("pulse_radius", "converging_intensity", "radiating_intensity",
+                    "audio_reactivity", "pulse_amplitude", "audio_attack_ms", "audio_release_ms"):
+            self.assertTrue(self.studio.focus_control(key))
+            self.assertIn(key, self.studio.variables)
 
     def test_preview_before_after_cancel_restore_previous_renderer_without_persisting(self):
         original = self.store.get_preference("presence_gpu")

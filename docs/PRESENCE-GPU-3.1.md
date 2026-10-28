@@ -82,6 +82,38 @@ Les 66 réglages sont conservés. Trois paramètres seulement sont ajoutés : ra
 de pulsation, intensité convergente et intensité rayonnante. La référence
 artistique 3.0 désactive ces nouvelles couches, sans remettre l'ancien plafond FPS.
 
+Phase C : **189 tests ciblés réussis**, dont vrais pixels OpenGL, huit gravures,
+silence/relâchement, VAD, délai PCM, interruption et reprise. Les journaux Windows
+de B/C ont révélé une limite arbitraire de 60 pixels dans le test de position.
+La vérification utilise désormais l'ancrage et les boîtes réelles des widgets,
+leur visibilité complète et l'absence de chevauchement avec les états/micro.
+Le placement réserve la hauteur réellement demandée par le thème natif.
+
+## D — Studio et livraison
+
+Le même Studio conserve ses six commandes essentielles, ses niveaux, sa recherche
+et les favoris du Centre. Il expose 69 curseurs : les 66 existants et les trois
+nouveaux paramètres de C. Le choix d'échelle Auto/100/125/150/200 % est disponible
+dans Performances, dans la recherche et via « GPU · Échelle de rendu » au Centre.
+Il utilise le même brouillon et la même clé SQLite que les autres réglages GPU.
+
+« Charger le style de référence 3.0 » restaure l'apparence approuvée en conservant
+le profil, l'échelle et la limite FPS choisis. Les effets 3.1 peuvent ensuite être
+réactivés. Avant/Après, Annuler, Appliquer et Restaurer restent transactionnels ;
+aucun aperçu ne réécrit le choix de moteur ni les préférences Canvas.
+
+Les clips et captures du [dossier de preuves](PRESENCE-GPU-3.1-EVIDENCE.md) sont
+issus des composants réels. Leur PCM de test est synthétique et identifié ; leur
+cadence d'export n'est pas une mesure de FPS en situation réelle.
+
+Validation finale locale : **802 tests exécutés, 793 réussis, 9 ignorés** en
+97,466 s sous Linux/Tk 9/EGL réel. Les ignorés nécessitent les dépendances audio
+natives ou une activation explicite des modèles réels. Sous Tk 8.6 : 51 tests
+ciblés exécutés, 50 réussis et un test EGL ignoré faute de dépendance facultative.
+Ces résultats et les captures ne remplacent pas la recette Windows matérielle.
+Consulter les deux workflows GitHub Actions du SHA final pour le build et les
+smoke tests : « Windows Jarvis » et « PRESENCE GPU prototype ».
+
 ## Validation Windows — matériel en attente
 
 1. Lancer JARVIS complet et choisir 2.5D ; F9 affiche les mesures réelles.
@@ -91,6 +123,18 @@ artistique 3.0 désactive ces nouvelles couches, sans remettre l'ancien plafond 
    Comparer Auto/100/125/150 % ; lire la résolution effective et les plafonds.
 4. Parler puis se taire, écouter Piper et interrompre : pas d'effet audio ancien,
    pas de perte de conversation. Revenir en Canvas et vérifier après redémarrage.
+5. Dans le Studio, comparer les échelles et les styles 3.0/3.1 sans sauvegarder,
+   puis Appliquer et redémarrer pour vérifier les préférences des deux moteurs.
+6. Comparer écoute sans parole, VAD confirmé et Piper : réception convergente,
+   réflexion contenue, émission rayonnante. Tester les trois expressions
+   « Heureux de te revoir 😊 », « Je t'aime ❤️ », « C'est drôle 😂 ».
+7. Vérifier Ctrl+F7 et les deux boutons, puis réduire/masquer la fenêtre et
+   constater la baisse d'activité graphique. Tester les interruptions en plein
+   PCM et les sorties casque/haut-parleurs/Bluetooth habituelles.
+8. Pour conserver les mesures : Voix → Diagnostic → Copier. La section GPU donne
+   le PID, la RAM/CPU du processus, les percentiles et les résolutions. La VRAM
+   du pilote, la sortie acoustique Bluetooth et l'impact Ollama exigent une
+   observation matérielle ; ils ne sont pas estimés à partir d'une vidéo.
 
 [Lancement et compilation Windows](PRESENCE-DUAL-ENGINE.md). Aucun essai sur votre
 microphone, votre sortie Bluetooth ou votre RTX 3070 n'est revendiqué ici.

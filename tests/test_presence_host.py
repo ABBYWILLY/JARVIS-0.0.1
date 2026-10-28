@@ -141,15 +141,27 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
                     self.root.update()
                     for button in self.presence.engine_buttons.values():
                         self.assertTrue(button.winfo_viewable())
-                        # Compare client pixels: Windows Toplevel root coordinates
-                        # include its native title bar; the Canvas is the client area.
+                        # Check actual client boxes; native Windows theme height
+                        # need not equal a synthetic Tk scaling * 60px budget.
                         x = button.winfo_rootx()-self.presence.canvas.winfo_rootx()
                         y = button.winfo_rooty()-self.presence.canvas.winfo_rooty()
                         self.assertGreaterEqual(x, 0)
                         self.assertGreaterEqual(y, 0)
                         self.assertLessEqual(x+button.winfo_width(), self.presence.canvas.winfo_width())
                         self.assertLessEqual(y+button.winfo_height(), self.presence.canvas.winfo_height())
-                        self.assertLessEqual(y+button.winfo_height(), 60*scale)
+                        bar = self.presence._engine_bar
+                        self.assertEqual(int(bar.place_info()["x"]), 12)
+                        self.assertEqual(int(bar.place_info()["y"]), 8)
+                        self.assertGreaterEqual(button.winfo_rooty(), bar.winfo_rooty())
+                        self.assertLessEqual(button.winfo_rooty()+button.winfo_height(),
+                                             bar.winfo_rooty()+bar.winfo_height())
+                    for label in (self.presence.state_label, self.presence.mic_label):
+                        bar = self.presence._engine_bar
+                        intersects = (label.winfo_rootx() < bar.winfo_rootx()+bar.winfo_width()
+                            and label.winfo_rootx()+label.winfo_width() > bar.winfo_rootx()
+                            and label.winfo_rooty() < bar.winfo_rooty()+bar.winfo_height()
+                            and label.winfo_rooty()+label.winfo_height() > bar.winfo_rooty())
+                        self.assertFalse(intersects, "Engine switch overlaps real status text")
         self.presence.window.focus_force()
         self.presence.window.event_generate("<Control-F7>")
         self.root.update()
