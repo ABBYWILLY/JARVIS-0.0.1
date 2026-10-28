@@ -3,11 +3,12 @@ import re
 import math
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable, Protocol
 
 from .audio import AudioEvent, resolve_device, signal_view
 from .audio_spectrum import PCMSpectrum, ZERO_BANDS
+from .speech_normalization import normalize_french_speech, sentence_boundary
 
 
 @dataclass
@@ -19,7 +20,8 @@ class PCM:
 class SpeechText(str):
     """Clean speech plus source metadata, picklable across Windows spawn IPC."""
     def __new__(cls, text, *, original=None, display_text=None, start=0, end=None,
-                events=(), segment_id=0, response_id=0, spectrum_events=(), spectrum_mode="expression", caption_plan=None):
+                events=(), segment_id=0, response_id=0, spectrum_events=(), spectrum_mode="expression", caption_plan=None,
+                rate=1.0, pause_ms=0):
         instance = super().__new__(cls, text)
         instance.original = text if original is None else original
         instance.display_text = text if display_text is None else display_text
@@ -31,6 +33,8 @@ class SpeechText(str):
         instance.spectrum_events = tuple(spectrum_events)
         instance.spectrum_mode = spectrum_mode
         instance.caption_plan = caption_plan
+        instance.rate = rate
+        instance.pause_ms = pause_ms
         return instance
 
 
@@ -51,10 +55,23 @@ class PiperSpeech:
         from piper.config import SynthesisConfig
         self.voice = PiperVoice.load(str(path), use_cuda=False)
         self.config = SynthesisConfig(length_scale=1.0 / settings.speed)
+        self.speed = settings.speed
 
     def synthesize(self, text):
-        for chunk in self.voice.synthesize(text, syn_config=self.config):
-            yield PCM(chunk.audio_float_array, chunk.sample_rate)
+        rate, pause_ms = getattr(text, "rate", 1.), getattr(text, "pause_ms", 0)
+        if (isinstance(rate, bool) or not isinstance(rate, (int, float)) or not math.isfinite(rate)
+                or not .25 <= rate <= 4 or type(pause_ms) is not int or not 0 <= pause_ms <= 300):
+            raise ValueError("Prosodie invalide : facteur 0,25–4 et pause 0–300 ms attendus.")
+        speed = min(2., max(.5, self.speed * rate))
+        config = replace(self.config, length_scale=1. / speed)
+        for chunk in self.voice.synthesize(normalize_french_speech(text), syn_config=config):
+            samples = chunk.audio_float_array
+            if pause_ms:
+                # Piper yields sentence chunks. Append a small, real PCM pause
+                # without waiting for the next chunk or opening another stream.
+                import numpy as np
+                samples = np.concatenate((samples, np.zeros(round(chunk.sample_rate * pause_ms / 1000), dtype="float32")))
+            yield PCM(samples, chunk.sample_rate)
 
 
 class SentenceBuffer:
@@ -70,7 +87,8 @@ class SentenceBuffer:
             # A long opening sentence need not delay the first audio until 240
             # characters. Following phrases retain the existing batching bound.
             limit = 240 if self.emitted else 96
-            match = re.search(r"[.!?;:\n](?:\s|$)", self.pending)
+            match = next((candidate for candidate in re.finditer(r"[.!?;:\n](?:\s|$)", self.pending)
+                          if sentence_boundary(self.pending, candidate.start(), final=final)), None)
             clause = re.search(r",\s", self.pending[40:limit]) if not self.emitted else None
             if match and match.end() <= limit:
                 end = match.end()

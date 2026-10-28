@@ -1,3 +1,16 @@
+## LOT 4, étape 2 — normalisation et prosodie Piper
+
+Branche vocale seule : valeurs françaises (nombres, décimaux, monnaies,
+dates/heures valides, sigles connus), segmentation protégeant abréviations,
+montants et marqueurs incomplets. Source SQLite/affichage/positions inchangés.
+Piper conserve son moteur et expose par segment son vrai length_scale et de
+courtes pauses PCM bornées, sans SSML émotionnel ni nouveau modèle.
+
+52 tests ciblés : 50 réussis, 2 ignorés (composants natifs absents), 0,153 s.
+Normalisation Linux synthétique : 0,032 ms/phrase, P95 0,045 ms ; ce n’est pas
+une mesure d’inférence Piper ni de latence acoustique Windows.
+Commandes/profils et validation complète suivent dans un commit distinct.
+
 ## LOT 4, étape 1 — détection de fin de tour
 
 Le silence sélectionné est désormais arrondi au-dessus à la trame PCM (32 ms),

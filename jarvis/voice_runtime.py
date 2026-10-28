@@ -280,7 +280,8 @@ def speech_worker(outbox, commands, profile, generation, persistent=False, spect
             played_any = False
             if isinstance(text, SpeechText):
                 from dataclasses import asdict
-                caption_metadata = {"text": text.display_text, "spoken_text": str(text),
+                from .speech_normalization import normalize_french_speech
+                caption_metadata = {"text": text.display_text, "spoken_text": normalize_french_speech(text),
                     "original_start": text.start, "original_end": text.end,
                     "segment_id": text.segment_id, "response_id": generation,
                     "text_events": [dict(asdict(event), value=event.value[:256]) for event in text.events],
@@ -298,7 +299,9 @@ def speech_worker(outbox, commands, profile, generation, persistent=False, spect
                     emit(event)
 
             synthesis_at = time.monotonic()
-            for pcm in speech.synthesize(str(text)):
+            # Preserve picklable per-segment Piper rate/pause settings; str
+            # conversion here used to discard all synthesis metadata.
+            for pcm in speech.synthesize(text):
                 emit(AudioEvent("tts_pcm_ready", {"elapsed_ms": round((time.monotonic() - synthesis_at) * 1000)}, generation))
                 player.play(pcm, str(text), playback_emit, generation)
                 synthesis_at = time.monotonic()

@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 from .expressions import (ascii_expressions, context_exclusions, expression_family,
                           merge_ranges, overlaps, spoken_context_symbols)
+from .speech_normalization import expand_dollar_symbols, sentence_boundary, speech_atom_spans
 
 
 @dataclass(frozen=True)
@@ -222,8 +223,7 @@ def _speech_text(text):
     ranges = list(_emoji_ranges(text))
     for start, end in reversed(ranges):
         text = text[:start] + " " + text[end:]
-    text = re.sub(r"\$\s*(\d+(?:[.,]\d+)?)", r"\1 dollars", text)
-    text = re.sub(r"(\d+(?:[.,]\d+)?)\s*\$", r"\1 dollars", text)
+    text = expand_dollar_symbols(text)
     # Unclosed formatting remains readable at end of stream.
     text = re.sub(r"[*_`$]", "", text)
     # A line/paragraph break is an audible pause, even inside emphasis or a list.
@@ -605,7 +605,7 @@ class _Scanner:
         # Numeric currency can be spoken once its enclosing phrase is complete;
         # an unfinished algebraic formula waits for its closing delimiter.
         following = text[start + 1:end]
-        if not re.match(r"\d", following):
+        if not re.match(r"[+-]?\d", following):
             self.protect(start, end, False)
             return start + 1, end, end, False
         # Until the stream ends, '$2.' could still become '$2.14 + x$'.
@@ -650,27 +650,28 @@ class SpeechBuffer:
             scanner.document()
             available = min(scanner.incomplete, default=len(source))
             limit = 240 if self.emitted else 96
+            protected = scanner.protected + (list(speech_atom_spans(source[:available])) if len(source) >= limit else [])
 
             def safe(end):
-                return end <= available and not any(start < end < stop for start, stop in scanner.protected)
+                return end <= available and not any(start < end < stop for start, stop in protected)
 
             sentence = None
             for match in re.finditer(r"[.!?;:\n](?:\s+|$)", source[:available]):
                 position = match.start()
-                # A trailing colon may still become an URL scheme (https:).
-                # Ordinary sentence endings can start playback immediately.
-                if position + 1 == len(source) and source[position] in ":;" and not final:
+                # Titles/initials and numeric fragments are not whole phrases.
+                # In particular a streamed 'Dr.' cannot start Piper yet.
+                if not sentence_boundary(source, position, final=final):
                     continue
-                # Decimal points are never sentence endings, including a streamed '2.'.
-                if source[position] == "." and position and source[position - 1].isdigit():
-                    if position + 1 == len(source) and not final or position + 1 < len(source) and source[position + 1].isdigit():
-                        continue
                 if safe(match.end()):
                     sentence = match.end()
                     break
             spaces = [match.end() for match in re.finditer(r"\s+", source[:min(available, limit + 1)]) if safe(match.end())]
+            clause = next((match.end() for match in re.finditer(r",\s+", source[40:min(available, limit)])
+                           if safe(40 + match.end())), None) if not self.emitted else None
             if sentence is not None and sentence <= limit:
                 stop = sentence
+            elif clause is not None:
+                stop = 40 + clause
             elif len(source) >= limit and spaces:
                 stop = spaces[-1]
             elif sentence is not None:
