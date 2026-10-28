@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 BUTTONS = ("command", "studio", "microphone", "stop")
+ENGINE_BUTTONS = ("engine_canvas", "engine_gpu")
 _LABELS = ("COMMAND OS", "Studio", "Micro", "Arrêt")
 _STATES = {"silent": "Repos", "listening": "Écoute", "user_speaking": "Voix détectée",
            "thinking": "Réflexion", "jarvis_speaking": "Parole", "dormant": "Sommeil"}
@@ -30,13 +31,22 @@ def layout(width, height, scale=1.):
         left = gap + index * (available / 4 + gap)
         right = gap + (index + 1) * available / 4 + index * gap
         buttons.append((action, (round(left), top, round(right), top + button_height)))
+    engine_width = max(36, round(44 * scale))
+    engine_height = max(16, round(18 * scale))
+    engine_gap = max(2, round(3 * scale))
+    engine_top = max(3, round(4 * scale))
+    engines = tuple((action, (gap + index * (engine_width + engine_gap), engine_top,
+                              gap + index * (engine_width + engine_gap) + engine_width,
+                              engine_top + engine_height))
+                    for index, action in enumerate(ENGINE_BUTTONS))
     return {"width": width, "height": height, "scale": scale,
             "header_height": header_height, "footer_height": footer_height,
-            "buttons": tuple(buttons)}
+            "buttons": tuple(buttons), "engine_buttons": engines}
 
 
 def hit_test(x, y, width, height, scale=1.):
-    for action, (left, top, right, bottom) in layout(width, height, scale)["buttons"]:
+    spec = layout(width, height, scale)
+    for action, (left, top, right, bottom) in (*spec["engine_buttons"], *spec["buttons"]):
         if left <= x < right and top <= y < bottom:
             return action
     return None
@@ -103,7 +113,9 @@ def caption_runs(source, line, cursor, marks):
 
 
 class GpuHud:
-    buttons = BUTTONS
+    # Keyboard order follows the visible controls, top-to-bottom. The footer
+    # BUTTONS contract remains unchanged for layout and existing IPC actions.
+    buttons = ENGINE_BUTTONS + BUTTONS
 
     def __init__(self, ctx):
         import moderngl
@@ -205,6 +217,8 @@ class GpuHud:
                             "limit_reason": ("HUD texture width bound" if atlas_width < width else None),
                             "allocation_bytes_estimate": atlas_width * atlas_height * 4}
         diagnostic = hud.get("diagnostic") is True
+        active_engine = hud.get("active_engine", "gpu")
+        active_engine = active_engine if isinstance(active_engine, str) and active_engine in {"canvas", "gpu"} else "gpu"
         strings = tuple(str(hud.get(key, ""))[:limit] for key, limit in (
             ("state", 64), ("engine", 120), ("microphone", 180), ("caption", 4096),
             ("caption_note", 160), ("operation", 200), ("preview", 160), ("shortcuts", 200),
@@ -219,7 +233,8 @@ class GpuHud:
         if len(accent) != 3 or not all(type(value) is int and 0 <= value <= 255 for value in accent):
             accent = (93, 227, 247)
         self._accent = tuple(value / 255 for value in accent)
-        key = (atlas_width, atlas_height, top, focused, round(scale, 3), strings, marks, diagnostic)
+        key = (atlas_width, atlas_height, top, focused, round(scale, 3), strings, marks, diagnostic,
+               active_engine)
         if key == self._key:
             return spec, top, bottom
         image = self._Image.new("RGBA", (atlas_width, atlas_height), (0, 0, 0, 0))
@@ -228,8 +243,27 @@ class GpuHud:
         heading, body, small = self._font(17 * scale), self._font(19 * scale), self._font(12 * scale)
         cyan, white, muted = (93, 227, 247, 255), (229, 241, 250, 255), (162, 184, 203, 255)
         state, engine, microphone, caption, note, operation, preview, shortcuts, performance = strings
-        title = "PRESENCE · 2.5D GPU · " + _STATES.get(state, state or "Repos")
-        draw.text((pad, 4), title, font=heading, fill=cyan)
+        # These are genuine hit-tested/focusable actions sent to JARVIS; only
+        # the parent may change/persist the engine. No second window is opened
+        # by the HUD. The filled segment indicates the actually active engine.
+        for index, ((action, physical), label) in enumerate(zip(spec["engine_buttons"], ("2D", "2.5D"))):
+            bounds = tuple(round(value * ratio) for value in physical)
+            chosen = (action == "engine_canvas") == (active_engine == "canvas")
+            focused_engine = index == focused
+            draw.rounded_rectangle(bounds, radius=max(2, round(3 * scale)),
+                fill=(24, 67, 82, 255) if chosen else (12, 23, 32, 245),
+                outline=white if focused_engine else cyan if chosen else (48, 75, 91, 255),
+                width=max(1, round(2 * scale)) if focused_engine else 1)
+            font = self._font(12 * scale)
+            x = (bounds[0] + bounds[2] - font.getlength(label)) / 2
+            y = bounds[1] + max(0, (bounds[3] - bounds[1] - font.size) / 2 - 2)
+            draw.text((x, y), label, font=font, fill=cyan if chosen else white)
+        title_left = (spec["engine_buttons"][-1][1][2] + max(5, round(10 * spec["scale"]))) * ratio
+        compact = width < 540 * max(.8, spec["scale"])
+        title = ("GPU · " if compact else "PRESENCE · 2.5D GPU · ") + _STATES.get(state, state or "Repos")
+        fitting_title = _lines(title, heading, atlas_width - title_left - pad, 1)
+        if fitting_title:
+            draw.text((title_left, 4), fitting_title[0], font=heading, fill=cyan)
         second = "Micro : " + (microphone or "désactivé")
         if operation:
             second += " · " + operation
@@ -264,13 +298,12 @@ class GpuHud:
             fitting = _lines(note, small, atlas_width - pad * 2, 1)
             if fitting:
                 draw.text((pad, top + line_height * 2), fitting[0], font=small, fill=muted)
-        compact = width < 540 * max(.8, spec["scale"])
         labels = ("Chat", "Studio", "Micro", "Arrêt") if compact else _LABELS
         for index, ((_action, bounds), label) in enumerate(zip(spec["buttons"], labels)):
             x0, y0, x1, y1 = bounds
             y0, y1 = top + (y0 - (height - spec["footer_height"])) * ratio, top + (y1 - (height - spec["footer_height"])) * ratio
             bounds = (round(x0 * ratio), round(y0), round(x1 * ratio), round(y1))
-            selected = index == focused
+            selected = index + len(ENGINE_BUTTONS) == focused
             draw.rounded_rectangle(bounds, radius=max(3, round(5 * scale)),
                                    fill=(25, 53, 66, 250) if selected else (15, 26, 36, 245),
                                    outline=cyan if selected else (48, 75, 91, 255), width=1)

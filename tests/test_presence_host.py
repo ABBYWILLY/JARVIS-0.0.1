@@ -106,6 +106,52 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
         self.assertFalse(child.frames[-1]["animation"]["active"])
         self.assertFalse(self.voice.capture.alive())
 
+    def test_visible_engine_buttons_and_gpu_ipc_preserve_playback_and_persist_choice(self):
+        self.start_audio_contract()
+        starts = (list(self.voice.capture.starts), list(self.voice.speech.starts))
+        epoch = self.voice.epoch
+        self.assertTrue(self.presence.engine_buttons["canvas"].winfo_viewable())
+        self.assertTrue(self.presence.engine_buttons["gpu"].winfo_viewable())
+        self.assertEqual(self.presence.engine_choice.get(), "canvas")
+        self.presence.engine_buttons["gpu"].invoke()
+        child = self.presence._gpu
+        self.assertEqual(self.presence.engine_choice.get(), "canvas")  # Actual engine until ready.
+        child.events.append({"kind": "ready"})
+        self.pump_until(lambda: self.presence.active_engine == "gpu")
+        self.assertEqual(self.presence.engine_choice.get(), "gpu")
+        child.events.append({"kind": "action", "action": "engine_canvas"})
+        self.pump_until(lambda: self.presence.active_engine == "canvas")
+        self.root.update()
+        self.assertTrue(self.presence.engine_buttons["gpu"].winfo_viewable())
+        self.assertFalse(child.alive())
+        self.assertEqual(self.store.get_preference("presence_engine")["mode"], "canvas")
+        self.assertEqual(starts, (self.voice.capture.starts, self.voice.speech.starts))
+        self.assertEqual(self.voice.epoch, epoch)
+        self.assertTrue(self.voice.capture.alive() and self.voice.speech.alive())
+
+    def test_engine_controls_remain_top_left_and_keyboard_switches_in_mini_and_high_dpi(self):
+        original = self.root.tk.call("tk", "scaling")
+        self.addCleanup(lambda: self.root.tk.call("tk", "scaling", original))
+        for scale in (1., 2., 2.5):
+            for mini in (False, True):
+                with self.subTest(scale=scale, mini=mini):
+                    self.root.tk.call("tk", "scaling", scale*96/72)
+                    self.presence.set_options(mini_mode=mini)
+                    self.presence.window.geometry("420x300" if mini else "640x440")
+                    self.root.update()
+                    for button in self.presence.engine_buttons.values():
+                        self.assertTrue(button.winfo_viewable())
+                        x = button.winfo_rootx()-self.presence.window.winfo_rootx()
+                        y = button.winfo_rooty()-self.presence.window.winfo_rooty()
+                        self.assertGreaterEqual(x, 0)
+                        self.assertLessEqual(x+button.winfo_width(), self.presence.window.winfo_width())
+                        self.assertLessEqual(y+button.winfo_height(), 60*scale)
+        self.presence.window.focus_force()
+        self.presence.window.event_generate("<Control-F7>")
+        self.root.update()
+        self.assertEqual(self.presence.engine_preferences.mode, "gpu")
+        self.assertIsNotNone(self.presence._gpu)
+
     def test_failure_falls_back_once_and_manual_retry_preserves_preference(self):
         child = self.ready_gpu()
         child.events.append({"kind": "error", "message": "Shader test failure"})

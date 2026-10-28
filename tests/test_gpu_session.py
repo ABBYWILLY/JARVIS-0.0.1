@@ -10,7 +10,7 @@ import threading
 from types import SimpleNamespace
 import unittest
 
-from jarvis.gpu_session import GpuSession, _fresh_frame, validate_packet
+from jarvis.gpu_session import ACTIONS, GpuSession, _dispatch_action, _fresh_frame, validate_packet
 
 
 def packet(seq=1):
@@ -89,6 +89,15 @@ def hung_child(_frames, _events, _quit, _urgent, _options):
         time.sleep(.1)
 
 
+def action_child(_frames, events, quit_event, urgent, options):
+    options["heartbeat"].value = time.monotonic()
+    events.put({"kind": "ready", "renderer": {"acceleration": "command_transport_test"}})
+    for name in ("engine_canvas", "engine_gpu", "toggle_engine", "stop"):
+        _dispatch_action(events, urgent, name)
+    while not quit_event.wait(.02):
+        options["heartbeat"].value = time.monotonic()
+
+
 class SessionWaitMixin:
     def wait_until(self, session, predicate, timeout=5.):
         deadline = time.monotonic()+timeout
@@ -102,6 +111,51 @@ class SessionWaitMixin:
 
 
 class ProcessContractTests(SessionWaitMixin, unittest.TestCase):
+    def test_visible_engine_commands_cross_real_spawn_transport_with_stop_priority(self):
+        session = GpuSession(target=action_child)
+        self.addCleanup(session.stop)
+        session.start()
+        found = self.wait_until(session, lambda items:
+            {item.get("action") for item in items if item.get("kind") == "action"}
+            >= {"engine_canvas", "engine_gpu", "toggle_engine", "stop"})
+        commands = [item["action"] for item in found if item.get("kind") == "action"]
+        self.assertEqual(set(commands), {"engine_canvas", "engine_gpu", "toggle_engine", "stop"})
+        self.assertEqual(len(commands), 4)
+        self.assertTrue(all(command in ACTIONS for command in commands))
+
+    def test_engine_dispatch_rejects_unknown_commands_and_preserves_bounded_stop_channel(self):
+        events, urgent = queue.Queue(2), threading.Event()
+        for invalid in ("run_shell", "", None, True, {"engine": "gpu"}, ["engine_gpu"]):
+            with self.subTest(command=invalid), self.assertRaises(ValueError):
+                _dispatch_action(events, urgent, invalid)
+        self.assertTrue(events.empty())
+        self.assertFalse(urgent.is_set())
+        events.put({"kind": "heartbeat"})
+        events.put({"kind": "heartbeat"})
+        self.assertTrue(_dispatch_action(events, urgent, "engine_canvas"))
+        self.assertEqual(events.qsize(), 2)
+        self.assertEqual(events.get_nowait(), {"kind": "heartbeat"})
+        self.assertEqual(events.get_nowait(), {"kind": "action", "action": "engine_canvas"})
+        events.put({"kind": "heartbeat"})
+        events.put({"kind": "heartbeat"})
+        self.assertTrue(_dispatch_action(events, urgent, "stop"))
+        self.assertTrue(urgent.is_set())
+        self.assertEqual(events.qsize(), 2)
+
+    def test_parent_reports_unknown_ipc_action_instead_of_dispatching_it(self):
+        session = GpuSession(clock=lambda: 100.)
+        session._process = SimpleNamespace(is_alive=lambda: True)
+        session._frames = queue.Queue(1)
+        session._events = queue.Queue(16)
+        session._urgent = threading.Event()
+        session._heartbeat = SimpleNamespace(value=100.)
+        session._ready, session._last_seen = True, 100.
+        session._events.put({"kind": "action", "action": {"run_shell": "anything"}})
+        events = session.poll()
+        self.assertEqual(events[0]["kind"], "error")
+        self.assertIn("inconnue", events[0]["message"])
+        self.assertFalse(any(item.get("kind") == "action" for item in events))
+
     def test_one_process_coalesces_to_final_state_and_restart_has_no_old_frames(self):
         session = GpuSession(target=echo_child)
         self.addCleanup(session.stop)

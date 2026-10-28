@@ -1,18 +1,22 @@
-# PRESENCE GPU 3.1 — phase A, 28 octobre 2026
+# PRESENCE GPU 3.1 — phases A et B, 28 octobre 2026
 
-Base4ae4f71 propre, application/prototype Windows verts. Direction3.0 conservée.
-A corrigeplafondbalanced30, snapshotdirty/attente100ms/VSync, caps720/1080/HUD1920.
-Renduclockisolé60nominal, IPC25Hz, natifphysique+Auto/100/125/150/200bornés,
-bloomindépendant/adaptationhystérésis, mesuresvraisdraws etDPI/CPU/RAM/PID.
-152testsciblésréussis14.434s etvraiGLFWMini/masquage/retourCanvasOK.
-Preuves: PRESENCE-GPU-3.1-EVIDENCE.md. Mesa1440x960natif25–27FPS,
-125%~18FPS,150%~13FPS:60nonatteintsici,aucuneextrapolationRTX/Ollama.
+Base approuvée4ae4f71 conservée. A publiée5cd8866 : cadence de présentation
+indépendante des snapshots, cible60 nominale, rendu natif/HiDPI/échelles bornées,
+adaptation graduelle et mesures réelles. 152 tests ciblés réussis.
+B : contrôle permanent [2D | 2.5D] dans Canvas et GPU, IPC borné et validé,
+Ctrl+F7 commun, choix persistant et protection du pipeline vocal.
+54 tests ciblés réussis ; vrais clics XTest Tk→GPU→Canvas et raccourci GLFW
+validés sous Linux, conversation conservée, aucun périphérique ouvert.
 
-Reste danslamissionautorisée : BtogglevisibleCanvas/GPU+IPC/CtrlF7 ;
-CauraPCMcompressée etsignaturesécouteconvergente/parolerayonnante ;
-DStudiochampsmanquants/référence3.0, testscomplets, preuvesvidéo, CIduSHAfinal.
-Ne pas refaireA,nimodifiermain/audiomoteurs/voix/modèles. Spécificationcomplète
-PRESENCE-GPU-3.1-SPEC.md ; guidePRESENCE-GPU-3.1.md. Validationmatérielleenattente.
+Les mesures Mesa1440×960 atteignent25–27FPS natifs, ~18à125%, ~13à150%.
+60FPS ne sont pas atteints ici ; aucune validation RTX/Ollama matérielle.
+Guide et preuves : PRESENCE-GPU-3.1.md et PRESENCE-GPU-3.1-EVIDENCE.md.
+CI prototypeA verte ; applicationA à suivre. Tester la CI du SHA final.
+
+Reste : C aura PCM expressive et signatures convergente/rayonnante, puis D
+Studio des seuls champs manquants, référence3.0, vidéos, tests complets et CI.
+Ne pas recommencer A/B, ne pas modifier main ou les moteurs vocaux/cognitifs.
+Validation Windows11/RTX3070/micro/Piper/Bluetooth en attente.
 
 ---
 

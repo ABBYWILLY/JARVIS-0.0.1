@@ -11,7 +11,8 @@ PROTOCOL_VERSION = 1
 FRAME_QUEUE_SIZE = 1
 EVENT_QUEUE_SIZE = 16
 MAX_PACKET_BYTES = 131072
-ACTIONS = ("command", "studio", "microphone", "stop", "sleep", "mini", "diagnostic")
+ACTIONS = ("command", "studio", "microphone", "stop", "sleep", "mini", "diagnostic",
+           "engine_canvas", "engine_gpu", "toggle_engine")
 _FRAME_KEYS = frozenset(("time_s", "reactor", "points", "details", "color", "rms",
                          "reduced_motion", "detail_opacity", "orbit_phase", "core_scale",
                          "audio_bands", "orbit_blend", "surface_family", "surface_amount", "art"))
@@ -166,6 +167,16 @@ def _send_status(events, event, *, critical=False):
         return False
 
 
+def _dispatch_action(events, urgent_stop, name):
+    """Only declared UI commands cross IPC; shutdown/stop retains priority."""
+    if not isinstance(name, str) or name not in ACTIONS:
+        raise ValueError("Commande PRESENCE GPU inconnue.")
+    if name == "stop":
+        urgent_stop.set()
+        return True
+    return _send_status(events, {"kind": "action", "action": name}, critical=True)
+
+
 def _fresh_frame(packet, now):
     """Clear stale energy without cutting a fresh parent release envelope."""
     frame = dict(packet["frame"])
@@ -280,10 +291,7 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
             monitor_refresh = getattr(video, "refresh_rate", None)
 
         def action(name):
-            if name == "stop":
-                urgent_stop.set()
-            else:
-                _send_status(events, {"kind": "action", "action": name}, critical=True)
+            return _dispatch_action(events, urgent_stop, name)
 
         if window is not None:
             def fullscreen(enabled=None):
@@ -321,6 +329,8 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                         action("command")
                 elif key == glfw.KEY_F6:
                     action("studio")
+                elif key == glfw.KEY_F7 and modifiers & glfw.MOD_CONTROL:
+                    action("toggle_engine")
                 elif key == glfw.KEY_F8:
                     action("command")
                 elif key == glfw.KEY_F9:
@@ -473,7 +483,7 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
                     frame.pop("art", None)
                     renderer.render(**frame, target=destination)
                     values = dict(current["hud"])
-                    values.setdefault("shortcuts", "Tab / Entrée · F6 Studio · M Micro · Ctrl+Espace Arrêt · D Sommeil · F9 Mode · F10 Mini · F11 Plein écran")
+                    values.setdefault("shortcuts", "Tab / Entrée · Ctrl+F7 2D / 2.5D · F6 Studio · M Micro · Ctrl+Espace Arrêt · D Sommeil · F9 Mode · F10 Mini · F11 Plein écran")
                     if window is not None:
                         values["dpi_scale"] = max(glfw.get_window_content_scale(window))
                     hud.render(values, *size, focused=focused, target=destination)
@@ -639,6 +649,9 @@ class GpuSession:
                 break
             if not isinstance(event, dict):
                 event = {"kind": "error", "message": "Réponse GPU invalide."}
+            if event.get("kind") == "action" and (not isinstance(event.get("action"), str)
+                                                   or event["action"] not in ACTIONS):
+                event = {"kind": "error", "message": "Commande PRESENCE GPU inconnue."}
             kind = event.get("kind")
             if kind == "ready":
                 self._ready = True

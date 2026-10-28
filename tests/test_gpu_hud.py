@@ -4,7 +4,7 @@ import subprocess
 import sys
 import unittest
 
-from jarvis.gpu_hud import BUTTONS, GpuHud, caption_runs, hit_test, layout
+from jarvis.gpu_hud import BUTTONS, ENGINE_BUTTONS, GpuHud, caption_runs, hit_test, layout
 
 
 class HudLayoutTests(unittest.TestCase):
@@ -14,16 +14,21 @@ class HudLayoutTests(unittest.TestCase):
                        check=True, capture_output=True)
 
     def test_all_buttons_remain_in_window_at_small_sizes_portrait_and_dpi(self):
-        for width, height in ((320, 240), (560, 320), (440, 900), (1920, 1080)):
-            for dpi in (1., 1.5, 2.5):
+        for width, height in ((320, 240), (560, 320), (440, 900), (1920, 1080), (3840, 2160)):
+            for dpi in (1., 1.5, 2.5, 3.):
                 with self.subTest(size=(width, height), dpi=dpi):
                     spec = layout(width, height, dpi)
                     self.assertEqual(tuple(action for action, _ in spec["buttons"]), BUTTONS)
-                    for action, (left, top, right, bottom) in spec["buttons"]:
+                    self.assertEqual(tuple(action for action, _ in spec["engine_buttons"]), ENGINE_BUTTONS)
+                    for action, (left, top, right, bottom) in (*spec["engine_buttons"], *spec["buttons"]):
                         self.assertTrue(0 <= left < right <= width)
                         self.assertTrue(0 <= top < bottom <= height)
                         self.assertEqual(hit_test((left+right)/2, (top+bottom)/2, width, height, dpi), action)
                     self.assertIsNone(hit_test(width/2, height/2, width, height, dpi))
+                    for _action, (_left, top, _right, bottom) in spec["engine_buttons"]:
+                        self.assertLess(bottom, spec["header_height"])
+                        self.assertLess(top, height * .1)
+        self.assertEqual(GpuHud.buttons, ENGINE_BUTTONS + BUTTONS)
 
     def test_caption_offsets_keep_french_and_only_prepared_words_are_accented(self):
         original = "La colère et la\nrage, le cœur ❤️"
@@ -76,6 +81,25 @@ class HudEglTests(unittest.TestCase):
         self.assertNotEqual(before[-960*60*3:], after[-960*60*3:])
         self.assertTrue(self.hud.caption_lines)
         self.assertLessEqual(len(self.hud.caption_lines), 2)
+
+    def test_engine_controls_are_real_pixels_active_state_and_six_keyboard_focuses(self):
+        payload = {"state": "thinking", "active_engine": "gpu"}
+        gpu = self.draw(payload)
+        payload["active_engine"] = "canvas"
+        canvas = self.draw(payload)
+        spec = layout(960, 640)
+        # Read back the actual target. No geometry model/mock can satisfy this.
+        for _action, (left, top, right, bottom) in spec["engine_buttons"]:
+            rows = range(640 - bottom, 640 - top)
+            before = b"".join(gpu[(row * 960 + left)*3:(row * 960 + right)*3] for row in rows)
+            after = b"".join(canvas[(row * 960 + left)*3:(row * 960 + right)*3] for row in rows)
+            self.assertNotEqual(before, after)
+        payload["active_engine"] = "gpu"
+        focused_pixels = set()
+        for index in range(len(self.hud.buttons)):
+            focused_pixels.add(self.draw(payload, focused=index))
+        self.assertEqual(len(focused_pixels), 6)
+        self.assertEqual(self.hud.buttons[-1], "stop")
 
     def test_measured_performance_is_only_displayed_in_diagnostic_mode(self):
         data = {"state": "thinking", "shortcuts": "F9 Diagnostic", "performance": "59.8 FPS · rendu 3840×2160"}

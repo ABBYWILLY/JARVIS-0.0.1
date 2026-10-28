@@ -29,12 +29,14 @@ class IntegratedPresence(PresenceView):
         self.gpu_studio = None
         self._engine_dialog = None
         self._closing_host = False
+        self._engine_bar = None
         super().__init__(app)
         self._saved_engine = self._read("presence_engine")
         self.engine_preferences = EnginePreferences.from_dict(self._saved_engine)
         self._saved_gpu = self._read("presence_gpu")
         self.gpu_settings = GpuSettings.from_dict(self._saved_gpu)
         self.engine_status = tk.StringVar(app.root)
+        self.engine_choice = tk.StringVar(app.root, value="canvas")
         self._status()
 
     def _read(self, key):
@@ -52,6 +54,44 @@ class IntegratedPresence(PresenceView):
         active = ENGINE_LABELS[self.active_engine]
         reason = detail or self.engine_preferences.reason
         self.engine_status.set("Actif : " + active + (" · " + reason if reason else ""))
+        self.engine_choice.set(self.active_engine)
+
+    def toggle_engine(self, _event=None):
+        self.set_engine("canvas" if self.active_engine == "gpu" else "gpu")
+        return "break"
+
+    def _show_canvas(self):
+        super().show()
+        if self._engine_bar is None or not self._engine_bar.winfo_exists():
+            self._engine_bar = tk.Frame(self.window, bg="#000000")
+            style = ttk.Style(self.window)
+            style.configure("PresenceEngine.Toolbutton", padding=(8, 3),
+                font=(self.app.font_family, 9), background="#11202b", foreground="#caedff")
+            style.map("PresenceEngine.Toolbutton", background=[("selected", "#174456")],
+                      foreground=[("selected", "#ffffff")])
+            self.engine_buttons = {}
+            for mode, label in (("canvas", "2D"), ("gpu", "2.5D")):
+                button = ttk.Radiobutton(self._engine_bar, text=label, value=mode,
+                    variable=self.engine_choice, style="PresenceEngine.Toolbutton",
+                    command=lambda chosen=mode: self.set_engine(chosen), takefocus=True)
+                button.pack(side="left", padx=1)
+                self.engine_buttons[mode] = button
+            self.window.bind("<Control-F7>", self.toggle_engine)
+        self._layout_controls(self.canvas.winfo_width(), self.canvas.winfo_height())
+
+    def _layout_controls(self, width, height):
+        super()._layout_controls(width, height)
+        if self._engine_bar is None or not self._engine_bar.winfo_exists():
+            return
+        self._engine_bar.place(x=12, y=8, anchor="nw")
+        self._engine_bar.lift()
+        bar_width = self._engine_bar.winfo_reqwidth()
+        if self.settings.mini_mode:
+            self.state_label.place(x=12+bar_width+12, y=12, relx=0, rely=0)
+        elif width > bar_width+self.identity.winfo_reqwidth()+self.header_controls.winfo_reqwidth()+64:
+            self.identity.place(x=bar_width+24, y=8, relx=0, rely=0)
+        else:
+            self.identity.place_forget()
 
     def _save_engine(self, candidate):
         values = {**self._saved_engine, **candidate.to_dict()}
@@ -91,7 +131,7 @@ class IntegratedPresence(PresenceView):
             # existing rehearsal/accessibility code. They never draw alongside
             # a visible GPU window; Canvas supplies the safe loading view.
             if self.window is None or not self.window.winfo_exists():
-                super().show()
+                self._show_canvas()
             self._gpu_desired = True
             if self._gpu is None:
                 from .gpu_session import GpuSession
@@ -136,7 +176,7 @@ class IntegratedPresence(PresenceView):
         self._gpu_desired = False
         self._status()
         if show:
-            super().show()
+            self._show_canvas()
         else:
             self._hide_canvas()
 
@@ -243,6 +283,8 @@ class IntegratedPresence(PresenceView):
                    "microphone": self.toggle_listening, "stop": self.emergency,
                    "sleep": self.toggle_sleep, "mini": self.toggle_mini,
                    "diagnostic": self.toggle_diagnostic}
+        actions.update(engine_canvas=lambda: self.set_engine("canvas"),
+                       engine_gpu=lambda: self.set_engine("gpu"), toggle_engine=self.toggle_engine)
         if action in actions:
             actions[action]()
 

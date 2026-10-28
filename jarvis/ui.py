@@ -300,6 +300,7 @@ class App:
         self.input.focus_set()
         root.bind("<F6>", self.toggle_sidebar)
         root.bind("<F7>", lambda _event: self.presence.show() or "break")
+        root.bind("<Control-F7>", self.presence.toggle_engine)
         root.bind("<F8>", self.focus_conversation)
         root.bind("<Configure>", self._responsive_navigation, add="+")
         root.update_idletasks()

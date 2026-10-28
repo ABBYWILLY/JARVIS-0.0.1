@@ -44,6 +44,19 @@ smoke d'une fenêtre GLFW avec Mini/masquage/restauration/retour Canvas.
 13 FPS à 150 %. Le coût supérieur de la netteté native est explicite ; aucun
 objectif 60 FPS matériel n'est déclaré atteint.
 
+## B — Choix direct 2D / 2.5D
+
+Le contrôle permanent `[2D | 2.5D]` en haut à gauche indique le moteur réellement
+actif. Il existe dans Canvas et dans le HUD GPU ; ses clics GPU traversent le
+canal IPC borné et validé. Le parent seul enregistre le choix et change de moteur.
+`Ctrl+F7` bascule depuis COMMAND OS ou PRESENCE ; Automatique reste disponible
+dans le Centre de contrôle. Tab/Entrée permettent de parcourir les commandes GPU.
+
+Les tests vérifient commandes visibles, vrai transport spawn, petites fenêtres,
+Mini, DPI simulés et préservation de l'audio/historique/génération au basculement.
+Une sélection GPU reste affichée comme 2D jusqu'à la notification prêt ; en cas
+d'échec, le motif et le nouvel essai manuel restent accessibles dans les paramètres.
+
 ## Validation Windows — matériel en attente
 
 1. Lancer JARVIS complet et choisir 2.5D ; F9 affiche les mesures réelles.
