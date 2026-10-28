@@ -1,3 +1,16 @@
+## LOT 4, étape 1 — détection de fin de tour
+
+Le silence sélectionné est désormais arrondi au-dessus à la trame PCM (32 ms),
+au lieu de pouvoir être raccourci : 300 ms donnaient 288 ms. Un pic VAD isolé
+pendant le silence ne réinitialise plus indéfiniment le délai ; une reprise est
+confirmée en deux trames, conservées intégralement. Seuil utilisateur, démarrage
+160 ms et limite de sécurité 20 s inchangés. Diagnostic : silence écoulé/cible,
+reprise candidate. Aucun gain, AEC ou réducteur de bruit ajouté.
+
+Tests ciblés audio/capture : 46 exécutés, 42 réussis, 4 ignorés (dépendances
+vocales natives absentes ici), 3,901 s. Trames/probabilités contrôlées et vraie
+orchestration testée ; calibration acoustique Windows en attente.
+
 # LOT 4 — Voix naturelle V1, démarrage le 28 octobre 2026
 
 Validation utilisateur sur Windows : PRESENCE GPU 3.1 est jugée satisfaisante

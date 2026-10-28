@@ -110,6 +110,15 @@ class CaptureHealthTests(unittest.TestCase):
         self.assertEqual(listening["rate"], 16000)
         self.assertEqual(calls, [("open", DEVICE_KEY), ("close",)])
 
+    def test_endpoint_diagnostics_expose_frame_calibration_without_changing_threshold(self):
+        events, _, _, _ = run_health([pcm(.02)] * 5, probability=.59)
+        diagnostic = next(event.payload for event in events if event.kind == "diagnostic")
+        self.assertEqual(diagnostic["silence_target_ms"], 800)
+        self.assertEqual(diagnostic["silence_elapsed_ms"], 0)
+        self.assertEqual(diagnostic["onset_ms"], 160)
+        self.assertFalse(diagnostic["resume_pending"])
+        self.assertFalse(any(event.kind == "speech_start" for event in events))
+
     def test_open_capture_without_pcm_publishes_heartbeats_without_fabricated_zero_rms(self):
         for item in (None, EMPTY_BATCH):
             with self.subTest(read_timeout=item is None):

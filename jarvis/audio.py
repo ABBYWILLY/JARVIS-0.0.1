@@ -40,10 +40,16 @@ def signal_view(samples, points=48):
 
 
 class TurnDetector:
-    """Silero probabilities in, bounded complete utterances out (32 ms frames)."""
+    """Silero probabilities in, bounded complete utterances out (32 ms frames).
+
+    The selected silence is a minimum, rounded up to the next complete frame.
+    Two voiced frames confirm resumption during an established silence: one
+    isolated VAD spike cannot indefinitely postpone the endpoint. No amplitude
+    gate, gain adjustment or automatic VAD threshold change is involved.
+    """
     def __init__(self, threshold=0.6, silence_ms=800, max_seconds=20):
         self.threshold = threshold
-        self.silence_frames = max(1, round(silence_ms / 32))
+        self.silence_frames = max(1, math.ceil(silence_ms * RATE / (1000 * FRAME)))
         self.max_frames = round(max_seconds * RATE / FRAME)
         self.last_end_reason = ""
         self.last_duration = 0.0
@@ -54,6 +60,7 @@ class TurnDetector:
         self.pre = deque(maxlen=8)
         self.frames = []
         self.voiced = self.silent = 0
+        self.resume_pending = False
         self.speaking = False
         self.waiting_for_quiet = False
 
@@ -93,8 +100,19 @@ class TurnDetector:
                 events.append(AudioEvent("speech_start"))
         else:
             self.frames.append(frame)
-            self.silent = 0 if probability >= self.threshold else self.silent + 1
-            if self.silent >= self.silence_frames:
+            if probability >= self.threshold:
+                if not self.silent or self.resume_pending:
+                    self.silent = 0
+                    self.resume_pending = False
+                else:
+                    # Keep this voiced frame and defer the decision. A second
+                    # consecutive voiced frame confirms resumed speech, even
+                    # at the exact endpoint; never end on the candidate itself.
+                    self.resume_pending = True
+            else:
+                self.silent += 2 if self.resume_pending else 1
+                self.resume_pending = False
+            if self.silent >= self.silence_frames and not self.resume_pending:
                 events.extend(self.finish("silence"))
             elif len(self.frames) >= self.max_frames:
                 events.extend(self.finish("max_duration"))

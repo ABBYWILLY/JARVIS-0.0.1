@@ -51,7 +51,7 @@ def capture_worker(outbox, commands, profile):
              "started_at": startup_at}))
 
     try:
-        from .audio import FrenchWhisper, Microphone, SileroFrames, TurnDetector, signal_view
+        from .audio import FRAME, RATE, FrenchWhisper, Microphone, SileroFrames, TurnDetector, signal_view
         settings = VoiceSettings(**profile).validate()
         startup("loading_stt")
         stt = FrenchWhisper(settings.model_root / "whisper", settings.cpu_threads)
@@ -95,6 +95,9 @@ def capture_worker(outbox, commands, profile):
                     "last_rms": last_rms, "vad": probability,
                     "state": phase, "capture_status": status, "stage": stage,
                     "turn_seconds": detector.duration, "end_reason": detector.last_end_reason,
+                    "silence_elapsed_ms": detector.silent * FRAME * 1000 // RATE,
+                    "silence_target_ms": detector.silence_frames * FRAME * 1000 // RATE,
+                    "resume_pending": detector.resume_pending, "onset_ms": 160,
                     "last_stt": last_stt, "rate": 16000,
                     "frame_samples": len(frame) if frame is not None else 0,
                     "frames_received": frames_received, "last_frame_at": last_frame_at,

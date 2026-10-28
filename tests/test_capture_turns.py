@@ -100,6 +100,23 @@ def run_capture(probabilities, *, silence=300, fail_first=False, mute_on_start=F
 
 
 class CaptureTurnTests(unittest.TestCase):
+    def test_noisy_tail_with_isolated_vad_spikes_still_reaches_whisper(self):
+        tail = [.9 if index in (6, 14, 22) else .01 for index in range(25)]
+        events, calls = run_capture([.95] * 10 + tail, silence=800)
+        self.assertEqual(len(calls), 1)
+        endpoint = next(event.payload for event in events if event.kind == "turn_end")
+        self.assertEqual(endpoint["reason"], "silence")
+        self.assertEqual(endpoint["silence_ms"], 800)
+        self.assertEqual([event.payload for event in events if event.kind == "transcript"], ["Bonjour"])
+
+    def test_confirmed_resumption_preserves_one_utterance_and_full_pcm(self):
+        events, calls = run_capture([.95] * 10 + [.01] * 9 + [.95] * 12 + [.01] * 10,
+                                    silence=320)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual([event.kind for event in events].count("speech_start"), 1)
+        self.assertGreater(len(calls[0]), 30 * FRAME)
+        self.assertIn("transcript", [event.kind for event in events])
+
     def test_superseded_queued_sample_reports_cancellation_without_writing(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "cancelled.wav"

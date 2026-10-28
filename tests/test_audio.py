@@ -1,4 +1,5 @@
 import importlib.util
+import math
 import unittest
 import tempfile
 from pathlib import Path
@@ -10,6 +11,66 @@ from jarvis.voice_config import VoiceSettings
 
 
 class TurnTests(unittest.TestCase):
+    def test_endpoint_never_shortens_the_selected_silence(self):
+        frame = [0.1] * FRAME
+        for milliseconds in (300, 320, 800, 1500, 2500):
+            with self.subTest(silence_ms=milliseconds):
+                detector = TurnDetector(silence_ms=milliseconds)
+                for _ in range(10):
+                    detector.feed(frame, .9)
+                frames = math.ceil(milliseconds / 32)
+                for _ in range(frames - 1):
+                    self.assertEqual([e.kind for e in detector.feed(frame, .01)], [])
+                events = detector.feed(frame, .01)
+                self.assertEqual([event.kind for event in events], ["utterance"])
+                self.assertGreaterEqual(detector.last_silence_ms, milliseconds)
+                self.assertLess(detector.last_silence_ms - milliseconds, 32)
+
+    def test_isolated_vad_spikes_do_not_restart_an_established_endpoint(self):
+        detector = TurnDetector(silence_ms=800)
+        frame = [.1] * FRAME
+        for _ in range(10):
+            detector.feed(frame, .9)
+        events = []
+        # 800 ms elapsed tail, with isolated 32 ms probabilities above the
+        # unchanged threshold. Actual PCM stays present throughout.
+        for index in range(25):
+            events.extend(detector.feed(frame, .9 if index in (6, 14, 22) else .01))
+        self.assertEqual([event.kind for event in events], ["utterance"])
+        self.assertEqual(detector.last_end_reason, "silence")
+        self.assertEqual(detector.last_silence_ms, 800)
+
+    def test_speech_resuming_at_endpoint_is_not_cut_on_the_first_voiced_frame(self):
+        detector = TurnDetector(silence_ms=320)
+        frame = [.1] * FRAME
+        for probability in [.9] * 10 + [.01] * 9:
+            detector.feed(frame, probability)
+        # Confirm resumption in two consecutive frames, including when the
+        # first arrives exactly where the next quiet frame would end the turn.
+        self.assertEqual(detector.feed(frame, .9), [])
+        self.assertEqual(detector.feed(frame, .9), [])
+        self.assertTrue(detector.speaking)
+        self.assertEqual(detector.silent, 0)
+        events = []
+        for probability in [.9] * 10 + [.01] * 10:
+            events.extend(detector.feed(frame, probability))
+        self.assertEqual([event.kind for event in events], ["utterance"])
+        self.assertGreater(len(events[0].payload), 30 * FRAME)
+
+    def test_reset_discards_unconfirmed_resumption_and_rearms_normally(self):
+        detector = TurnDetector(silence_ms=320)
+        frame = [.1] * FRAME
+        for probability in [.9] * 10 + [.01] * 8 + [.9]:
+            detector.feed(frame, probability)
+        self.assertTrue(detector.resume_pending)
+        detector.reset()
+        self.assertFalse(detector.resume_pending)
+        self.assertFalse(detector.speaking)
+        events = []
+        for probability in [.9] * 10 + [.01] * 10:
+            events.extend(detector.feed(frame, probability))
+        self.assertEqual([event.kind for event in events], ["speech_start", "utterance"])
+
     def test_silence_and_click_never_create_turn(self):
         detector = TurnDetector(silence_ms=320)
         for i in range(200):
