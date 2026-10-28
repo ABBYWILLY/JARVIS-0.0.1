@@ -1,3 +1,9 @@
+> Validation visuelle utilisateur sur Windows (28 octobre 2026) : fluidité,
+> netteté, animations et bascule 2D/2.5D satisfaisantes. Rendu conservé.
+> Benchmarks combinés RTX 3070 + Ollama + voix encore à effectuer.
+> CI finale c40d724 : [application Windows](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40759274807)
+> et [prototype](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40759274772) réussis.
+
 # PRESENCE GPU 3.1
 
 28 octobre 2026 · base `4ae4f71` · branche `feat/jalon-2-voice-presence`.

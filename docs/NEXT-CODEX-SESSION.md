@@ -1,3 +1,18 @@
+# LOT 4 — Voix naturelle V1, démarrage le 28 octobre 2026
+
+Validation utilisateur sur Windows : PRESENCE GPU 3.1 est jugée satisfaisante
+pour la fluidité, la netteté, les animations et la bascule 2D/2.5D.
+Le rendu est préservé ; emojis supplémentaires et retouches graphiques reportés.
+Les benchmarks combinés RTX 3070 + Ollama + voix restent à effectuer.
+CI finale GPU 3.1 c40d724 : application Windows et prototype réussis.
+
+Périmètre vocal : réutiliser VAD/Whisper/Piper, corriger les tours et la reprise,
+ajouter les commandes prudentes et normaliser le texte parlé/profils Piper.
+Pas de nouveau modèle, pas de modification de main. Validation acoustique et
+matérielle du LOT 4 à réaliser sur le PC ; aucun essai distant ne la remplace.
+
+---
+
 # PRESENCE GPU 3.1 — livraison logicielle A–D, 28 octobre 2026
 
 Base artistique4ae4f71 conservée. A :5cd8866 (cadence/HiDPI, CI verte).
