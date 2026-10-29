@@ -122,7 +122,7 @@ class CognitiveDesktopTests(unittest.TestCase):
         sources = dialog.nametowidget("sources")
         self.assertIn("Votre demande", sources.get(sources.size() - 2))
         self.assertIn("Réponse non vérifiée", sources.get(sources.size() - 1))
-        summary = self.root.getvar(dialog.nametowidget("summary").cget("textvariable"))
+        summary = self.root.getvar(dialog.summary_label.cget("textvariable"))
         self.assertIn("contexte préparé", summary)
         self.assertIn("acceptation HTTP par Ollama non observée", summary)
         self.assertIn("l’inclusion ne prouve pas l’utilisation", summary)

@@ -182,6 +182,43 @@ class CognitiveFlowTests(unittest.TestCase):
         self.assertIn("échec", self.voice.status.get().casefold())
         self.assertNotIn("Local STT failure", json.dumps(self.app.cognitive.events()))
 
+    def test_old_stt_error_does_not_change_current_activity_revision_or_metrics(self):
+        self.configured_request(listening=True)
+        self.voice.speech.events.append(AudioEvent("tts_ready", {"load_ms": 20}, self.voice.epoch))
+        self.voice.poll()
+        self.app.worker.events.append(Event("chunk", "Une réponse en streaming"))
+        self.poll_app()
+        self.voice.heard = 3
+        before = self.app.cognitive.snapshot()
+        self.assertEqual(before["primary"], "generating")
+        self.voice.capture.events.append(AudioEvent("stt_error", {
+            "error": "Échec d’un ancien tour", "elapsed_ms": 999}, self.voice.heard - 1))
+        self.voice.poll()
+        after = self.app.cognitive.snapshot()
+        self.assertEqual(after["revision"], before["revision"])
+        self.assertEqual(after["primary"], before["primary"])
+        self.assertEqual(after["activities"], before["activities"])
+        self.assertEqual(after["metrics"], before["metrics"])
+        self.assertTrue(any("stt_error" in line for line in self.voice.diagnostic_events))
+
+    def test_late_question_stt_error_does_not_preempt_pcm_speaking_hud(self):
+        self.configured_request(listening=True)
+        self.app.worker.events.append(Event("chunk", "Une phrase réelle."))
+        self.poll_app()
+        self.played()
+        self.assertTrue(self.voice._response_owns_visuals())
+        before = self.app.cognitive.snapshot()
+        self.assertEqual(before["primary"], "speaking")
+        self.voice.capture.events.append(AudioEvent("stt_error", {
+            "error": "STT tardif de la question précédente", "elapsed_ms": 3}, self.voice.heard))
+        self.voice.poll()
+        after = self.app.cognitive.snapshot()
+        self.assertEqual(after["primary"], "speaking")
+        self.assertEqual(after["activities"], before["activities"])
+        self.assertTrue(self.voice.tts_active)
+        self.assertTrue(self.voice.speech.alive())
+        self.assertTrue(any("stt_visual_ignored" in line for line in self.voice.diagnostic_events))
+
     def test_hud_reuses_owner_revision_and_existing_poll_without_sqlite_reads(self):
         panel = self.app.cognitive_view
         self.app.presence.window = None

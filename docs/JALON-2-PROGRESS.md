@@ -1,3 +1,36 @@
+# LOT 5 — Cognitive HUD 1.0 livré côté logiciel, 29 octobre 2026
+
+5A47ec206 contrat observé et audit ;5B48ebfae vuescommunes et réglages ;
+5C4d10262 actions sur passages ;5Dbef37b4 provenance et acceptationHTTP ;
+5E validation/proofs/performance et derniers correctifs de cadrage/STTtardif.
+CI5A et5D applicationWindows/prototype vertes. B/Cavaient révélé des boutons
+horsclient à250%DPI et une fixture audio incomplète ; Dcorrige sans désactiver
+les tests. Suivre Actions du dernier commit5E avant d’annoncer l’EXE final.
+
+Livré : HUDdésactivable Minimal/Standard/Diagnostic dansCOMMANDOS/Canvas/GPU ;
+états simultanés mesurés, générations gardées, journal64événements/15min RAM,
+pas de nouveau timer/sondageSQLite/Ollama. Extraits sensibles seulement dans
+l’inspecteur privé. Sélectionsourceexacte, septactions, lecture/reprise portée
+aupassage, nouvellesdemandesexplicitesbornéesavecprovenance. Recherche/insertion/
+acceptationHTTP/référencesexplicites distinctes, aucun usageinterne prétendu.
+Le résumé de l’inspecteur défile danssonCanvas, les erreursSTTtardives ne
+remplacent plus uneparole encours et Mini réserve lesinsets natifs desLabel.
+
+Suitecomplète Linux/Tk9/EGL948exécutés939réussis9ignorés115,439s ; finalTk8.6
+81/81réussis31,751s et27testsfinaux ciblés6,246s. Les ignorésconcernent les
+composantsaudioabsents ici et essais de vrais modèles opt-in. Pasdepoidsajoutés,
+ni shaders/géométrieGPU/moteursWhisper/Piper/VAD modifiés. Pasdechangementmain.
+
+Preuves :docs/COGNITIVE-HUD-EVIDENCE.md,21PNG,MP413s/156images,menuactions,
+tracelocale etrapports bruts ; simulations indiquées, aucun micro/modèle réel.
+CPUidle court~14ms/2s, RSS~36Mo,atlasinchangé660480octets ; pasgainRTXinventé.
+GuideetrecettePC :docs/COGNITIVE-HUD.md. Reste :essais LOT5 physiquesWindows,
+DPI multiécran,casque/Bluetooth,latences etRTX3070+Ollama+voix souscharge.
+LOT4 jugésatisfaisant etGPU3.1approuvée parl’utilisateur :nepaslesredévelopper.
+Ne pas commencer LOT7,agentique,emojissupplémentairesouretouchesartistiques.
+
+---
+
 # LOT 5 — Cognitive HUD en cours, 29 octobre 2026
 
 5A : contrat observable 47ec206, CI Windows/prototype vertes. 5B : mêmes états

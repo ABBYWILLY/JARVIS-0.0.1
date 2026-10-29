@@ -935,11 +935,9 @@ class App:
         picker = ttk.Combobox(dialog, name="responses", values=labels, state="readonly")
         picker.pack(fill="x")
         summary = tk.StringVar()
-        summary_label = tk.Label(dialog, name="summary", textvariable=summary, bg=PANEL, fg=MUTED,
-                 justify="left", anchor="w", wraplength=760, font=(self.font_family, 10), takefocus=True)
         # Bound the summary so the source list remains reachable at high DPI.
-        # Canvas can embed a child of its ancestor, keeping the existing widget
-        # name and textvariable used by source inspection and accessibility.
+        # A direct Canvas child is clipped inside its viewport. A sibling of
+        # its ancestor can be stacked behind the Canvas and overlap the list.
         summary_frame = tk.Frame(dialog, bg=PANEL, height=140)
         summary_frame.pack(fill="x", pady=8)
         summary_frame.pack_propagate(False)
@@ -949,6 +947,8 @@ class App:
         summary_scroll.pack(side="right", fill="y")
         summary_canvas.pack(side="left", fill="both", expand=True)
         summary_canvas.configure(yscrollcommand=summary_scroll.set)
+        summary_label = dialog.summary_label = tk.Label(summary_canvas, name="summary", textvariable=summary, bg=PANEL, fg=MUTED,
+                 justify="left", anchor="w", wraplength=760, font=(self.font_family, 10), takefocus=True)
         summary_item = summary_canvas.create_window(0, 0, window=summary_label, anchor="nw")
         summary_label.bind("<Configure>", lambda _event: summary_canvas.configure(scrollregion=summary_canvas.bbox("all")))
         def fit_summary(event):

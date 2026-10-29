@@ -1,0 +1,46 @@
+{
+  "scope": "Actual MarkdownView selection and App.selection_action(read) → VoiceControls; audio boundary is an explicit recording double. No Piper model/process, sound or Ollama call.",
+  "selection": {
+    "message_id": 2,
+    "session_id": "ef9a1a9cab884bac9f4a1b5a4c703ec3",
+    "region_key": "md_region_1_start",
+    "revision": 1,
+    "source_start": 28,
+    "source_end": 108,
+    "original": "Voici **un passage français** avec [un lien](https://example.org), 12,50 € et 😊.",
+    "display_text": "Voici un passage français avec un lien, 12,50 € et 😊.",
+    "speech_source": "Voici un passage français avec un lien, 12,50 € et 😊.",
+    "source_hash": "1212da132d4b387982a575416323a348bd1292d46882efa5f6db9cd1e43d78f1"
+  },
+  "accepted": true,
+  "ollama_worker_starts": 0,
+  "capture_starts": [],
+  "audio_boundary_starts": [
+    {
+      "kind": "speech",
+      "generation": 1,
+      "voice": "fr_FR-tom-medium",
+      "speed": 1.0
+    }
+  ],
+  "tts_requests": [
+    {
+      "speech": "Voici un passage français avec un lien, 12,50 € et .",
+      "original": "Voici un passage français avec un lien, 12,50 € et 😊.",
+      "start": 0,
+      "end": 53,
+      "segment_id": 1
+    }
+  ],
+  "original_sqlite_text_preserved": true,
+  "menu_actions": [
+    "read",
+    "repeat",
+    "explain",
+    "expand",
+    "summarize",
+    "continue",
+    "copy"
+  ],
+  "context_delivery": "prepared"
+}

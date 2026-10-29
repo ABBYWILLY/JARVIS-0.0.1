@@ -126,7 +126,7 @@ class ContextDesktopTests(unittest.TestCase):
         dialog = self.open_inspector()
         picker = dialog.nametowidget("responses")
         self.assertEqual(picker.current(), 1)
-        summary_widget = dialog.nametowidget("summary")
+        summary_widget = dialog.summary_label
         self.assertIn("400 tokens", self.root.getvar(summary_widget.cget("textvariable")))
         picker.current(0)
         picker.event_generate("<<ComboboxSelected>>")
@@ -167,6 +167,9 @@ class ContextDesktopTests(unittest.TestCase):
             self.root.update()
             sources = dialog.nametowidget("sources")
             close = dialog.nametowidget("close_context")
+            self.assertIs(dialog.summary_label.master, dialog.summary_canvas)
+            self.assertTrue(dialog.summary_label.winfo_viewable())
+            self.assertGreaterEqual(dialog.summary_label.winfo_rooty(), dialog.summary_canvas.winfo_rooty())
             self.assertTrue(sources.winfo_viewable())
             self.assertTrue(dialog.nametowidget("detail.details").winfo_viewable())
             self.assertTrue(close.winfo_viewable())

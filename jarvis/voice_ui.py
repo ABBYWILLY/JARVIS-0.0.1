@@ -665,6 +665,8 @@ class VoiceControls:
             elif event.kind == "stt_error":
                 self.record_diagnostic(event.kind, event.payload)
                 if event.generation == self.heard:
+                    if not self._response_owns_visuals():
+                        self.observe_activity("error", response=False)
                     self.transcribing = False
                     self.diagnostic_failure = "STT : " + str(event.payload.get("error", "Transcription impossible"))
                     self.stt_latency(event.payload)
@@ -892,7 +894,7 @@ class VoiceControls:
     def record_diagnostic(self, kind, payload):
         stamp = time.strftime("%H:%M:%S")
         self.diagnostic_events.append(f"{stamp} · {kind} · {payload}")
-        if kind in {"stt_error", "capture_error", "voice_command_error"}:
+        if kind in {"capture_error", "voice_command_error"}:
             self.observe_activity("error", response=False)
         self.refresh_diagnostics()
 

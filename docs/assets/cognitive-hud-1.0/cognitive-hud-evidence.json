@@ -1,0 +1,4868 @@
+{
+  "scope": "Real IntegratedPresence→validated packet→production GpuRenderer+GpuHud; injected CognitiveState activities, synthetic16kHz PCM, audio and transport doubles. No microphone/Piper/Ollama/network/userDB. Header on/off comparison leaves all other pixels identical.",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "context": {
+    "vendor": "Mesa",
+    "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+    "acceleration": "software",
+    "hardware_validation": "pending",
+    "required_version": "OpenGL 3.3"
+  },
+  "resolution": [
+    960,
+    640
+  ],
+  "video_seconds": 13,
+  "video_fps": 12,
+  "video_fps_scope": "Encoding cadence only, not real rendered/presented FPS",
+  "trace": [
+    {
+      "frame": 0,
+      "time_s": 0.0,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154407.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 1,
+      "time_s": 0.08333333333333333,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154407.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 2,
+      "time_s": 0.16666666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154407.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 3,
+      "time_s": 0.25,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154407.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 4,
+      "time_s": 0.3333333333333333,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154407.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 5,
+      "time_s": 0.4166666666666667,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 6,
+      "time_s": 0.5,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 7,
+      "time_s": 0.5833333333333334,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 8,
+      "time_s": 0.6666666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 9,
+      "time_s": 0.75,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 10,
+      "time_s": 0.8333333333333334,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 11,
+      "time_s": 0.9166666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154407.660619888,
+        "activity_started": {},
+        "observed_at": 154408.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 2
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 12,
+      "time_s": 1.0,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154408.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 13,
+      "time_s": 1.0833333333333333,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154408.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 14,
+      "time_s": 1.1666666666666667,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154408.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 15,
+      "time_s": 1.25,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154408.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 16,
+      "time_s": 1.3333333333333333,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154408.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 17,
+      "time_s": 1.4166666666666667,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 18,
+      "time_s": 1.5,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 19,
+      "time_s": 1.5833333333333333,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 20,
+      "time_s": 1.6666666666666667,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 21,
+      "time_s": 1.75,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 22,
+      "time_s": 1.8333333333333333,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 23,
+      "time_s": 1.9166666666666667,
+      "injected_activity": "listening",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "listening",
+        "activities": [
+          "listening"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154408.660619888,
+        "activity_started": {
+          "listening": 154408.660619888
+        },
+        "observed_at": 154409.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 3
+      },
+      "hud": "J’écoute · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "listening",
+      "rms": 0.0
+    },
+    {
+      "frame": 24,
+      "time_s": 2.0,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154409.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 25,
+      "time_s": 2.0833333333333335,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154409.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.055435735394317204
+    },
+    {
+      "frame": 26,
+      "time_s": 2.1666666666666665,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154409.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.035062439076157186
+    },
+    {
+      "frame": 27,
+      "time_s": 2.25,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154409.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 28,
+      "time_s": 2.3333333333333335,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154409.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 29,
+      "time_s": 2.4166666666666665,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.022085997262127028
+    },
+    {
+      "frame": 30,
+      "time_s": 2.5,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.05676178651964142
+    },
+    {
+      "frame": 31,
+      "time_s": 2.5833333333333335,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.022050910682777255
+    },
+    {
+      "frame": 32,
+      "time_s": 2.6666666666666665,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 33,
+      "time_s": 2.75,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 34,
+      "time_s": 2.8333333333333335,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.03511791319899008
+    },
+    {
+      "frame": 35,
+      "time_s": 2.9166666666666665,
+      "injected_activity": "user_speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "user_speaking",
+        "activities": [
+          "user_speaking"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154409.660619888,
+        "activity_started": {
+          "user_speaking": 154409.660619888
+        },
+        "observed_at": 154410.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 5
+      },
+      "hud": "Voix détectée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.055523942628529
+    },
+    {
+      "frame": 36,
+      "time_s": 3.0,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154410.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 37,
+      "time_s": 3.0833333333333335,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154410.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 38,
+      "time_s": 3.1666666666666665,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154410.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 39,
+      "time_s": 3.25,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154410.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 40,
+      "time_s": 3.3333333333333335,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154410.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 41,
+      "time_s": 3.4166666666666665,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 42,
+      "time_s": 3.5,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 43,
+      "time_s": 3.5833333333333335,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 44,
+      "time_s": 3.6666666666666665,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 45,
+      "time_s": 3.75,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 46,
+      "time_s": 3.8333333333333335,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 47,
+      "time_s": 3.9166666666666665,
+      "injected_activity": "transcribing",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "transcribing",
+        "activities": [
+          "transcribing"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154410.660619888,
+        "activity_started": {
+          "transcribing": 154410.660619888
+        },
+        "observed_at": 154411.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 7
+      },
+      "hud": "Transcription en cours · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 48,
+      "time_s": 4.0,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154411.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 49,
+      "time_s": 4.083333333333333,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154411.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 50,
+      "time_s": 4.166666666666667,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154411.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 51,
+      "time_s": 4.25,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154411.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 52,
+      "time_s": 4.333333333333333,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154411.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 53,
+      "time_s": 4.416666666666667,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 54,
+      "time_s": 4.5,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 55,
+      "time_s": 4.583333333333333,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 56,
+      "time_s": 4.666666666666667,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 57,
+      "time_s": 4.75,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 58,
+      "time_s": 4.833333333333333,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 59,
+      "time_s": 4.916666666666667,
+      "injected_activity": "context",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "context",
+        "activities": [
+          "context"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154411.660619888,
+        "activity_started": {
+          "context": 154411.660619888
+        },
+        "observed_at": 154412.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 9
+      },
+      "hud": "Préparation du contexte · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 60,
+      "time_s": 5.0,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154412.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 61,
+      "time_s": 5.083333333333333,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154412.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 62,
+      "time_s": 5.166666666666667,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154412.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 63,
+      "time_s": 5.25,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154412.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 64,
+      "time_s": 5.333333333333333,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154412.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 65,
+      "time_s": 5.416666666666667,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 66,
+      "time_s": 5.5,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 67,
+      "time_s": 5.583333333333333,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 68,
+      "time_s": 5.666666666666667,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 69,
+      "time_s": 5.75,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 70,
+      "time_s": 5.833333333333333,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 71,
+      "time_s": 5.916666666666667,
+      "injected_activity": "waiting",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "waiting",
+        "activities": [
+          "waiting"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154412.660619888,
+        "activity_started": {
+          "waiting": 154412.660619888
+        },
+        "observed_at": 154413.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 11
+      },
+      "hud": "Attente d’Ollama · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 72,
+      "time_s": 6.0,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154413.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 73,
+      "time_s": 6.083333333333333,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154413.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 74,
+      "time_s": 6.166666666666667,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154413.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 75,
+      "time_s": 6.25,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154413.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 76,
+      "time_s": 6.333333333333333,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154413.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 77,
+      "time_s": 6.416666666666667,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 78,
+      "time_s": 6.5,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 79,
+      "time_s": 6.583333333333333,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 80,
+      "time_s": 6.666666666666667,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 81,
+      "time_s": 6.75,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 82,
+      "time_s": 6.833333333333333,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 83,
+      "time_s": 6.916666666666667,
+      "injected_activity": "generating",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "generating",
+        "activities": [
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154413.660619888,
+        "activity_started": {
+          "generating": 154413.660619888
+        },
+        "observed_at": 154414.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 13
+      },
+      "hud": "Génération locale · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 84,
+      "time_s": 7.0,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154414.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 85,
+      "time_s": 7.083333333333333,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154414.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 86,
+      "time_s": 7.166666666666667,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154414.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 87,
+      "time_s": 7.25,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154414.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 88,
+      "time_s": 7.333333333333333,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154414.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 89,
+      "time_s": 7.416666666666667,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 90,
+      "time_s": 7.5,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 91,
+      "time_s": 7.583333333333333,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 92,
+      "time_s": 7.666666666666667,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 93,
+      "time_s": 7.75,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 94,
+      "time_s": 7.833333333333333,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 95,
+      "time_s": 7.916666666666667,
+      "injected_activity": "synthesis",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "synthesis",
+        "activities": [
+          "synthesis"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154414.660619888,
+        "activity_started": {
+          "synthesis": 154414.660619888
+        },
+        "observed_at": 154415.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 15
+      },
+      "hud": "Préparation de la voix · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "thinking",
+      "rms": 0.0
+    },
+    {
+      "frame": 96,
+      "time_s": 8.0,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154415.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 97,
+      "time_s": 8.083333333333334,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154415.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.055435735394317204
+    },
+    {
+      "frame": 98,
+      "time_s": 8.166666666666666,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154415.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.035062439076157186
+    },
+    {
+      "frame": 99,
+      "time_s": 8.25,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154415.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 100,
+      "time_s": 8.333333333333334,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154415.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 101,
+      "time_s": 8.416666666666666,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.022085997262127028
+    },
+    {
+      "frame": 102,
+      "time_s": 8.5,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.05676178651964142
+    },
+    {
+      "frame": 103,
+      "time_s": 8.583333333333334,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.022050910682777255
+    },
+    {
+      "frame": 104,
+      "time_s": 8.666666666666666,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 105,
+      "time_s": 8.75,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 106,
+      "time_s": 8.833333333333334,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.03511791319899008
+    },
+    {
+      "frame": 107,
+      "time_s": 8.916666666666666,
+      "injected_activity": "speaking",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "speaking",
+        "activities": [
+          "speaking",
+          "generating"
+        ],
+        "started_at": 154407.660619888,
+        "changed_at": 154415.660619888,
+        "activity_started": {
+          "speaking": 154415.660619888,
+          "generating": 154415.660619888
+        },
+        "observed_at": 154416.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 18
+      },
+      "hud": "JARVIS parle · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "jarvis_speaking",
+      "rms": 0.055523942628529
+    },
+    {
+      "frame": 108,
+      "time_s": 9.0,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154416.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 2.8731315281898047e-12
+    },
+    {
+      "frame": 109,
+      "time_s": 9.083333333333334,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154416.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 110,
+      "time_s": 9.166666666666666,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154416.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 111,
+      "time_s": 9.25,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154416.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.044787783510811335
+    },
+    {
+      "frame": 112,
+      "time_s": 9.333333333333334,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154416.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.051584727618759485
+    },
+    {
+      "frame": 113,
+      "time_s": 9.416666666666666,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 114,
+      "time_s": 9.5,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 115,
+      "time_s": 9.583333333333334,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 116,
+      "time_s": 9.666666666666666,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.05150324155714819
+    },
+    {
+      "frame": 117,
+      "time_s": 9.75,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.044787783510811335
+    },
+    {
+      "frame": 118,
+      "time_s": 9.833333333333334,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 119,
+      "time_s": 9.916666666666666,
+      "injected_activity": "interrupted",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "interrupted",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154416.660619888,
+        "activity_started": {},
+        "observed_at": 154417.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": true,
+        "revision": 20
+      },
+      "hud": "Réponse interrompue · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "user_speaking",
+      "rms": 0.0
+    },
+    {
+      "frame": 120,
+      "time_s": 10.0,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154417.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 121,
+      "time_s": 10.083333333333334,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154417.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 122,
+      "time_s": 10.166666666666666,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154417.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 123,
+      "time_s": 10.25,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154417.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 124,
+      "time_s": 10.333333333333334,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154417.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 125,
+      "time_s": 10.416666666666666,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 126,
+      "time_s": 10.5,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 127,
+      "time_s": 10.583333333333334,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 128,
+      "time_s": 10.666666666666666,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 129,
+      "time_s": 10.75,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 130,
+      "time_s": 10.833333333333334,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 131,
+      "time_s": 10.916666666666666,
+      "injected_activity": "error",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "error",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154417.660619888,
+        "activity_started": {},
+        "observed_at": 154418.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 22
+      },
+      "hud": "Erreur · diagnostic disponible · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 132,
+      "time_s": 11.0,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154418.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 133,
+      "time_s": 11.083333333333334,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154418.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 134,
+      "time_s": 11.166666666666666,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154418.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 135,
+      "time_s": 11.25,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154418.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 136,
+      "time_s": 11.333333333333334,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154418.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 137,
+      "time_s": 11.416666666666666,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 138,
+      "time_s": 11.5,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 139,
+      "time_s": 11.583333333333334,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 140,
+      "time_s": 11.666666666666666,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 141,
+      "time_s": 11.75,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 142,
+      "time_s": 11.833333333333334,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 143,
+      "time_s": 11.916666666666666,
+      "injected_activity": "cancelled",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "cancelled",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154418.660619888,
+        "activity_started": {},
+        "observed_at": 154419.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": true,
+        "interrupted": false,
+        "revision": 24
+      },
+      "hud": "Réponse annulée · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 144,
+      "time_s": 12.0,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154419.660619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 145,
+      "time_s": 12.083333333333334,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154419.74395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 146,
+      "time_s": 12.166666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154419.82728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 147,
+      "time_s": 12.25,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154419.910619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 148,
+      "time_s": 12.333333333333334,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154419.99395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 149,
+      "time_s": 12.416666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.07728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 150,
+      "time_s": 12.5,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.160619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 151,
+      "time_s": 12.583333333333334,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.24395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 152,
+      "time_s": 12.666666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.32728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 153,
+      "time_s": 12.75,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.410619888,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 154,
+      "time_s": 12.833333333333334,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.49395322133,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    },
+    {
+      "frame": 155,
+      "time_s": 12.916666666666666,
+      "injected_activity": "idle",
+      "observed_contract": {
+        "turn_id": 1,
+        "generation": 1,
+        "primary": "idle",
+        "activities": [],
+        "started_at": 154407.660619888,
+        "changed_at": 154419.660619888,
+        "activity_started": {},
+        "observed_at": 154420.57728655465,
+        "model": "DÉMO HORS LIGNE",
+        "policy": "fast",
+        "budget": null,
+        "source_count": 0,
+        "metrics": {},
+        "error": "",
+        "cancelled": false,
+        "interrupted": false,
+        "revision": 25
+      },
+      "hud": "Repos · DÉMO HORS LIGNE · Rapide",
+      "visual_state": "silent",
+      "rms": 0.0
+    }
+  ],
+  "selection_demo": {
+    "scope": "Actual MarkdownView selection and App.selection_action(read) → VoiceControls; audio boundary is an explicit recording double. No Piper model/process, sound or Ollama call.",
+    "selection": {
+      "message_id": 2,
+      "session_id": "ef9a1a9cab884bac9f4a1b5a4c703ec3",
+      "region_key": "md_region_1_start",
+      "revision": 1,
+      "source_start": 28,
+      "source_end": 108,
+      "original": "Voici **un passage français** avec [un lien](https://example.org), 12,50 € et 😊.",
+      "display_text": "Voici un passage français avec un lien, 12,50 € et 😊.",
+      "speech_source": "Voici un passage français avec un lien, 12,50 € et 😊.",
+      "source_hash": "1212da132d4b387982a575416323a348bd1292d46882efa5f6db9cd1e43d78f1"
+    },
+    "accepted": true,
+    "ollama_worker_starts": 0,
+    "capture_starts": [],
+    "audio_boundary_starts": [
+      {
+        "kind": "speech",
+        "generation": 1,
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0
+      }
+    ],
+    "tts_requests": [
+      {
+        "speech": "Voici un passage français avec un lien, 12,50 € et .",
+        "original": "Voici un passage français avec un lien, 12,50 € et 😊.",
+        "start": 0,
+        "end": 53,
+        "segment_id": 1
+      }
+    ],
+    "original_sqlite_text_preserved": true,
+    "menu_actions": [
+      "read",
+      "repeat",
+      "explain",
+      "expand",
+      "summarize",
+      "continue",
+      "copy"
+    ],
+    "context_delivery": "prepared"
+  },
+  "capture_metrics": {
+    "render_gl_hud_finish_mean_ms": 21.325876878668517,
+    "render_gl_hud_finish_p95_ms": 29.909928009146824,
+    "process_cpu_seconds_including_capture_and_benchmark": 51.072609189000005,
+    "wall_seconds_including_capture_and_benchmark": 15.401368732011179,
+    "max_rss_bytes_entire_capture_process": 168116224,
+    "owned_renderer_hud_bytes_estimate": 7632064,
+    "physical_vram": null,
+    "piper_latency": null,
+    "ollama_ttft": null
+  },
+  "benchmark": {
+    "scope": "Real production sphere+HUD at960x640, fixed THINKING frame, EGL software; CPU includes driver worker threads. No pacing, swap, readback or encoding. Changed-title case deliberately stresses rasterization, not live1Hz updates.",
+    "baseline": "1985a99",
+    "baseline_hud_sha256": "bc007ca2608649cb0ae4673ee43d67060677ffbb091ce2dc7955d96055649f76",
+    "repetitions": 3,
+    "frames_per_run": 40,
+    "results": {
+      "before_cached": {
+        "mean_ms_median_run": 17.265910348214675,
+        "p95_ms_median_run": 27.421084989327937,
+        "runs": [
+          {
+            "mean_ms": 17.265910348214675,
+            "p95_ms": 26.96169598493725,
+            "process_cpu_ms": 2808.8185580000004,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 16.971440055203857,
+            "p95_ms": 27.421084989327937,
+            "process_cpu_ms": 2735.6987889999973,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 18.669361222418956,
+            "p95_ms": 29.062993999104947,
+            "process_cpu_ms": 2967.225834999997,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          }
+        ]
+      },
+      "disabled_cached": {
+        "mean_ms_median_run": 18.231732050480787,
+        "p95_ms_median_run": 28.50159301306121,
+        "runs": [
+          {
+            "mean_ms": 22.517965650331462,
+            "p95_ms": 30.317427997943014,
+            "process_cpu_ms": 3627.039366000002,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 18.21617922396399,
+            "p95_ms": 28.452711005229503,
+            "process_cpu_ms": 2963.5158439999996,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 18.231732050480787,
+            "p95_ms": 28.50159301306121,
+            "process_cpu_ms": 2973.740872999997,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          }
+        ]
+      },
+      "enabled_cached": {
+        "mean_ms_median_run": 18.451518596702954,
+        "p95_ms_median_run": 29.53471100772731,
+        "runs": [
+          {
+            "mean_ms": 18.01879659979022,
+            "p95_ms": 28.891369001939893,
+            "process_cpu_ms": 2916.0918739999956,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 18.451518596702954,
+            "p95_ms": 30.17987500061281,
+            "process_cpu_ms": 2982.212488000002,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 18.88667127423105,
+            "p95_ms": 29.53471100772731,
+            "process_cpu_ms": 3019.9143700000022,
+            "hud_upload_count": 1,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          }
+        ]
+      },
+      "changed_title_each_frame": {
+        "mean_ms_median_run": 22.237052501441212,
+        "p95_ms_median_run": 24.905340978875756,
+        "runs": [
+          {
+            "mean_ms": 22.178183950018138,
+            "p95_ms": 25.09928701329045,
+            "process_cpu_ms": 3133.7999980000004,
+            "hud_upload_count": 41,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 22.237052501441212,
+            "p95_ms": 24.28961399709806,
+            "process_cpu_ms": 3211.7962199999965,
+            "hud_upload_count": 41,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          },
+          {
+            "mean_ms": 23.325558972283034,
+            "p95_ms": 24.905340978875756,
+            "process_cpu_ms": 3410.9857879999977,
+            "hud_upload_count": 41,
+            "hud_owned_bytes": 660480,
+            "renderer_owned_bytes": 7380864
+          }
+        ]
+      }
+    },
+    "physical_vram": null,
+    "power": null,
+    "ollama_ttft": null,
+    "piper_latency": null
+  },
+  "source_sha256": {
+    "jarvis/cognitive_state.py": "242ce86c31f3f8b68d280dff96d715a2cb8b588f2676b2f0d4655c90be7cb940",
+    "jarvis/cognitive_ui.py": "0bb5dd7ef659e2b819487fccfa0c110dbe95cdf96238eb063988379683dcf2db",
+    "jarvis/ui.py": "1d7343c93cf4205b5e377d72157dd9c7f0a40c53097211c65d9df1ce5f4eba97",
+    "jarvis/presence.py": "24de1e3739414fdbcaa3d63306ef81f252a545affeec95d739bbf99d4df01161",
+    "jarvis/presence_host.py": "690b432d8cc294d79061546c2218a91d1ed64c21324a26314571681c309a0b15",
+    "jarvis/gpu_hud.py": "f60706003ca5d6efaae4fc83721b8b74c127d826e26afb8a84e0a34eb829882a",
+    "jarvis/gpu_session.py": "20ebeee178cf44f37c8ab2bb3b683d65ac0aa7b38269079a33cbe7f9fe22e65c",
+    "jarvis/gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+    "jarvis/reactor_shaders.py": "3834d1703b910cab653fded15fab870b09ad892058579022671f1eadca75d960",
+    "scripts/capture_cognitive_hud.py": "84118be2e73ccc0e9e4b10aba5768e31f49566156e54366657350d4543f345a7"
+  },
+  "artifact_sha256": {
+    "selection-actions-trace.json": "ba23647e581bf76d0f21f7634e79ac6dc40027a2b573ea93b01d547a7a8d8aa2",
+    "context-inspector-demo.png": "4ad186377c6e4dcfaa68a7c5ee904adfffe615889a3443db9854d87d2e3ca1de",
+    "command-os-selection-menu.png": "5c661910ba933b43c8cb319cd2ee2d722d18dcfeb927e032acb5ecfb825966dc",
+    "command-os-selection.png": "a899981ef3d8a6d8d7cdc86d29ffd96741d8f25a68cca4260cb50c31232e7ab4",
+    "canvas-mini-hud.png": "d6f7e7ee9c27b8ae406ff7a37d53ca94c0a63384d948d82db8d84fbfd7a0273c",
+    "canvas-thinking-hud.png": "36c89c4875b352153a6bb144baf0a7eec550e1ef98a0170b79b7c5beb98975a1",
+    "gpu-mini-hud.png": "099f796099aa076fbd7985c13bcd9ad8e931899784c1f454b4ec8ef5180c0931",
+    "12-idle.png": "df843843de42380bddeda9324c7bfa025adef20b23eb015a7bda81f6bd3fb5b1",
+    "11-cancelled.png": "77f03216eaf51e254b522e720e197917123b273168c84f69dba08d36f6b9b206",
+    "10-error.png": "cfa6a057fc06cbe0c1e2ec543d54b2c757996e3ca444bd93015c3b9ed767bdee",
+    "09-interrupted.png": "c0c28679a47fd9e10bf817c7a15e779341f182f77ccd64712be604ef5b46b812",
+    "08-speaking.png": "23769c9b23b17a428730d1a876b29720d092d1112f4cd55783151f2f07c37571",
+    "07-synthesis.png": "dd8e937d7d37231654dbbdce280677c8f373b07ff1f4d6c55ef13f5ed60d0497",
+    "gpu-thinking-hud-off.png": "d1adf8d60dc7d79bc5725c0f897233013d6416de4eb966491a5b548d47e113b1",
+    "gpu-thinking-hud-on.png": "8f021d80b83679c025325cc15ddf16c12d87bfe3a298993ee0431ea25cab31e2",
+    "06-generating.png": "8f021d80b83679c025325cc15ddf16c12d87bfe3a298993ee0431ea25cab31e2",
+    "05-waiting.png": "490268c3f0be2474d781d0d757f2f2214a9b4fc95be03c8a71a4b9f65c0c13bf",
+    "04-context.png": "4eed43566ac65f9dfb5be75ec694234ad3a0c0b45b389ac51038fad74db85405",
+    "03-transcribing.png": "bf76c2731d02dd19b3dc50c90834d93d2f9792b2529b54e5c98722229c204675",
+    "02-user_speaking.png": "a4e07a51737fa3e55df1bf4bd653192b187bfe3e08031fe2fe7d891093009fce",
+    "01-listening.png": "76806765c74d34c54734f5fb0113a14cca395f1cda03e7fa6ab45ccbfb0fefc0",
+    "00-idle.png": "454c3691925821bf10e6b28a58326e943c23fa61ee39e8d44d52cb6d0b707c0a",
+    "cognitive-hud-demo.mp4": "8d496c48ce0deac787a8e73f28ba612f560934ff322e731fc0c616c0e97ad1af"
+  }
+}

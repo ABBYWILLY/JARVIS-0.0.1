@@ -113,3 +113,67 @@ boutons à560×400/250%DPI et une fixture audio sans propriétaireApp ; corrigé
 sans réduire les assertions de visibilité ou désactiver de tests. En mode compact,
 le HUD réutilise le statut existant. Les variables/callbacks Tk supplémentaires
 sont libérés explicitement à la fermeture ; validation Windows finale à suivre.
+
+
+## 5E — validation et limites
+
+Suite complète Linux/Tk9/EGL réel :948 exécutés,939 réussis,9 ignorés
+(composants audio natifs absents et essais de modèles réels opt-in),115,439s.
+La campagne Tk8.6 a révélé un dépassement d’un pixel du statut Mini : le calcul
+réserve maintenant le padding/bordure natifs du Label, sans assouplir le test.
+Le test Mini ciblé passe après correction. Une erreur STT tardive ou d’ancienne
+génération reste dans le diagnostic local et ne remplace plus le HUD de parole.
+Le résumé de l’inspecteur est correctement enfant de son Canvas, donc visible
+et limité à sa zone de défilement ; testé à100/250%DPI sans recouvrir les sources.
+
+Preuves réelles et rapports : [vidéo, captures et mesures](COGNITIVE-HUD-EVIDENCE.md).
+21PNG, vidéo13s, vrai menu de sélection et trace de lecture locale ; données
+simulées annoncées et aucun micro/modèle réel ouvert. Processus App au repos,
+mesure courte2s : CPU médian14,129ms avant /13,909ms HUD minimal, RSS35,680 /
+35,918Mo. Aucune réduction significative démontrée. Pas de nouvelle minuterie.
+Mesa logiciel, atlasHUDinchangé :660480octets. Pas de mesure VRAM physique,
+watts, impact TTFT/Piper ou charge combinée RTX/Ollama/voix à distance.
+
+La CI de5D `bef37b4` est verte (applicationWindows40890560484 et prototype
+40890560381). Suivre les deux workflows du dernier commit5E pour l’EXE final.
+Pas de nouveau modèle, framework ou dépendance. Canvas reste une alternative
+permanente ; shaders, sphère, anneaux et géométrieGPU3.1 sont conservés.
+
+## Recette sur le PC Windows
+
+1. Ouvrir **Centre de contrôle → Interface → Cognitive HUD**. Comparer Minimal,
+   Standard et Diagnostic, désactiver puis réactiver. Réouvrir JARVIS : valeurs
+   conservées. En petite fenêtre, le statut compact utilise la ligne existante.
+2. Faire une question texte puis vocale : vérifier attente, génération, voix,
+   parole PCM et chevauchement. Interrompre : aucune ancienne notification ne
+   doit rétablir une réponse annulée. Vérifier micro coupé, silence et erreurSTT.
+3. Sélectionner du gras, un lien, une table, du code et des emojis : clic droit
+   ou Maj+F10. Lire/Répéter ne lancent pas Ollama ; l’option de code reste respectée.
+   Interrompre puis Reprends : la lecture reste dans le passage. Vitesse et voix
+   installées se règlent dans l’éditeur vocal existant, sans nouveau moteur.
+4. Expliquer/Développer/Résumer : une nouvelle demande citant le passage est
+   archivée. Vérifier modèle/budgetC1 et annulation. Continuer seulement sur la fin
+   de la dernière réponse. Une source changée ou une ancienne sélection doit
+   être refusée ; pendant génération, copie possible et autres actions différées.
+5. Ouvrir **Contexte** : comparer récupéré/inclus/référence explicite, instructions
+   effectives et acceptationHTTP. Les détails privés doivent rester dans cet
+   inspecteur, jamais sur PRESENCE. Modifier/supprimer un souvenir : l’extrait
+   historique reste distinct de son état actuel. Vérifier aussi un ancien échange.
+6. Répéter avec Canvas, GPU, Mini, plein écran, DPI100/150/200/250% et deux écrans.
+   Tester clavier, réduction des mouvements, GPU indisponible/repli et bascule
+   pendant parole, sans réouverture micro/Piper ni déplacement du noyau.
+7. Comparer même requête/modèle, HUDmasqué/Minimal/Diagnostic : métriques TTFT,
+   transcription, premierPCM estimé et temps de frameF9. Mesurer CPU/RAM/VRAM
+   avec Ollama et voix sur RTX3070 ; le délai acoustique Bluetooth reste séparé
+   des estimations DAC. Ce test physique du LOT5 est encore à réaliser.
+
+Sources : même procédure d’installation que [VOICE.md](VOICE.md), puis `python run.py`.
+Compilation Windows : `.\scripts\build-windows.ps1 -WithVoice -WithGpu` ;
+les artefactsGitHubActions comprennent `Jarvis.exe`, sonSHA-256 et les diagnostics.
+Aucun travail sur main, LOT7 ou fonctions agentiques.
+
+
+Vérifications finales complémentaires après cadrage natifMini :27 tests
+pertinents réussis en6,246s ; campagne Tk8.6 complète ciblée81/81 réussis en
+31,751s (100/200/250%DPI, sélectionUnicode, provenance et navigation compris).
+Empreintes des10sources et23artefacts de preuve vérifiées avant publication.

@@ -1442,6 +1442,11 @@ class PresenceView:
                     switch = getattr(self, "_engine_bar", None)
                     left = 12 if switch is None else 24 + switch.winfo_reqwidth()
                     available = max(20, width * .97 - self.header_controls.winfo_reqwidth() - left - 8)
+                # Font.measure excludes the native Label's padding/borders.
+                # Reserve those pixels too, including Tk 8.6/DPI rounding.
+                chrome = 2 * sum(self.state_label.winfo_pixels(self.state_label.cget(option))
+                                 for option in ("padx", "borderwidth", "highlightthickness"))
+                available = max(0, math.floor(available) - chrome - 2)
                 while status and family.measure(status + "…") > available:
                     status = status[:-1]
                 if status != self.cognitive_text:

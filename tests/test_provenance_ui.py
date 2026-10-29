@@ -117,7 +117,7 @@ class ProvenanceDesktopTests(unittest.TestCase):
         self.assertEqual(self.stored_metadata(mid)["context"]["system_instructions"][0]["content"], original)
         self.store.update_message_metadata(mid, {"context": {"sources": []}})
         self.assertIs(self.app.open_context(), dialog)
-        summary = self.root.getvar(dialog.nametowidget("summary").cget("textvariable"))
+        summary = self.root.getvar(dialog.summary_label.cget("textvariable"))
         self.assertIn("Instructions système non enregistrées", summary)
         self.assertFalse(any("Instructions effectives" in item for item in dialog.nametowidget("sources").get(0, "end")))
 
@@ -132,7 +132,7 @@ class ProvenanceDesktopTests(unittest.TestCase):
         self.assertEqual(self.store.message(mid)["content"], "")
         self.finish_response()
         dialog = self.inspector()
-        summary = self.root.getvar(dialog.nametowidget("summary").cget("textvariable"))
+        summary = self.root.getvar(dialog.summary_label.cget("textvariable"))
         self.assertIn("Requête acceptée par Ollama (HTTP)", summary)
         self.assertIn("utilisation de chaque source non démontrée", summary)
 
