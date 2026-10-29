@@ -136,3 +136,28 @@ test ne prouve une absence universelle de fuite mémoire ; les fermetures forcé
 ou non acquittées restent explicitement distinctes d'un nettoyage GL confirmé.
 Les connexions privées de `multiprocessing.Queue` sont fermées seulement après
 la mort de l'enfant : vérification Windows/Tk 8.6 requise en plus de Linux.
+
+## 7D — réactivité des erreurs de capture
+
+Le contexte `ThreadPoolExecutor` attendait la fin de Whisper avant de fermer le
+microphone et d'exposer une erreur de capture/VAD. La sortie ferme maintenant le
+micro puis signale l'erreur sans cette attente ; les tâches en attente sont
+annulées. Un appel STT natif déjà engagé ne peut pas être interrompu comme une
+tâche Python : le parent reçoit l'erreur et conserve l'arrêt borné du processus.
+Aucun texte tardif ni deuxième tour en attente n'est envoyé à Ollama.
+
+[Comparatif et protocole](benchmarks/lot7/capture-recovery.json) : cinq essais
+par version, STT volontairement retenu jusqu'à libération du test (100 ms côté
+référence). Avant : erreur et fermeture attendent cette libération ; après :
+elles la précèdent dans les cinq essais. Coût de boucle synthétique médian
+100,368 → 0,013 ms pour le diagnostic, **pas** une mesure de latence Whisper,
+acoustique ou Windows. Trois régressions testent déconnexion, panne VAD, tour
+en attente et arrêt d'un vrai enfant dont le STT est bloqué.
+
+135 tests ciblés voix/commandes/capture/HUD réussis en 24,715 s ; 24 tests
+supplémentaires Tk 8.6 en 8,225 s. Les seuils VAD, durées de silence, profils,
+budgets C1, normalisation, PCM et direction artistique n'ont pas changé. Aucune
+preuve de saccade ou latence de succès nécessitant de modifier Piper/Ollama dans
+le cloud : pas de raccourcissement artificiel des réponses ni d'optimisation
+spéculative de ce parcours. Confirmation GPU finale : 50 tests Tk 9/EGL et
+23 tests Tk 8.6 réussis, y compris annulation de l'aperçu pendant panne.

@@ -36,6 +36,7 @@ def capture_worker(outbox, commands, profile):
     startup_at = time.monotonic()
     stage = "initialisation STT"
     microphone = None
+    executor = None
     generation = 0
     event_drops = 0
     selected_device = profile.get("input_device") or "Par défaut Windows"
@@ -61,7 +62,8 @@ def capture_worker(outbox, commands, profile):
         detector = TurnDetector(settings.vad_threshold, settings.silence_ms)
         stage = "ouverture microphone"
         startup("opening_microphone")
-        with Microphone(settings.input_device) as microphone, ThreadPoolExecutor(max_workers=1) as executor:
+        with Microphone(settings.input_device) as microphone:
+            executor = ThreadPoolExecutor(max_workers=1)
             def device_health():
                 info = getattr(microphone, "diagnostic_info", None)
                 return info() if callable(info) else {"selected_device": selected_device,
@@ -243,6 +245,13 @@ def capture_worker(outbox, commands, profile):
                    "event_drops": event_drops,
                    "error": f"{type(exc).__name__}: {str(exc)[:400]}"}))
         emit(AudioEvent("error", audio_error(exc)))
+    finally:
+        if executor is not None:
+            # Never hold the microphone or hide its failure behind native STT.
+            # The parent receives the error and owns bounded process shutdown;
+            # an in-flight transcription cannot be cancelled as a Python task.
+            # No queued/later result is delivered once this capture loop exits.
+            executor.shutdown(wait=False, cancel_futures=True)
 
 
 def speech_worker(outbox, commands, profile, generation, persistent=False, spectrum_control=None):

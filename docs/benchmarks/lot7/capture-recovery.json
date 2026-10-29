@@ -1,0 +1,150 @@
+{
+  "scope": "Synthetic blocked STT + capture disconnection through production worker; no models, microphone, audio playback or acoustic latency.",
+  "limitation": "Reference waits for the test-imposed 100ms STT release. Tiny final timings are cloud software-loop costs, not physical Whisper or Windows timings.",
+  "repetitions": 5,
+  "reference_commit": "19c003a2a77178b41f20aa6152fcfd311634b111",
+  "final_parent_commit": "34d889e91cc37d037dd5f1b40eb99bdac37a7e98",
+  "current_voice_runtime_sha256": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "conditions": {
+    "vad_probability": 0.95,
+    "frame_samples": 512,
+    "rms_sample": 0.02,
+    "stt_release_timeout_ms": 100,
+    "raw_pcm_exported": false
+  },
+  "cases": {
+    "reference": {
+      "runs": [
+        {
+          "error_visible_within_100ms": false,
+          "microphone_closed_before_stt_release": false,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 100.73735099285841,
+          "disconnect_to_close_ms": 100.71063099894673,
+          "release_delay_ms": 100.20396998152137
+        },
+        {
+          "error_visible_within_100ms": false,
+          "microphone_closed_before_stt_release": false,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 100.33197500160895,
+          "disconnect_to_close_ms": 100.30205099610612,
+          "release_delay_ms": 100.15693999594077
+        },
+        {
+          "error_visible_within_100ms": false,
+          "microphone_closed_before_stt_release": false,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 100.3539870143868,
+          "disconnect_to_close_ms": 100.30669701518491,
+          "release_delay_ms": 100.14900201349519
+        },
+        {
+          "error_visible_within_100ms": false,
+          "microphone_closed_before_stt_release": false,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 100.56228598114103,
+          "disconnect_to_close_ms": 100.53084898390807,
+          "release_delay_ms": 100.20547697786242
+        },
+        {
+          "error_visible_within_100ms": false,
+          "microphone_closed_before_stt_release": false,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 100.36818802473135,
+          "disconnect_to_close_ms": 100.34356100368313,
+          "release_delay_ms": 100.2297930244822
+        }
+      ],
+      "median_disconnect_to_error_ms": 100.36818802473135,
+      "median_disconnect_to_close_ms": 100.34356100368313,
+      "all_errors_before_stt_release": false,
+      "all_microphones_closed_before_stt_release": false,
+      "late_transcripts": 0
+    },
+    "final": {
+      "runs": [
+        {
+          "error_visible_within_100ms": true,
+          "microphone_closed_before_stt_release": true,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 0.017846992705017328,
+          "disconnect_to_close_ms": 0.010455987649038434,
+          "release_delay_ms": 0.07727000047452748
+        },
+        {
+          "error_visible_within_100ms": true,
+          "microphone_closed_before_stt_release": true,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 0.014160992577672005,
+          "disconnect_to_close_ms": 0.007941998774185777,
+          "release_delay_ms": 0.05592798697762191
+        },
+        {
+          "error_visible_within_100ms": true,
+          "microphone_closed_before_stt_release": true,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 0.013190001482143998,
+          "disconnect_to_close_ms": 0.007952010491862893,
+          "release_delay_ms": 0.05743102519772947
+        },
+        {
+          "error_visible_within_100ms": true,
+          "microphone_closed_before_stt_release": true,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 0.012158998288214207,
+          "disconnect_to_close_ms": 0.007552007446065545,
+          "release_delay_ms": 0.0402859877794981
+        },
+        {
+          "error_visible_within_100ms": true,
+          "microphone_closed_before_stt_release": true,
+          "thread_stopped": true,
+          "late_transcripts": 0,
+          "disconnect_to_error_ms": 0.01240900019183755,
+          "disconnect_to_close_ms": 0.007511989679187536,
+          "release_delay_ms": 0.04097700002603233
+        }
+      ],
+      "median_disconnect_to_error_ms": 0.013190001482143998,
+      "median_disconnect_to_close_ms": 0.007941998774185777,
+      "all_errors_before_stt_release": true,
+      "all_microphones_closed_before_stt_release": true,
+      "late_transcripts": 0
+    }
+  },
+  "reference_voice_runtime_sha256": "ec63aedaa97a0c54b3bc72ab0055229d8c03613d9eb1a8bb748daf78a46932f2",
+  "method": {
+    "scope": "Boucle capture_worker réelle, adaptateurs microphone/VAD/Whisper remplacés par doubles bornés ; aucune donnée utilisateur, aucun appareil ni modèle natif.",
+    "steps": [
+      "Charger le source voice_runtime.py de 19c003a par git show dans un module de paquet jarvis séparé ; exécuter le même protocole contre ce capture_worker puis celui du travail courant.",
+      "Fournir cinq trames PCM synthétiques de 512 échantillons constants à 0,02, VAD fixé à 0,95 ; injecter finish_turn après speech_start.",
+      "Bloquer Whisper.transcribe sur threading.Event ; dès son entrée, provoquer RuntimeError dans Microphone.read et horodater cette déconnexion avec time.monotonic.",
+      "Horodater Microphone.__exit__ et la notification capture_error. Attendre celle-ci pendant au plus 100 ms avant de libérer volontairement le STT.",
+      "Libérer et joindre les threads dans finally. Vérifier erreur visible et fermeture micro avant cette libération, thread arrêté et absence de transcript tardif.",
+      "Répéter cinq fois par version. Conserver chaque valeur et calculer la médiane sans retrancher le délai imposé par le protocole."
+    ],
+    "interpretation": "Les ~100 ms initiaux correspondent à notre STT volontairement retenu 100 ms. La preuve est la suppression de cette dépendance de fermeture/alerte, pas un gain réel de latence Whisper, acoustique, GPU ou Windows.",
+    "regression_command": "python -m unittest -v tests.test_capture_failure_latency",
+    "regression_cases": [
+      "test_disconnect_closes_microphone_and_reports_error_before_blocked_stt_finishes",
+      "test_vad_failure_drops_pending_turn_and_never_delivers_late_stt",
+      "test_parent_stops_real_capture_child_still_held_in_stt_after_capture_error"
+    ],
+    "regression_file": "tests/test_capture_failure_latency.py",
+    "regression_additions": "Les deux premiers tests conservent aussi un second tour dans le slot STT en attente et exigent zéro exécution/résultat tardif ; le troisième tue un vrai enfant spawn encore retenu en STT et vérifie disparition des enfants et fermeture des canaux.",
+    "native_stt_note": "shutdown(wait=False,cancel_futures=True) ne peut pas interrompre un appel natif déjà en cours ; le parent reste responsable de terminate/kill/join bornés du processus audio après notification.",
+    "hardware_validation": "Validation matérielle Windows/microphone/Whisper en attente."
+  }
+}
