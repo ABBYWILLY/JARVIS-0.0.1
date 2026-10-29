@@ -360,20 +360,26 @@ class AudioProcess:
         self.spectrum_control = None
 
     def start(self, kind, settings, generation=0):
-        self.stop()
-        self.kind, self.generation = kind, generation
-        self.outbox = self.context.Queue(maxsize=128)
-        self.commands = self.context.Queue(maxsize=8)
         target = {"capture": capture_worker, "speech": speech_worker, "sample": sample_worker,
                   "diagnostics": diagnostics_worker}[kind]
-        args = (self.outbox, self.commands, settings.to_dict())
-        if kind == "speech":
-            self.spectrum_control = self.context.Value("b", False, lock=False)
-            args += (generation, True, self.spectrum_control)
-        elif kind == "sample":
-            args += (generation,)
-        self.process = self.context.Process(target=target, args=args, daemon=True)
-        self.process.start()
+        self.stop()
+        self.kind, self.generation = kind, generation
+        try:
+            self.outbox = self.context.Queue(maxsize=128)
+            self.commands = self.context.Queue(maxsize=8)
+            args = (self.outbox, self.commands, settings.to_dict())
+            if kind == "speech":
+                self.spectrum_control = self.context.Value("b", False, lock=False)
+                args += (generation, True, self.spectrum_control)
+            elif kind == "sample":
+                args += (generation,)
+            self.process = self.context.Process(target=target, args=args, daemon=True)
+            self.process.start()
+        except BaseException:
+            # Spawn may fail before a process has a PID. Roll back even a
+            # partially allocated pair of channels so listening can be retried.
+            self.stop()
+            raise
 
     def send(self, command):
         if self.commands is None:
@@ -406,12 +412,17 @@ class AudioProcess:
 
     def stop(self):
         if self.process is not None:
-            if self.process.is_alive():
-                self.process.terminate()
-            self.process.join(timeout=0.25)
-            if self.process.is_alive():
-                self.process.kill()
+            if self.process.pid is not None:
+                if self.process.is_alive():
+                    self.process.terminate()
                 self.process.join(timeout=0.25)
+                if self.process.is_alive():
+                    self.process.kill()
+                    self.process.join(timeout=0.25)
+                    if self.process.is_alive():
+                        # Retain the handle and channels: a later explicit
+                        # stop can retry, rather than orphaning a live worker.
+                        raise RuntimeError("Le processus audio ne s’est pas arrêté ; réessayez l’arrêt d’urgence.")
             self.process.close()
             self.process = None
         for channel in (self.commands, self.outbox):

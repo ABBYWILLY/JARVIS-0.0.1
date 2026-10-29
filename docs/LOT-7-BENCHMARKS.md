@@ -74,7 +74,7 @@ explicite permet de reproduire les réglages nécessaires sans ouvrir l'archive 
 ```
 
 Seules les familles existantes `voice`, `presence`, `presence_engine`,
-`presence_gpu`, `reading`, `cognitive_hud` sont acceptées. Le scénario impose
+`presence_gpu`, `conversation`, `cognitive_hud` sont acceptées. Le scénario impose
 uniquement son moteur et son profil GPU dans la base temporaire. Rien n'écrase
 les préférences personnelles. Les autres paramètres sont les valeurs normales
 du programme ; aucun budget n'est abaissé pour embellir les chiffres.

@@ -41,10 +41,10 @@ class RuntimeBenchmarkTests(unittest.TestCase):
     def test_profile_is_explicit_json_and_rejects_unknown_or_oversized_data(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "profile.json"
-            values = {"settings": {"model": "local:4b"}, "preferences": {"voice": {"speed": 1.1}}}
+            values = {"settings": {"model": "local:4b"}, "preferences": {"voice": {"speed": 1.1}, "conversation": {"size": 18}}}
             path.write_text(json.dumps(values), encoding="utf-8")
             self.assertEqual(benchmark.load_profile(path), values)
-            for invalid in ([1], {"archive": "personal.sqlite3"}, {"preferences": {"other": {}}}, {"preferences": {"voice": []}}):
+            for invalid in ([1], {"archive": "personal.sqlite3"}, {"preferences": {"other": {}}}, {"preferences": {"reading": {"size": 18}}}, {"preferences": {"voice": []}}):
                 path.write_text(json.dumps(invalid), encoding="utf-8")
                 with self.assertRaises(ValueError):
                     benchmark.load_profile(path)
@@ -153,6 +153,47 @@ class RuntimeBenchmarkTests(unittest.TestCase):
 
 
 class RuntimeBenchmarkTkTests(unittest.TestCase):
+    def test_failed_close_releases_temporary_sqlite_and_keeps_private_cleanup_error_out_of_report(self):
+        from tests.test_jarvis import display_available
+        if not display_available():
+            self.skipTest("Écran graphique indisponible")
+        from jarvis.storage import Store
+        from jarvis.ui import App
+        original_temporary = tempfile.TemporaryDirectory
+        original_close = Store.close
+        closed = []
+        typography = []
+        private_error = "C:/Users/private-user/private-model-and-conversation-path"
+        def temporary(*args, **kwargs):
+            directory = original_temporary(*args, **kwargs)
+            self.addCleanup(directory.cleanup)
+            directory.cleanup = Mock(side_effect=PermissionError(private_error))
+            return directory
+        def close(store):
+            original_close(store)
+            closed.append(store)
+        def decline_close(app):
+            typography.append((app.typography.size, app.markdown.body_font.actual("size")))
+        with original_temporary() as folder:
+            config, report_path = Path(folder) / "config.json", Path(folder) / "report.json"
+            config.write_text(json.dumps({"source": str(benchmark.REPO), "profile": {"settings": {}, "preferences": {"conversation": {"size": 18}}},
+                "model": None, "context": None, "scenario": "idle", "width": 900, "height": 600,
+                "tk_scaling": None, "seconds": 1, "warmup": .1, "visual_state": "idle",
+                "cache_state": "unspecified", "allow_software": False}))
+            with patch.object(App, "close", autospec=True, side_effect=decline_close), patch.object(Store, "close", autospec=True, side_effect=close), patch.object(benchmark.tempfile, "TemporaryDirectory", side_effect=temporary):
+                code = benchmark._child(config, report_path)
+            self.assertEqual(code, 2)
+            report = json.loads(report_path.read_text())
+            self.assertEqual(report["status"], "error")
+            self.assertEqual(report["error_type"], "ApplicationCloseNotCompleted")
+            self.assertEqual(report["temporary_cleanup_error_type"], "PermissionError")
+            self.assertNotIn(private_error, report_path.read_text())
+            self.assertEqual(len(closed), 1)
+            self.assertEqual(typography[0], (18, 18))
+            import sqlite3
+            with self.assertRaises(sqlite3.ProgrammingError):
+                closed[0].db.execute("SELECT 1")
+
     def test_real_idle_child_uses_disposable_sqlite_and_never_opens_audio_or_ollama(self):
         from tests.test_jarvis import display_available
         if not display_available():

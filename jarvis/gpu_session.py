@@ -218,6 +218,25 @@ def _fresh_frame(packet, now):
     return frame, (frame_old, pcm_old, expression_old)
 
 
+def _release_gpu_resources(items):
+    """Release every owned resource and preserve deferred renderer failures."""
+    failures = []
+    for label, resource in items:
+        if resource is None:
+            continue
+        try:
+            if label in {"hud", "renderer"}:
+                resource.shutdown()
+            else:
+                resource.release()
+        except Exception as error:
+            failures.append(f"{label}: {type(error).__name__}: {error}")
+        # GpuRenderer deliberately finishes all releases before exposing a
+        # bounded error journal. shutdown() need not raise for cleanup to fail.
+        failures.extend(f"{label}: {error}" for error in getattr(resource, "release_errors", ()))
+    return failures
+
+
 def _gpu_child(frames, events, quit_event, urgent_stop, options):
     """One isolated GL context. It consumes presentation, never conversation."""
     import os
@@ -547,16 +566,8 @@ def _gpu_child(frames, events, quit_event, urgent_stop, options):
             f"PRESENCE GPU indisponible : {type(error).__name__}: {error}",
             "stage": stage, "renderer": info}, critical=True)
     finally:
-        for label, resource in (("hud", hud), ("renderer", renderer), ("framebuffer", output), ("context", context)):
-            if resource is None:
-                continue
-            try:
-                if label in {"hud", "renderer"}:
-                    resource.shutdown()
-                else:
-                    resource.release()
-            except Exception as error:
-                cleanup_errors.append(f"{label}: {type(error).__name__}: {error}")
+        cleanup_errors.extend(_release_gpu_resources((("hud", hud), ("renderer", renderer),
+                                                     ("framebuffer", output), ("context", context))))
         if glfw is not None:
             try:
                 if window is not None:
@@ -592,6 +603,9 @@ class GpuSession:
         self._seq = -1
         self._started_at = self._last_seen = 0.
         self._ready = self._failure_reported = self._seen_closed = False
+        self._terminal_events = []
+        self._shutdown_report = None
+        self._frame_errors = []
 
     def alive(self):
         return bool(self._process is not None and self._process.is_alive())
@@ -599,6 +613,57 @@ class GpuSession:
     @property
     def ready(self):
         return self._ready
+
+    @property
+    def shutdown_report(self):
+        """Last bounded closure evidence, separate from process liveness."""
+        if self._shutdown_report is None:
+            return None
+        return {**self._shutdown_report,
+                "cleanup_errors": list(self._shutdown_report["cleanup_errors"]),
+                "errors": [{**event, "renderer": dict(event["renderer"])}
+                           for event in self._shutdown_report["errors"]]}
+
+    def _remember_terminal(self, event):
+        if not isinstance(event, dict) or event.get("kind") not in ("error", "closed"):
+            return
+        if event["kind"] == "closed":
+            errors = event.get("cleanup_errors", ())
+            errors = errors if isinstance(errors, (tuple, list)) else ("Invalid cleanup diagnostic",)
+            value = {"kind": "closed", "cleanup_errors": [str(error)[:512] for error in errors[:16]]}
+        else:
+            renderer = event.get("renderer", {})
+            acceleration = renderer.get("acceleration", "") if isinstance(renderer, dict) else ""
+            value = {"kind": "error", "message": str(event.get("message", "Unknown GPU error"))[:512],
+                     "stage": str(event.get("stage", ""))[:80],
+                     "renderer": {"acceleration": str(acceleration)[:32]}}
+        self._terminal_events.append(value)
+        del self._terminal_events[:-16]
+
+    def _drain_shutdown_events(self):
+        # No callbacks/actions during closure and no wait on the feeder: the
+        # completed child's joined feeder makes its final records readable.
+        if self._events is None:
+            return
+        import queue
+        for _index in range(EVENT_QUEUE_SIZE):
+            try:
+                event = self._events.get_nowait()
+            except queue.Empty:
+                break
+            self._remember_terminal(event)
+
+    def _closure_report(self, forced, termination_failed=False):
+        closed = [event for event in self._terminal_events if event["kind"] == "closed"]
+        cleanup = [error for event in closed for error in event["cleanup_errors"]][-16:]
+        errors = [dict(event) for event in self._terminal_events if event["kind"] == "error"]
+        if not cleanup:
+            cleanup = [event["message"] for event in errors if event["message"].startswith("Fermeture GPU :")]
+        status = ("termination_failed" if termination_failed else "cleanup_failed" if cleanup else
+                  "forced" if forced else "complete" if closed else "unconfirmed")
+        self._shutdown_report = {"status": status, "acknowledged": bool(closed),
+                                 "forced": forced, "cleanup_errors": cleanup, "errors": errors}
+        return self.shutdown_report
 
     def start(self, packet=None):
         if self.alive():
@@ -610,6 +675,15 @@ class GpuSession:
         self._frames = context.Queue(maxsize=FRAME_QUEUE_SIZE)
         self._events = context.Queue(maxsize=EVENT_QUEUE_SIZE)
         self._quit, self._urgent = context.Event(), context.Event()
+        # An intentionally abandoned large packet must not strand its feeder
+        # or print a broken-pipe traceback during shutdown. Unexpected runtime
+        # transport errors remain observable by the existing parent poll.
+        stop_flag, frame_errors = self._quit, []
+        self._frame_errors = frame_errors
+        def frame_error(error, _packet):
+            if not stop_flag.is_set() and not frame_errors:
+                frame_errors.append(f"Canal visuel GPU : {type(error).__name__}: {error}"[:512])
+        self._frames._on_queue_feeder_error = frame_error
         self._heartbeat = context.Value("d", 0., lock=False)
         options = {"allow_software": self._allow_software, "headless": self._headless,
                    "heartbeat": self._heartbeat}
@@ -619,6 +693,8 @@ class GpuSession:
         self._pending = None
         self._seq = -1
         self._ready = self._failure_reported = self._seen_closed = False
+        self._terminal_events = []
+        self._shutdown_report = None
         self._started_at = self._last_seen = self._clock()
         try:
             self._process.start()
@@ -684,10 +760,13 @@ class GpuSession:
                 self._seen_closed = True
             if kind == "error":
                 self._failure_reported = True
+            self._remember_terminal(event)
             result.append(event)
         last_beat = max(self._last_seen, self._heartbeat.value)
         error = None
-        if not self.alive() and not self._seen_closed:
+        if self._frame_errors:
+            error = self._frame_errors[0]
+        elif not self.alive() and not self._seen_closed:
             error = "Le processus PRESENCE GPU s'est arrêté (code " + str(self._process.exitcode) + ")."
         elif not self._ready and now-self._started_at > self._startup_timeout:
             error = "Le moteur PRESENCE GPU ne répond pas pendant son initialisation."
@@ -695,35 +774,72 @@ class GpuSession:
             error = "Le moteur PRESENCE GPU ne répond plus."
         if error and not self._failure_reported:
             self._failure_reported = True
-            result.append({"kind": "error", "message": error})
+            event = {"kind": "error", "message": error}
+            self._remember_terminal(event)
+            result.append(event)
         self._flush()
         return result
 
     def stop(self, timeout=.6):
+        """Bounded stop returning actual cleanup evidence, not just exit status.
+
+        A forced exit releases OS resources but does not prove renderer cleanup.
+        Failed termination retains all handles so an explicit retry is possible.
+        """
         if not math.isfinite(timeout) or not 0 < timeout <= 5:
             raise ValueError("Délai de fermeture GPU invalide.")
+        import time
+        deadline = time.monotonic()+timeout
         process = self._process
+        if process is None and self._shutdown_report is not None:
+            return self.shutdown_report
+        forced = False
         if process is not None:
             if self._quit is not None:
                 self._quit.set()
+            self._drain_shutdown_events()
             try:
                 process.join(timeout*.5)
+                self._drain_shutdown_events()
                 if process.is_alive():
+                    forced = True
                     process.terminate()
                     process.join(timeout*.4)
+                    self._drain_shutdown_events()
                 if process.is_alive() and hasattr(process, "kill"):
                     process.kill()
                     process.join(timeout*.1)
+                    self._drain_shutdown_events()
                 if process.is_alive():
+                    self._closure_report(forced, termination_failed=True)
                     raise RuntimeError("Le processus GPU n'a pas pu être fermé ; aucun second moteur n'a été ouvert.")
             except AssertionError:
                 # Process.start itself failed: it has no child to join.
                 pass
+            self._drain_shutdown_events()
             process.close()
         for channel in (self._frames, self._events):
             if channel is not None:
                 channel.cancel_join_thread()
                 channel.close()
+                # Queue.close only enqueues a sentinel. A feeder writing a
+                # packet larger than the OS pipe can never reach that sentinel
+                # if the child has exited and this parent keeps its reader open.
+                # The child is confirmed dead here; abandon only visual data.
+                reader = getattr(channel, "_reader", None)
+                if reader is not None:
+                    reader.close()
+                feeder = getattr(channel, "_thread", None)
+                if feeder is not None:
+                    feeder.join(max(0., deadline-time.monotonic()))
+                writer = getattr(channel, "_writer", None)
+                if writer is not None:
+                    writer.close()
+                if feeder is not None and feeder.is_alive():
+                    self._remember_terminal({"kind": "error", "message":
+                        "Fermeture GPU : le fil du canal visuel n'a pas terminé dans le délai borné."})
+        result = self._closure_report(forced)
         self._process = self._frames = self._events = self._quit = self._urgent = self._heartbeat = None
         self._pending = None
         self._ready = False
+        return result

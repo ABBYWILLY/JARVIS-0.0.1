@@ -30,10 +30,15 @@ class Worker:
 
     def start(self, operation, settings, messages=None):
         self.stop()
-        self.queue = self.context.Queue(maxsize=128)
-        self.process = self.context.Process(target=run_worker,
-            args=(self.queue, operation, settings.to_dict(), messages), daemon=True)
-        self.process.start()
+        try:
+            self.queue = self.context.Queue(maxsize=128)
+            self.process = self.context.Process(target=run_worker,
+                args=(self.queue, operation, settings.to_dict(), messages), daemon=True)
+            self.process.start()
+        except BaseException:
+            # Allocation/spawn is transactional, including a process with no PID.
+            self.stop()
+            raise
 
     def poll(self):
         events = []
@@ -50,14 +55,19 @@ class Worker:
 
     def stop(self):
         if self.process is not None:
-            if self.process.is_alive():
-                self.process.terminate()
-            self.process.join(timeout=0.2)
-            if self.process.is_alive():
-                self.process.kill()
+            if self.process.pid is not None:
+                if self.process.is_alive():
+                    self.process.terminate()
                 self.process.join(timeout=0.2)
+                if self.process.is_alive():
+                    self.process.kill()
+                    self.process.join(timeout=0.2)
+                if self.process.is_alive():
+                    # Retain ownership: a failed stop must not permit a second worker.
+                    raise RuntimeError("Le processus Ollama n'a pas pu être fermé ; réessayez l'arrêt.")
             self.process.close()
             self.process = None
         if self.queue is not None:
+            self.queue.cancel_join_thread()
             self.queue.close()
             self.queue = None

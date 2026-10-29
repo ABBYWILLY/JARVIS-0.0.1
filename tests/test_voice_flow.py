@@ -1049,7 +1049,7 @@ class RuntimeContractTests(unittest.TestCase):
     def test_process_stop_terminates_then_kills_and_discards_channels(self):
         boundary = AudioProcess()
         process, inbox, outbox = Mock(), Mock(), Mock()
-        process.is_alive.side_effect = [True, True]
+        process.is_alive.side_effect = [True, True, False]
         boundary.process, boundary.commands, boundary.outbox = process, inbox, outbox
         boundary.stop()
         process.terminate.assert_called_once()

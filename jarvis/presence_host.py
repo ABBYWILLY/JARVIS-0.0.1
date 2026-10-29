@@ -17,6 +17,7 @@ class IntegratedPresence(PresenceView):
         self._gpu = self._gpu_scene = None
         self._gpu_poll_id = None
         self._gpu_ready = self._gpu_desired = self._gpu_visible = False
+        self._gpu_stop_error = ""
         self._gpu_size = (960, 640)
         self._gpu_seq = 0
         self._gpu_bands = (0., 0., 0.)
@@ -125,8 +126,7 @@ class IntegratedPresence(PresenceView):
         self._canvas_preview_restore = None
         if self.studio is not None:
             self.studio.cancel()
-        self.show()
-        return True
+        return self.show()
 
     def retry_gpu(self):
         candidate = self.engine_preferences.retry()
@@ -136,10 +136,13 @@ class IntegratedPresence(PresenceView):
             self.show()
 
     def show(self):
+        # A driver can exceptionally refuse bounded termination. Keep its
+        # owner reachable and require an explicit retry before any replacement.
+        if self._gpu_stop_error and not self._stop_gpu():
+            return False
         self._closing_host = False
         if self._canvas_preview_restore is not None:
-            self._canvas(show=True)
-            return
+            return self._canvas(show=True)
         if self._preview_restore is not None or self.engine_preferences.target == "gpu":
             # The hidden native caption/control widgets are also used by the
             # existing rehearsal/accessibility code. They never draw alongside
@@ -155,7 +158,7 @@ class IntegratedPresence(PresenceView):
                     self._gpu.start()
                 except Exception as error:
                     self._gpu_failed(f"Initialisation GPU : {type(error).__name__}: {error}")
-                    return
+                    return False
                 self._status("Initialisation GPU ; le moteur 2D reste disponible")
                 self._poll_gpu()
             elif self._gpu_ready:
@@ -164,8 +167,8 @@ class IntegratedPresence(PresenceView):
                 self._gpu_visible = True
                 self._request_spectrum(True)
                 self._render()
-            return
-        self._canvas(show=True)
+            return True
+        return self._canvas(show=True)
 
     def _hide_canvas(self):
         self._cancel_animation()
@@ -177,15 +180,39 @@ class IntegratedPresence(PresenceView):
         if self._gpu_poll_id is not None:
             self.app.root.after_cancel(self._gpu_poll_id)
             self._gpu_poll_id = None
-        session, self._gpu = self._gpu, None
-        self._gpu_ready = self._gpu_visible = False
+        session = self._gpu
         if session is not None:
-            session.stop()
+            try:
+                report = session.stop()
+            except Exception as error:
+                # Do not orphan the still-owned process or recurse through
+                # _gpu_failed -> _canvas -> _stop_gpu on a shutdown failure.
+                self._gpu_stop_error = f"{type(error).__name__}: {error}"[:512]
+                self._gpu_ready = self._gpu_visible = self._gpu_desired = False
+                self._cancel_animation()
+                self._request_spectrum(False)
+                detail = ("Fermeture GPU impossible : " + self._gpu_stop_error
+                          + " · Réessayez manuellement ; aucun autre moteur ouvert")
+                self._status(detail)
+                self.app.set_status("PRESENCE : " + detail, True)
+                self.app.root.deiconify()
+                self.app.root.lift()
+                return False
+            if isinstance(report, dict):
+                self.gpu_diagnostics["shutdown"] = report
+                if report.get("cleanup_errors"):
+                    self.app.set_status("PRESENCE : processus GPU fermé, mais une libération a échoué ; "
+                                        "consultez le diagnostic GPU.", True)
+            self._gpu = None
+        self._gpu_stop_error = ""
+        self._gpu_ready = self._gpu_visible = False
         self._request_spectrum(False)
+        return True
 
     def _canvas(self, *, show):
         self._cancel_animation()
-        self._stop_gpu()
+        if not self._stop_gpu():
+            return False
         self.active_engine = "canvas"
         self._gpu_desired = False
         self._status()
@@ -193,6 +220,7 @@ class IntegratedPresence(PresenceView):
             self._show_canvas()
         else:
             self._hide_canvas()
+        return True
 
     def _request_spectrum(self, enabled):
         setter = getattr(self.app.voice, "set_visual_spectrum", None)
@@ -226,6 +254,10 @@ class IntegratedPresence(PresenceView):
         reason = str(reason)[:512]
         visible = self._preview_restore[1] if self._preview_restore is not None else self._gpu_desired
         preview = self._preview_restore is not None
+        # Clearing an offline preview normally repaints. A failed renderer
+        # must not be called again from that cleanup path.
+        self._gpu_ready = False
+        self._cancel_animation()
         self._preview_restore = self._preview_art = None
         self._pending_gpu_preview = None
         if not preview:
@@ -235,12 +267,14 @@ class IntegratedPresence(PresenceView):
             # automatic restart loop. Persistence can fail; the live latch cannot.
             self.engine_preferences = failed
         self.clear_preview()
-        self._canvas(show=visible)
-        self._status("GPU indisponible : " + reason + " · Réessayer manuellement")
-        self.app.set_status("PRESENCE utilise Canvas : " + reason, True)
+        restored = self._canvas(show=visible)
+        if restored:
+            self._status("GPU indisponible : " + reason + " · Réessayer manuellement")
+            self.app.set_status("PRESENCE utilise Canvas : " + reason, True)
         if self.gpu_studio is not None:
             self.gpu_studio.previewing = False
-            self.gpu_studio.status.set("Aperçu GPU indisponible : " + reason)
+            self.gpu_studio.status.set("Aperçu GPU indisponible : " + reason
+                                      + (" · " + self._gpu_stop_error if not restored else ""))
 
     def _poll_gpu(self):
         self._gpu_poll_id = None
@@ -250,6 +284,10 @@ class IntegratedPresence(PresenceView):
         try:
             events = session.poll()
             for event in events:
+                # A command can replace/close the session during this batch.
+                # Its queued heartbeat, errors and other commands are obsolete.
+                if self._gpu is not session or self._gpu_stop_error or self._closing_host:
+                    return
                 kind = event.get("kind")
                 if kind == "error":
                     self._gpu_failed(event.get("message", event.get("error", "Le renderer ne répond plus.")))
@@ -283,11 +321,12 @@ class IntegratedPresence(PresenceView):
                     self._gpu_action(event.get("action"))
                 elif kind == "closed":
                     self.return_to_command()
-                    self._stop_gpu()
+                    if not self._stop_gpu():
+                        return
                     self.active_engine = "canvas"
                     self._status()
                     return
-            if self._gpu is session:
+            if self._gpu is session and not self._gpu_stop_error:
                 self._gpu_poll_id = self.app.root.after(50, self._poll_gpu)
         except Exception as error:
             self._gpu_failed(f"Canal GPU : {type(error).__name__}: {error}")
@@ -683,8 +722,10 @@ class IntegratedPresence(PresenceView):
         if self.gpu_studio is not None:
             self.gpu_studio.cancel()
             self.gpu_studio = None
-        self._stop_gpu()
+        if not self._stop_gpu():
+            return False
         self.active_engine = "canvas"
         if self._engine_dialog is not None and self._engine_dialog.winfo_exists():
             self._engine_dialog.destroy()
         super().close()
+        return True

@@ -87,8 +87,22 @@ def run_smoke(directory, *, headless=False, allow_software=False, timeout=20.):
     finally:
         try:
             if session is not None:
-                session.stop(timeout=2.)
-            report["shutdown"] = "complete"
+                closure = session.stop(timeout=2.)
+                report["closure"] = closure
+                # Seeing one frame proves neither successful resource release
+                # nor absence of a later renderer failure.
+                unexpected = [event for event in closure["errors"]
+                              if not (report["status"] == "driver_unavailable"
+                                      and expected_driver_absence(event))]
+                if closure["status"] != "complete" or unexpected:
+                    result = 1
+                    report["status"] = "failed"
+                    report["shutdown"] = "failed"
+                    report.setdefault("error", "GPU closure was not acknowledged cleanly; see closure.")
+                else:
+                    report["shutdown"] = "complete"
+            else:
+                report["shutdown"] = "complete"
         except Exception as error:
             result = 1
             report["shutdown"] = f"failed: {type(error).__name__}: {error}"

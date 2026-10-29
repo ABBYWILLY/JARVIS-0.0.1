@@ -11,6 +11,7 @@ from types import SimpleNamespace
 import unittest
 
 from jarvis.gpu_session import ACTIONS, GpuSession, _dispatch_action, _fresh_frame, validate_packet
+from jarvis.gpu_session import _release_gpu_resources
 
 
 def packet(seq=1):
@@ -133,6 +134,14 @@ def action_child(_frames, events, quit_event, urgent, options):
         options["heartbeat"].value = time.monotonic()
 
 
+def late_cleanup_child(_frames, events, quit_event, _urgent, options):
+    options["heartbeat"].value = time.monotonic()
+    events.put({"kind": "ready"})
+    quit_event.wait(3.)
+    events.put({"kind": "error", "message": "Fermeture GPU : renderer: resource lost"})
+    events.put({"kind": "closed", "cleanup_errors": ["renderer: resource lost"]})
+
+
 class SessionWaitMixin:
     def wait_until(self, session, predicate, timeout=5.):
         deadline = time.monotonic()+timeout
@@ -146,6 +155,135 @@ class SessionWaitMixin:
 
 
 class ProcessContractTests(SessionWaitMixin, unittest.TestCase):
+    def test_cleanup_attempts_all_resources_and_reports_deferred_renderer_failures(self):
+        calls = []
+        class Resource:
+            release_errors = ()
+            def __init__(self, name, fails=False):
+                self.name, self.fails = name, fails
+            def shutdown(self):
+                calls.append(self.name)
+                if self.fails:
+                    raise RuntimeError("direct failure")
+            release = shutdown
+        renderer = Resource("renderer")
+        renderer.release_errors = ("RuntimeError: deferred failure",)
+        errors = _release_gpu_resources((("hud", Resource("hud", True)),
+                                        ("renderer", renderer), ("framebuffer", Resource("framebuffer")),
+                                        ("context", Resource("context")), ("missing", None)))
+        self.assertEqual(calls, ["hud", "renderer", "framebuffer", "context"])
+        self.assertEqual(errors, ["hud: RuntimeError: direct failure",
+                                  "renderer: RuntimeError: deferred failure"])
+
+    def test_stop_drains_late_cleanup_evidence_and_idempotent_report_is_copied(self):
+        session = GpuSession(target=late_cleanup_child)
+        self.addCleanup(session.stop)
+        session.start()
+        self.wait_until(session, lambda items: any(item["kind"] == "ready" for item in items))
+        report = session.stop(timeout=1.)
+        self.assertEqual(report["status"], "cleanup_failed")
+        self.assertTrue(report["acknowledged"])
+        self.assertFalse(report["forced"])
+        self.assertEqual(report["cleanup_errors"], ["renderer: resource lost"])
+        self.assertIn("resource lost", report["errors"][0]["message"])
+        report["cleanup_errors"].clear()
+        report["errors"][0]["message"] = "mutated"
+        self.assertIn("resource lost", session.stop()["errors"][0]["message"])
+        self.assertEqual(session.shutdown_report["cleanup_errors"], ["renderer: resource lost"])
+        self.assertIsNone(session._process)
+        self.assertIsNone(session._events)
+
+    def test_repeated_spawn_stop_and_forced_kill_leave_no_owned_children_or_pending_frames(self):
+        import multiprocessing as mp
+        owned = []
+        session = GpuSession(target=echo_child)
+        self.addCleanup(session.stop)
+        for cycle in range(5):
+            session.start()
+            owned.append(session._process.pid)
+            self.wait_until(session, lambda items: any(item["kind"] == "ready" for item in items))
+            for seq in range(80):
+                session.submit(packet(seq))
+            self.wait_until(session, lambda items: any(item.get("rendered_seq") == 79 for item in items))
+            report = session.stop(timeout=1.)
+            self.assertEqual(report["status"], "complete")
+            self.assertTrue(report["acknowledged"])
+            self.assertFalse(report["forced"])
+            self.assertEqual(report["cleanup_errors"], [])
+            self.assertIsNone(session._pending)
+            self.assertIsNone(session._frames)
+            self.assertIsNone(session._events)
+            self.assertFalse(set(owned) & {child.pid for child in mp.active_children()})
+        hung = GpuSession(target=hung_child, startup_timeout=.05)
+        self.addCleanup(hung.stop)
+        for cycle in range(2):
+            hung.start()
+            owned.append(hung._process.pid)
+            report = hung.stop(timeout=.5)
+            self.assertEqual(report["status"], "forced")
+            self.assertTrue(report["forced"])
+            self.assertFalse(report["acknowledged"])
+            self.assertFalse(set(owned) & {child.pid for child in mp.active_children()})
+
+    def test_large_abandoned_packets_do_not_leave_queue_feeders_after_forced_shutdown(self):
+        import multiprocessing as mp
+        feeders, pids = [], []
+        session = GpuSession(target=hung_child)
+        self.addCleanup(session.stop)
+        for cycle in range(3):
+            session.start()
+            pids.append(session._process.pid)
+            value = packet()
+            # Valid presentation data above the Linux/Windows pipe capacity.
+            # The child deliberately never consumes it.
+            value["hud"].update({f"extra{index}": "x"*8192 for index in range(12)})
+            self.assertTrue(session.submit(value))
+            feeder = session._frames._thread
+            feeders.append(feeder)
+            self.assertTrue(feeder.is_alive())
+            report = session.stop(timeout=.8)
+            self.assertTrue(report["forced"])
+            self.assertFalse(any(thread.is_alive() for thread in feeders))
+            self.assertFalse(set(pids) & {child.pid for child in mp.active_children()})
+            self.assertEqual(report["cleanup_errors"], [])
+            self.assertIsNone(session._frames)
+
+    def test_unexpected_frame_feeder_error_is_visible_once_but_shutdown_discards_are_not_errors(self):
+        session = GpuSession(target=echo_child)
+        self.addCleanup(session.stop)
+        session.start()
+        self.wait_until(session, lambda items: any(item["kind"] == "ready" for item in items))
+        session._frames._on_queue_feeder_error(BrokenPipeError("runtime transport failure"), b"unused")
+        result = session.poll()
+        errors = [item for item in result if item.get("kind") == "error"]
+        self.assertEqual(len(errors), 1)
+        self.assertIn("runtime transport failure", errors[0]["message"])
+        self.assertFalse(any(item.get("kind") == "error" for item in session.poll()))
+        callback = session._frames._on_queue_feeder_error
+        session.stop()
+        callback(BrokenPipeError("expected abandoned packet"), b"unused")
+        self.assertEqual(len(session._frame_errors), 1)
+
+    def test_unstoppable_process_retains_channels_for_retry_and_reports_failed_termination(self):
+        class Unstoppable:
+            def join(self, _timeout): pass
+            def is_alive(self): return True
+            def terminate(self): pass
+            def kill(self): pass
+            def close(self): raise AssertionError("must not close a live process handle")
+        session = GpuSession()
+        process = session._process = Unstoppable()
+        frames = session._frames = queue.Queue(1)
+        events = session._events = queue.Queue(16)
+        session._quit = threading.Event()
+        with self.assertRaisesRegex(RuntimeError, "aucun second moteur"):
+            session.stop(timeout=.1)
+        self.assertIs(session._process, process)
+        self.assertIs(session._frames, frames)
+        self.assertIs(session._events, events)
+        self.assertTrue(session._quit.is_set())
+        self.assertEqual(session.shutdown_report["status"], "termination_failed")
+
     def test_visible_engine_commands_cross_real_spawn_transport_with_stop_priority(self):
         session = GpuSession(target=action_child)
         self.addCleanup(session.stop)

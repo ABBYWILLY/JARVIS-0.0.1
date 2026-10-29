@@ -1326,18 +1326,24 @@ class App:
         self.set_status("Erreur de stockage local : vérifiez l’espace libre et les droits du dossier de données. Redémarrez JARVIS." if isinstance(exc, (sqlite3.Error, OSError)) else "Erreur interne de l’interface. Redémarrez JARVIS ; les données déjà enregistrées sont conservées.", True)
 
     def close(self):
+        if self.closed:
+            return
         try:
             self.voice.stop_listening()
-            self.presence.close()
+            if self.presence.close() is False:
+                # Keep the owner/UI alive for a manual retry of a failed stop.
+                return
             if self.operation:
                 self.cancel()
-        finally:
-            self.closed = True
             self.worker.stop()
-            self.root.after_cancel(self.poll_id)
-            self.markdown.close()
-            self.cognitive_view.close()
-            self.store.close()
-            self.navigation_font = None
-            self.input_font = None
-            self.root.destroy()
+        except Exception as error:
+            self.set_status("Fermeture interrompue : " + str(error)[:500] + " Réessayez de fermer JARVIS.", True)
+            return
+        self.closed = True
+        self.root.after_cancel(self.poll_id)
+        self.markdown.close()
+        self.cognitive_view.close()
+        self.store.close()
+        self.navigation_font = None
+        self.input_font = None
+        self.root.destroy()

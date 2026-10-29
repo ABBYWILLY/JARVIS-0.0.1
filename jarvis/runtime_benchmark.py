@@ -30,7 +30,7 @@ METRIC_KEYS = frozenset(("total_duration", "load_duration", "prompt_eval_count",
                          "eval_count", "eval_duration", "response_tokens", "ttft_seconds", "tokens_per_second",
                          "stt_ms", "context_ms", "piper_ms", "tts_first_pcm_ms", "end_to_pcm_estimate_ms",
                          "silence_ms", "audio_start_estimate_ms"))
-PREFERENCES = frozenset(("voice", "presence", "presence_engine", "presence_gpu", "reading", "cognitive_hud"))
+PREFERENCES = frozenset(("voice", "presence", "presence_engine", "presence_gpu", "conversation", "cognitive_hud"))
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -211,7 +211,9 @@ def _child(config_path, report_path):
     state = {}
     nvidia = None
     sample_id = finish_id = start_id = None
-    with tempfile.TemporaryDirectory(prefix="jarvis-runtime-benchmark-") as folder:
+    temporary_store = tempfile.TemporaryDirectory(prefix="jarvis-runtime-benchmark-")
+    try:
+        folder = temporary_store.name
         try:
             store = Store(Path(folder) / "benchmark.sqlite3")
             store.save_settings(settings)
@@ -394,13 +396,25 @@ def _child(config_path, report_path):
                 except Exception as error:
                     report["status"] = "error"
                     report["cleanup_error_type"] = type(error).__name__
-            elif store is not None:
-                store.close()
+            if store is not None:
+                # This database belongs only to this bounded tool. Even a
+                # declined/failed App.close must release its Windows file lock.
+                try:
+                    store.close()
+                except Exception as error:
+                    report["status"] = "error"
+                    report["store_cleanup_error_type"] = type(error).__name__
             if root is not None:
                 try:
                     root.destroy()
                 except tk.TclError:
                     pass
+    finally:
+        try:
+            temporary_store.cleanup()
+        except OSError as error:
+            report["status"] = "error"
+            report["temporary_cleanup_error_type"] = type(error).__name__
     with Path(report_path).open("x", encoding="utf-8") as stream:
         json.dump(report, stream, ensure_ascii=False, allow_nan=False)
     return 0 if report["status"] == "complete" else 2

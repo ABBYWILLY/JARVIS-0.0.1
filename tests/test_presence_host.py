@@ -183,6 +183,95 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
         self.assertEqual(len(RendererDouble.instances), 2)
         self.assertFalse(self.presence.engine_preferences.gpu_failed)
 
+    def test_failed_gpu_stop_keeps_owner_blocks_replacement_and_allows_manual_cleanup(self):
+        self.start_audio_contract()
+        child = self.ready_gpu()
+        starts = (list(self.voice.capture.starts), list(self.voice.speech.starts))
+        epoch = self.voice.epoch
+        with patch.object(child, "stop", side_effect=RuntimeError("driver refuses termination")) as stop:
+            self.assertFalse(self.presence.set_engine("canvas"))
+            self.assertIs(self.presence._gpu, child)
+            self.assertTrue(child.alive())
+            self.assertFalse(self.presence.window.winfo_ismapped())
+            self.assertIsNone(self.presence._gpu_poll_id)
+            self.assertIsNone(self.presence.after_id)
+            self.assertIn("Fermeture GPU impossible", self.app.status.get())
+            self.assertIn("aucun autre moteur", self.presence.engine_status.get())
+            # Explicit retry makes one bounded attempt, never a fallback loop.
+            self.assertFalse(self.presence.set_engine("gpu"))
+            self.assertEqual(stop.call_count, 2)
+            self.assertEqual(len(RendererDouble.instances), 1)
+            self.assertIs(self.presence._gpu, child)
+            self.assertFalse(self.presence.close())
+            self.assertEqual(stop.call_count, 3)
+            self.assertTrue(self.presence.window.winfo_exists())
+        self.assertTrue(self.presence.set_engine("canvas"))
+        self.root.update()
+        self.assertIsNone(self.presence._gpu)
+        self.assertFalse(child.alive())
+        self.assertTrue(self.presence.window.winfo_ismapped())
+        self.assertEqual(starts, (self.voice.capture.starts, self.voice.speech.starts))
+        self.assertEqual(self.voice.epoch, epoch)
+
+    def test_gpu_failure_with_unstoppable_child_does_not_recurse_or_claim_canvas(self):
+        child = self.ready_gpu()
+        child.events.append({"kind": "error", "message": "driver lost"})
+        with patch.object(child, "stop", side_effect=RuntimeError("still running")) as stop:
+            self.pump_until(lambda: bool(self.presence._gpu_stop_error))
+            self.assertEqual(stop.call_count, 1)
+            self.assertIs(self.presence._gpu, child)
+            self.assertEqual(self.presence.active_engine, "gpu")
+            self.assertTrue(self.presence.engine_preferences.gpu_failed)
+            self.assertFalse(self.presence.window.winfo_ismapped())
+            self.assertIn("Fermeture GPU impossible", self.app.status.get())
+            self.assertNotIn("utilise Canvas", self.app.status.get())
+        self.assertTrue(self.presence.set_engine("canvas"))
+
+    def test_old_batch_is_discarded_immediately_after_engine_switch(self):
+        child = self.ready_gpu()
+        diagnostics = copy.deepcopy(self.presence.gpu_diagnostics)
+        child.events.extend((
+            {"kind": "action", "action": "engine_canvas"},
+            {"kind": "ready"},
+            {"kind": "heartbeat", "visible": True, "timing": {"actual_draw_fps": 999}},
+            {"kind": "action", "action": "engine_gpu"},
+            {"kind": "error", "message": "obsolete error"},
+        ))
+        self.pump_until(lambda: self.presence.active_engine == "canvas")
+        self.root.update()
+        self.assertEqual(self.presence.active_engine, "canvas")
+        self.assertIsNone(self.presence._gpu)
+        self.assertEqual(len(RendererDouble.instances), 1)
+        self.assertEqual(self.presence.gpu_diagnostics, diagnostics)
+        self.assertFalse(self.presence._gpu_ready)
+        self.assertFalse(self.presence._gpu_visible)
+        self.assertIsNone(self.presence._gpu_poll_id)
+        self.assertNotIn("obsolete", self.app.status.get())
+
+    def test_repeated_engine_cycles_preserve_audio_scope_and_cancel_old_callbacks(self):
+        mid, epoch = self.start_audio_contract()
+        starts = (list(self.voice.capture.starts), list(self.voice.speech.starts))
+        messages = self.store.messages(self.app.session_id)
+        model, semantic = self.presence.model, self.presence.semantic
+        old_children = []
+        for index in range(12):
+            child = self.ready_gpu()
+            old_children.append(child)
+            self.presence.update_event("thinking")
+            self.assertEqual(sum(item.alive() for item in RendererDouble.instances), 1)
+            self.assertTrue(self.presence.set_engine("canvas"))
+            self.root.update()
+            self.assertTrue(all(not item.alive() for item in old_children))
+            self.assertTrue(all(item.stops == 1 for item in old_children))
+            self.assertIsNone(self.presence._gpu_poll_id)
+            self.assertEqual(self.voice.epoch, epoch)
+            self.assertIs(self.presence.model, model)
+            self.assertIs(self.presence.semantic, semantic)
+        self.assertEqual(len(RendererDouble.instances), 12)
+        self.assertEqual(starts, (self.voice.capture.starts, self.voice.speech.starts))
+        self.assertEqual(self.store.messages(self.app.session_id), messages)
+        self.assertEqual(self.voice.mid, mid)
+
     def test_gpu_failure_stays_latched_when_database_is_unwritable(self):
         child = self.ready_gpu()
         child.events.append({"kind": "error", "message": "Driver stopped"})

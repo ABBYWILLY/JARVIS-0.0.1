@@ -20,13 +20,19 @@ def main():
 
     root = tk.Tk()
     root.withdraw()
+    store = None
     try:
         store = Store(data_directory() / "jarvis.sqlite3")
         app = App(root, store, refresh=not smoke)
-    except Exception:
-        if not smoke:
-            messagebox.showerror("JARVIS — démarrage impossible", "Impossible d’ouvrir les données locales. Vérifiez les droits du dossier et l’espace disque. Ne supprimez pas votre base ; sauvegardez-la avant toute réparation.", parent=root)
-        root.destroy()
+    except Exception as error:
+        try:
+            if not smoke:
+                detail = f"{type(error).__name__} : {error}"[:500]
+                messagebox.showerror("JARVIS — démarrage impossible", "Impossible d’ouvrir les données locales. Vérifiez les droits du dossier et l’espace disque. Ne supprimez pas votre base ; sauvegardez-la avant toute réparation.\n\nDiagnostic : " + detail, parent=root)
+        finally:
+            if store is not None:
+                store.close()
+            root.destroy()
         return 1
     root.deiconify()
     result = [0]

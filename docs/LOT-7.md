@@ -103,3 +103,36 @@ Résultats exactement égaux, index existant utilisé, intégrité SQLite `ok`.
 66 tests contexte/mémoire/provenance/stockage vocal réussis, dont paires
 irrégulières, tous les statuts, Unicode et grosses métadonnées privées conservées
 dans l'archive mais exclues de la lecture contextuelle.
+
+## 7C — arrêt, erreurs et récupération
+
+- Allocation/démarrage des workers Ollama et audio transactionnels : une erreur
+  avant PID ferme les files et le processus non démarré, préserve l'exception et
+  permet un nouvel essai. Un enfant encore vivant après `kill` reste possédé ;
+  aucun deuxième worker ne peut être lancé à sa place.
+- PRESENCE conserve aussi la session GPU si son arrêt échoue, rend l'erreur
+  visible et laisse COMMAND OS accessible pour réessayer. L'application ne
+  détruit pas son propriétaire avant confirmation des arrêts.
+- Les événements d'une ancienne session ne sont plus consommés après une
+  bascule. Les erreurs différées de libération GL et l'acquittement de fermeture
+  remontent jusqu'au diagnostic et aux probes de compilation : une première
+  image ne suffit plus à déclarer le nettoyage réussi.
+- Défaut supplémentaire reproduit : trois arrêts forcés après paquet graphique
+  de ~96 Kio laissaient **trois `QueueFeederThread`** bloqués malgré la mort des
+  enfants. Le transport libère maintenant ses pipes après confirmation de leur
+  mort et attend son feeder dans le délai d'arrêt existant : **zéro sur trois**
+  dans le même essai borné. Les erreurs de transport en fonctionnement sont
+  signalées ; seuls les paquets visuels devenus inutiles à l'arrêt sont abandonnés.
+- Le démarrage échoué ferme explicitement SQLite et expose le type d'erreur ;
+  archive, fragment récupérable et préférences invalides sont préservés pour
+  diagnostic. L'outil de benchmark ferme aussi sa base jetable en cas d'échec
+  et applique la vraie préférence typographique `conversation`.
+
+Validation : 18 tests worker/audio/démarrage, dont dix cycles réels de chaque
+worker ; 49 tests transport GPU/host/smoke avec EGL réel ; 12 tests de l'outil,
+dont rendu Tk de la taille de police et erreur de nettoyage Windows simulée.
+Douze cycles de bascule gardent les mêmes instances audio/conversation. Aucun
+test ne prouve une absence universelle de fuite mémoire ; les fermetures forcées
+ou non acquittées restent explicitement distinctes d'un nettoyage GL confirmé.
+Les connexions privées de `multiprocessing.Queue` sont fermées seulement après
+la mort de l'enfant : vérification Windows/Tk 8.6 requise en plus de Linux.
