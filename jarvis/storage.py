@@ -133,13 +133,22 @@ class Store:
 
     def context_records(self, sid):
         # Failed/cancelled turns are archived, but never silently treated as complete.
-        rows = self.messages(sid)
+        # Context needs neither per-response provenance metadata nor model/audio
+        # preferences. Project only the required columns and consume consecutive
+        # pairs without retaining a second full archive of sqlite3.Row objects.
+        rows = self.db.execute(
+            "SELECT id,session_id,role,content,created,status FROM messages "
+            "WHERE session_id=? ORDER BY id", (sid,))
         result = []
-        for i in range(0, len(rows) - 1, 2):
-            user, assistant = rows[i:i + 2]
-            if user["role"] == "user" and assistant["role"] == "assistant" and assistant["status"] == "complete":
-                result.extend({key: row[key] for key in ("id", "session_id", "role", "content", "created")}
-                              for row in (user, assistant))
+        try:
+            for user in rows:
+                assistant = next(rows, None)
+                if (assistant is not None and user["role"] == "user"
+                        and assistant["role"] == "assistant" and assistant["status"] == "complete"):
+                    result.extend({key: row[key] for key in ("id", "session_id", "role", "content", "created")}
+                                  for row in (user, assistant))
+        finally:
+            rows.close()
         return result
 
     def begin_turn(self, sid, text, model, source="text", metadata=None):

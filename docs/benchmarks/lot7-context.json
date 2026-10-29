@@ -1,0 +1,86 @@
+{
+  "scope": "Compare historical/current context reads on disposable synthetic SQLite data.\n\nNo user database, model, microphone or network is opened. The historical method\nis structurally checked against the chosen local Git revision; timings alternate\non the same warmed database. Tracemalloc records Python allocations, not total\nprocess RSS or VRAM. This does not benchmark the entire C1 context builder.\n",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "sqlite_version": "3.53.1",
+  "baseline_commit": "19c003a2a77178b41f20aa6152fcfd311634b111",
+  "baseline_storage_sha256": "6df24e447e06a965c8780d934081df87508da79248bc1b037402ccab2f811775",
+  "current_storage_sha256": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85",
+  "conditions": {
+    "synthetic": true,
+    "turns": 400,
+    "messages": 800,
+    "content_chars_per_message": 2048,
+    "metadata_bytes_per_message": 9530,
+    "cache": "warm SQLite/OS; 3 warmup reads per case",
+    "repetitions": 20
+  },
+  "query_plan": [
+    [
+      4,
+      0,
+      61,
+      "SEARCH messages USING INDEX messages_session (session_id=?)"
+    ]
+  ],
+  "equal_results": true,
+  "integrity_check": "ok",
+  "measurements": {
+    "before": {
+      "samples_ms": [
+        9.335790993645787,
+        9.751717996550724,
+        9.251997020328417,
+        9.655835980083793,
+        9.21492199995555,
+        9.831315983319655,
+        8.857262000674382,
+        8.449997985735536,
+        8.343098976183683,
+        8.636075013782829,
+        8.30450200010091,
+        5.827830987982452,
+        5.575565999606624,
+        5.69297099718824,
+        6.0381320072337985,
+        5.597109004156664,
+        5.607874016277492,
+        5.904374003876001,
+        5.582326994044706,
+        6.2064219964668155
+      ],
+      "median_ms": 8.323800488142297,
+      "max_ms": 9.831315983319655,
+      "tracemalloc_peak_bytes": 9767520,
+      "returned_records": 800
+    },
+    "after": {
+      "samples_ms": [
+        5.136666004545987,
+        4.806475975783542,
+        4.557325999485329,
+        4.474273009691387,
+        5.568245978793129,
+        5.635395005811006,
+        4.377659992314875,
+        3.9511279901489615,
+        4.181369993602857,
+        4.217783018248156,
+        3.071915009059012,
+        2.5336660037282854,
+        2.5421799800824374,
+        2.474418986821547,
+        2.793863008264452,
+        2.6854220195673406,
+        2.5902100023813546,
+        3.439791005803272,
+        2.6599740085657686,
+        2.624831016873941
+      ],
+      "median_ms": 3.695459497976117,
+      "max_ms": 5.635395005811006,
+      "tracemalloc_peak_bytes": 1991596,
+      "returned_records": 800
+    }
+  }
+}

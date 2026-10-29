@@ -81,3 +81,25 @@ exports JSON/CSV/Markdown, comparaison contrôlée, arrêt borné de l'arbre d'e
 aucun texte/PCM dans les exports. Les parcours interactifs incomplets ne sont
 pas des succès. 11 tests ciblés réussis en 1,954 s ; référence de non-régression
 initiale : 120 exécutés, 119 réussis, 1 modèle réel ignoré, 29,293 s.
+
+## 7B — lecture de contexte SQLite
+
+`Store.context_records()` projette maintenant uniquement les six colonnes
+requises, consomme les mêmes paires consécutives et ferme son curseur. Aucune
+modification de contenu, budget, schéma, FTS, réglage ou sauvegarde.
+
+Comparaison reproductible :
+
+```powershell
+python scripts/benchmark_context_storage.py --output contexte-comparaison.json
+```
+
+[Résultats bruts](benchmarks/lot7-context.json), source initiale vérifiée par
+AST contre `19c003a`, mêmes 800 messages synthétiques et lectures alternées
+sur le même cache chaud : médiane **8,324 → 3,695 ms** ; pic d'allocations
+Python **9 767 520 → 1 991 596 octets** (−79,6 %). C'est une réduction du coût
+de préparation des données, pas une promesse de débit Ollama ou de RAM globale.
+Résultats exactement égaux, index existant utilisé, intégrité SQLite `ok`.
+66 tests contexte/mémoire/provenance/stockage vocal réussis, dont paires
+irrégulières, tous les statuts, Unicode et grosses métadonnées privées conservées
+dans l'archive mais exclues de la lecture contextuelle.
