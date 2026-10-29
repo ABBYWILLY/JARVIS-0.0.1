@@ -5,6 +5,7 @@ import queue
 import threading
 import time
 import unittest
+from collections import deque
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -39,6 +40,9 @@ class PlaybackPolicyTests(unittest.TestCase):
         voice.settings = VoiceSettings()
         voice.tts_profile = None
         voice.epoch = 8
+        voice.replay_offset = 0
+        voice.replay_source = None
+        voice.recent_output = deque(maxlen=8)
         return voice
 
     def test_renderer_switch_changes_live_policy_without_restarting_piper(self):
@@ -109,6 +113,7 @@ class PlaybackPolicyTests(unittest.TestCase):
         voice._drain_visuals(100.21)
         signal = voice.notify_presence.call_args.kwargs["signal"]
         self.assertEqual(signal["bands"], (.1, .2, .3))
+        self.assertEqual(voice.replay_offset, 0)
         voice.speech.start.assert_not_called()
         voice.speech.stop.assert_not_called()
 

@@ -10,6 +10,14 @@ PERSONALITY_PROMPTS = {
     "UNHINGED": "Adopte un ton direct, spontané et franc. Réponds en français.",
 }
 
+# Piper supports duration scaling and ordinary PCM silence, not emotional SSML.
+SPEECH_PROFILES = {
+    "normal": ("Discussion normale", 1.0, 0),
+    "technical": ("Explication technique", .95, 80),
+    "story": ("Récit", .92, 120),
+    "brief": ("Réponse courte", 1.05, 0),
+}
+
 
 @dataclass(frozen=True)
 class VoiceSettings:
@@ -24,6 +32,8 @@ class VoiceSettings:
     cpu_threads: int = 4
     personality: str = "Personnalisé"
     speak_code: bool = False
+    speech_profile: str = "normal"
+    resume_delay_ms: int = 350
 
     def validate(self):
         if not isinstance(self.speak_code, bool):
@@ -36,6 +46,11 @@ class VoiceSettings:
             raise ValueError("Silence (300–2500 ms) ou threads CPU (1–8) invalide.")
         if self.personality not in {"Personnalisé", *PERSONALITY_PROMPTS}:
             raise ValueError("Profil conversationnel invalide.")
+        if self.speech_profile not in SPEECH_PROFILES:
+            raise ValueError("Profil de lecture vocale invalide.")
+        if (isinstance(self.resume_delay_ms, bool) or not isinstance(self.resume_delay_ms, int)
+                or not 100 <= self.resume_delay_ms <= 1500):
+            raise ValueError("Reprise du microphone : délai de 100 à 1500 ms requis.")
         return self
 
     @property

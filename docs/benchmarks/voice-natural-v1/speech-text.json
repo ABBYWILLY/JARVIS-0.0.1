@@ -1,0 +1,33 @@
+{
+  "scope": "Synthetic text only; no Piper/Whisper model, device, GPU, inference, acoustic latency or end-to-end performance measured.",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "baseline": "c40d724",
+  "sources": {
+    "jarvis/richtext.py": "376b9eba22f1c060f6193908752744f153c8bbb50224e782e51026bb90b7b87f",
+    "jarvis/tts.py": "678369c9b3a6c55e3dcdb4bb70670acdb8c4195d8d64db41fa7929c392426892",
+    "jarvis/speech_normalization.py": "859c37e82488672ff63339a8fea9805912feb28c728b34de1a7a870009513bdd"
+  },
+  "text_characters": 983,
+  "input_batch_characters": 32,
+  "segmentation_baseline": {
+    "mean_ms": 5.956024795,
+    "median_ms": 5.6828775,
+    "p95_ms": 7.480289,
+    "count": 200
+  },
+  "segmentation_lot4": {
+    "mean_ms": 5.995595615,
+    "median_ms": 5.703583,
+    "p95_ms": 7.603792,
+    "count": 200
+  },
+  "normalization_per_phrase": {
+    "mean_ms": 0.03204871225,
+    "median_ms": 0.028031,
+    "p95_ms": 0.045127,
+    "count": 4000
+  },
+  "normalization_process_cpu_seconds": 0.129130902,
+  "normalization_trace_peak_bytes": 5186
+}

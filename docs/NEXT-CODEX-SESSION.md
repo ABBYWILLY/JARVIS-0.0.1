@@ -1,3 +1,38 @@
+# LOT 4 — Voix naturelle V1, livraison logicielle du 29 octobre 2026
+
+PRESENCE GPU 3.1 approuvée visuellement par l’utilisateur ; rendu conservé sans
+modification Canvas/shaders/renderer. Benchmarks RTX 3070 + Ollama + voix à faire.
+Validation visuelle consignée dans 74922fc. Étape tours : e10dc2b (CI Windows et
+prototype verts). Étape normalisation/Piper : 26a681b (deux CI vertes).
+
+Étape finale : commandes micro entières et confirmées, citations/dictée protégées,
+garde textuel d’écho borné (sans AEC), boutons accessibles, relecture/reprise
+SQLite sans LLM, continuation C1 réutilisée et développement explicitement demandé.
+Relecture longue alimentée progressivement ; annulation coupe file/callbacks et
+anciennes générations. Quatre profils Piper persistants dans les préférences
+existantes ; vitesse/voix/périphériques conservés. Délai de retour micro réglable,
+activation en pleine préécoute haut-parleurs protégée. Pas de nouveau modèle.
+
+Tests finaux Linux/Tk9/EGL réel : 867 exécutés, 858 réussis, 9 ignorés,
+109,836 s. Tk 8.6 : 49 réussis, 15,917 s. Deux essais initiaux ont signalé une
+fixture manuelle à compléter et un test DPI à isoler/restaurer ; vérifications
+finales réussies. Sources archivées, budgets J2.8, mémoire et bascule 2D/GPU
+couverts par la suite complète. Aucun benchmark matériel inventé.
+Normalisation synthétique : moyenne 0,032 ms/phrase, P95 0,045 ms ; détecteur
+seul ~3,45 µs/trame. Rapports : docs/benchmarks/voice-natural-v1/.
+
+Suivre les workflows du commit final dans GitHub Actions avant de considérer
+son EXE compilé. Guide et recette Windows : docs/VOICE.md, section LOT 4.
+Validation matérielle/acoustique LOT 4 en attente : micro/VAD/Whisper, Tom/Siwis,
+casque/haut-parleurs/Bluetooth, interruptions/reprise et mesures combinées RTX.
+Alignement par segment/bloc PCM approximatif, pas de timestamps mot à mot.
+Les commandes perdant leur contexte de citation dans Whisper ne peuvent être
+reconstituées ; casque requis pour interruption pendant lecture, aucun AEC.
+Ne pas refaire ce lot ; prochaine action : recette physique et mesures réelles.
+Aucun changement de main, des emojis supplémentaires ou des autres lots.
+
+---
+
 ## LOT 4, étape 2 — normalisation et prosodie Piper
 
 Branche vocale seule : valeurs françaises (nombres, décimaux, monnaies,

@@ -374,3 +374,105 @@ le même corpus avant/après. La fidélité réelle ne se déduit pas des tests 
 Garder silence VAD et garde speakers350ms pour comparer ; aucun changement aveugle
 de threads/GPU. PortAudio estime le DAC, pas le délai Bluetooth XTREME140 : comparer
 à une sortie filaire avec même configuration avant d’attribuer un délai au moteur.
+
+
+## LOT 4 — Voix naturelle V1 (28 octobre 2026)
+
+Le rendu PRESENCE GPU 3.1 est approuvé visuellement par l’utilisateur sur Windows
+(fluidité, netteté, animations, bascule 2D/2.5D) et reste inchangé. Les mesures
+combinées RTX 3070 + Ollama + voix restent à faire. Aucun modèle ajouté.
+
+Dans **Centre de contrôle → Voix**, le même éditeur persistant propose :
+
+- **Discussion normale** : vitesse existante, aucune pause ajoutée.
+- **Explication technique** : vitesse ×0,95, pause PCM de80 ms par phrase Piper.
+- **Récit** : vitesse ×0,92, pause de120 ms.
+- **Réponse courte** : vitesse ×1,05, sans pause ajoutée ; ce profil change le
+  rythme vocal, pas le budget ou le contenu Ollama.
+
+Débit final borné entre0,5 et2×, réglages manuels conservés. Piper emploie son
+vrai `length_scale` et du silence PCM ; aucune émotion vocale avancée ou SSML
+annoncée. Les pauses allongent réellement l’audio. Changer le débit pendant une
+relecture ne recharge pas les poids ; les phrases déjà en file conservent leur
+rythme. La préécoute utilise les mêmes paramètres.
+
+La branche parlée normalise les valeurs françaises non ambiguës : nombres et
+décimaux, montants (dont dollars sans confusion LaTeX), dates valides jour/mois/
+année et ISO, heures, abréviations et sigles connus. Versions, identifiants,
+valeurs hors plage et dates invalides restent littéraux. Markdown, emojis,
+libellés de liens et code conservent le traitement commun existant. Titres,
+initiales, montants et constructions incomplètes ne sont plus coupés au mauvais
+endroit. Texte affiché, archives SQLite et positions sources restent originaux.
+
+**Lecture et commandes** ouvre les boutons Stop, Répéter, Reprendre, Continuer,
+Plus lentement et Développer ce passage. Les mêmes commandes sont acceptées
+oralement uniquement comme phrases entières issues d’un tour micro confirmé :
+« Stop », « Répète », « Reprends », « Continue », « Plus lentement » /
+« Parle moins vite », « Développe ce passage ». Une citation, une dictée ou une
+phrase contenant ces mots reste une conversation. La commande seule constitue
+une instruction ; si Whisper supprime la formulation d’une citation orale, le
+programme ne peut pas reconstituer cette intention perdue.
+
+Répéter/reprendre relit l’original SQLite sans nouvel appel Ollama. La reprise
+repart du début du segment réellement joué à son échéance PCM, jamais du dernier
+segment simplement mis en file ; elle peut donc répéter quelques mots. La
+relecture longue est alimentée progressivement, avec file bornée et annulation
+immédiate, plutôt que de soumettre toute l’archive en une fois. Continuer
+réutilise le cerveau C1. Développer envoie une requête explicite avec un extrait
+original borné à1500 caractères, archivé dans la conversation. Plus lentement
+réduit le débit de0,1× et le conserve après redémarrage.
+
+En haut-parleurs, capture suspendue pendant lecture, préécoute et activation du
+micro en pleine lecture ; reprise différée de350 ms par défaut. Réglage avancé
+100–1500 ms pour adapter ce délai au PC, sans prétendre mesurer Bluetooth. En
+casque, le VAD conserve l’interruption immédiate. Les commandes présentes dans
+les8 derniers segments PCM et8 derniers segments soumis sont refusées pendant
+le chevauchement/délai de retour (écho possible). Ce garde textuel conservateur
+peut aussi refuser une commande volontaire identique ; réessayez après le son.
+**Il ne remplace pas une annulation d’écho acoustique (AEC)** ; un casque qui
+fuit ou un mode acoustique mal choisi doit être diagnostiqué sur le PC.
+
+Le silence sélectionné n’est jamais raccourci (300→320 ms pour trames32 ms).
+Une seule trame VAD haute pendant le silence n’annule plus le délai ; deux
+trames confirment une reprise sans supprimer le PCM. Seuil VAD, démarrage160 ms
+et limite20 s conservés. Diagnostic : silence écoulé/cible, reprise candidate,
+STT, erreurs, commandes et échéances DAC. Une erreur de persistance arrête
+l’audio sans effacer l’archive. Annulation prioritaire des événements visuels
+anciens ; les deux moteurs consomment le même flux réel, sans changement de
+renderer. Les couleurs, emojis et sous-titres gardent l’alignement approximatif
+par segment/bloc PCM, sans précision mot à mot annoncée.
+
+Mesures internes de portée limitée :
+[rapports](benchmarks/voice-natural-v1/). Détecteur seul ~3,45µs/trame ;
+normalisation moyenne0,032ms/phrase, P950,045ms. Segmentation983caractères en
+lots32 :5,996ms contre5,956ms avant (aucun gain significatif). PCM/texte
+synthétiques Linux, pas une mesure Whisper/Piper/RTX ou de latence audible.
+Aucune consommation VRAM physique, puissance ou RAM globale inventée.
+
+### Recette Windows — validation matérielle en attente
+
+1. Utiliser les mêmes modèles, périphériques et réglages qu’avant. Tester Tom
+   puis Siwis en préécoute normale/technique/récit ; comparer voix réelle et
+   pauses avec « Dr. Martin prévoit12,50€ le28/10/2026 à14:05. ».
+2. Micro autorisé, parler court puis long, hésiter, se taire ; contrôler RMS,
+   VAD et silence cible dans Diagnostic. Refaire avec bruit ambiant ; conserver
+   les seuils avant d’envisager une calibration.
+3. Avec casque : interrompre, dire Stop, Répète, Reprends, Continue, Plus
+   lentement. Vérifier l’absence d’ancien son/emoji/sous-titre après annulation,
+   puis la reprise au segment. Dire « Écris le mot stop » et une citation :
+   aucune action de commande attendue quand la transcription garde ce contexte.
+4. En haut-parleurs/Bluetooth : vérifier la suspension micro, y compris en
+   activant l’écoute pendant une préécoute. Écoute rétablie après la fin réelle.
+   Ne pas utiliser le mode casque avec des haut-parleurs pour ce test.
+5. Alterner2D/2.5D pendant parole et reprise, sans redémarrer micro/Piper.
+   Vérifier les réglages après redémarrage et les boutons au clavier/petit DPI.
+6. Copier les diagnostics du même échange : silence PCM, durée Whisper,
+   attente Ollama, premier texte→PCM DAC estimé. Comparer casque filaire et
+   Bluetooth ; le délai acoustique Bluetooth n’est pas mesuré par PortAudio.
+   Mesurer F9/CPU/RAM avec et sans Ollama et voix sur RTX3070 avant de conclure
+   sur l’impact combiné. Les commandes de benchmark Piper/WER ci-dessus restent
+   disponibles, hors conversation et sans téléchargement automatique.
+
+Lancer depuis les sources comme dans le guide d’installation ; compiler avec
+`.\scripts\build-windows.ps1 -WithVoice -WithGpu`. La CI Windows vérifie la
+suite et l’EXE ; elle ne valide ni l’acoustique ni le microphone du PC utilisateur.

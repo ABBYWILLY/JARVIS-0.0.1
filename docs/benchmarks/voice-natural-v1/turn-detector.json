@@ -1,0 +1,17 @@
+{
+  "before": {
+    "frames_per_run": 70000,
+    "pcm_seconds_per_run": 2240,
+    "wall_median_ms": 265.066,
+    "process_cpu_median_ms": 264.949,
+    "wall_microseconds_per_frame": 3.787
+  },
+  "after": {
+    "frames_per_run": 70000,
+    "pcm_seconds_per_run": 2240,
+    "wall_median_ms": 241.485,
+    "process_cpu_median_ms": 241.399,
+    "wall_microseconds_per_frame": 3.45
+  },
+  "scope": "Linux Python 3.12 pure TurnDetector only, synthetic fixed PCM/probabilities, five repetitions, no Silero, Whisper, Piper, Ollama or physical devices; not end-to-end latency."
+}

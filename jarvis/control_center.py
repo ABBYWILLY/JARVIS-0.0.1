@@ -84,6 +84,10 @@ ROUTES = (
           "gpu échelle rendu résolution définition pixels dpi natif supersampling performance", level="personalize", owner="gpu", control="render_scale"),
     Route("voice_speed", FAMILIES[2], "Vitesse de la voix", "Régler la vitesse Piper dans Voix et périphériques.",
           "vitesse débit voix piper", level="personalize", owner="voice", control="speed"),
+    Route("voice_profile", FAMILIES[2], "Profil de lecture", "Discussion, explication technique, récit ou réponse courte : rythme et pauses Piper.",
+          "voix profil lecture prosodie technique récit discussion court", level="personalize", owner="voice", control="speech_profile"),
+    Route("voice_actions", FAMILIES[2], "Lecture et commandes", "Arrêter, répéter, reprendre, continuer, ralentir ou développer via des boutons accessibles.",
+          "voix stop répète reprends continue lentement commandes relecture interruption"),
     Route("turn_silence", FAMILIES[2], "Silence de fin de tour", "Ajuster l’attente de fin de parole dans les réglages vocaux existants.",
           "silence fin tour attente", level="personalize", owner="voice", control="silence_ms"),
     Route("reading_font", FAMILIES[3], "Police de lecture", "Choisir une police dans l’aperçu typographique existant.",
@@ -342,6 +346,7 @@ class ControlCenter:
                    "gpu": app.presence.open_gpu_settings, "generation": app.open_settings,
                    "memory": app.open_memory, "context": app.open_context,
                    "voice": app.voice.open_settings, "diagnostics": app.voice.open_diagnostics,
+                   "voice_actions": app.voice.open_actions,
                    "reading": app.open_conversation_settings, "navigation": app.toggle_sidebar}
         if key in actions:
             actions[key]()

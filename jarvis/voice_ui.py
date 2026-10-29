@@ -11,7 +11,8 @@ from .richtext import SpeechBuffer, parse_text
 from .captions import prepare_caption
 from .spectrum import analyze_passages
 from .tts import SpeechText
-from .voice_config import PERSONALITY_PROMPTS, VOICES, VoiceSettings
+from .voice_config import PERSONALITY_PROMPTS, SPEECH_PROFILES, VOICES, VoiceSettings
+from .voice_commands import recognize_command, command_echo
 from .voice_runtime import AudioProcess, audio_error
 
 
@@ -54,6 +55,20 @@ class VoiceControls:
         self.diagnostic_events = deque(maxlen=32)
         self.diagnostic_window = None
         self.settings_dialog = None
+        self.actions_dialog = None
+        self.confirmed_turn = None
+        self.transcript_handled = None
+        self.echo_turn_output = ()
+        self.echo_until = 0.
+        self.echo_tail_output = ()
+        self.recent_output = deque(maxlen=8)
+        self.submitted_output = deque(maxlen=8)
+        self.replay_mid = None
+        self.replay_session = None
+        self.replay_offset = 0
+        self.source_offset = 0
+        self.replay_source = None
+        self.replay_cursor = 0
         self.last_capture_event = "aucun"
         self.last_capture_event_at = self.last_pcm_at = None
         self.diagnostic_failure = ""
@@ -65,6 +80,7 @@ class VoiceControls:
         self.listen_button.pack(fill="x", pady=(10, 4))
         ttk.Button(parent, text="Voix / périphériques", command=self.open_settings).pack(fill="x")
         ttk.Button(parent, text="Diagnostic micro / STT", command=self.open_diagnostics).pack(fill="x", pady=2)
+        ttk.Button(parent, text="Lecture et commandes", command=self.open_actions).pack(fill="x", pady=2)
         ttk.Button(parent, text="Arrêt d’urgence", command=self.emergency).pack(fill="x", pady=4)
         tk.Label(parent, textvariable=self.status, bg="#121c29", fg="#a6b8cb",
                  wraplength=235, justify="left", font=(app.font_family, 9)).pack(fill="x", pady=4)
@@ -106,15 +122,31 @@ class VoiceControls:
         self.reference_result = ""
         self.reset_turn_latency()
         self.heard = 0
+        self.confirmed_turn = None
+        self.transcript_handled = None
         self.listen_button.configure(text="Désactiver l’écoute")
-        self.status.set("Chargement STT/VAD local…")
         self.last_capture = time.monotonic()
-        self.set_mic_state("starting", "Chargement STT/VAD local")
-        self.notify_presence("thinking")
+        if self.tts_active and self.settings.acoustic_mode == "speakers":
+            # The capture worker consumes mute before VAD reads its first PCM.
+            # Activating listening during a button-initiated replay must retain
+            # exactly the same speaker isolation as a normal voice response.
+            if not self.capture.send({"kind": "mute", "value": True}):
+                self.stop_listening()
+                self.status.set("Écoute annulée : suspension du microphone impossible pendant la lecture.")
+                self.set_mic_state("error", "Suspension du microphone impossible")
+                return
+            self.set_mic_state("suspended", "Chargement local ; lecture haut-parleurs")
+            self.status.set("Lecture haut-parleurs : microphone suspendu")
+        else:
+            self.status.set("Chargement STT/VAD local…")
+            self.set_mic_state("starting", "Chargement STT/VAD local")
+        if not self.tts_active:
+            self.notify_presence("thinking")
 
     def stop_listening(self):
         self.capture.stop()
         self.listening = False
+        self.confirmed_turn = None
         self.transcribing = False
         self.listen_button.configure(text="Activer l’écoute")
         self.status.set("Microphone désactivé")
@@ -151,6 +183,7 @@ class VoiceControls:
         self.transcribing = False
         self.playing_sample = False
         self.mid = None
+        self.replay_source = None
         if self.resume_id is not None:
             self.app.root.after_cancel(self.resume_id)
             self.resume_id = None
@@ -168,6 +201,8 @@ class VoiceControls:
             self.reset_turn_latency()
         self.llm_started_at = time.monotonic()
         self.mid = mid if self.listening else None
+        self.replay_mid, self.replay_session, self.replay_offset = mid, self.app.session_id, 0
+        self.source_offset = 0
         self.reading = self.listening
         self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
         self.segment_id = 0
@@ -178,8 +213,9 @@ class VoiceControls:
     def prepare_speech(self):
         # Warm loading overlaps Ollama. It never opens/mutes the microphone and
         # opens no output stream until an actual phrase is available.
-        if (self.speech.process is None or not self.speech.alive()
-                or self.tts_profile != self.settings):
+        engine_keys = ("voice", "models_dir", "output_device")
+        if (self.speech.process is None or not self.speech.alive() or self.tts_profile is None
+                or any(getattr(self.tts_profile, key) != getattr(self.settings, key) for key in engine_keys)):
             self.speech.start("speech", self.settings, self.epoch)
             self.tts_profile = self.settings
             self.tts_ready = False
@@ -223,7 +259,9 @@ class VoiceControls:
             self.tts_active = True
             self.app.stop_button.configure(state="normal")
             self.last_speech = time.monotonic()
-            self.app.store.update_message_metadata(self.mid, {"tts_engine": "piper", "voice": self.settings.voice, "audio_status": "synthesizing"})
+            self.app.store.update_message_metadata(self.mid, {"tts_engine": "piper", "voice": self.settings.voice,
+                "speech_profile": self.settings.speech_profile, "tts_speed": self.settings.speed,
+                "audio_status": "synthesizing"})
             if self.listening and self.settings.acoustic_mode == "speakers":
                 if not self.capture.send({"kind": "mute", "value": True}):
                     self.cancel_speech(status="error")
@@ -237,6 +275,7 @@ class VoiceControls:
             self.status.set("Lecture arrêtée : trop de phrases audio en attente (64). Le texte reste enregistré.")
             return
         self.pending_phrases.append(phrase)
+        self.submitted_output.append(str(phrase))
         self.drain_phrases()
 
     def drain_phrases(self):
@@ -254,6 +293,11 @@ class VoiceControls:
 
     def feed_speech(self, text, final=False):
         for segment in self.segmenter.feed(text, final=final):
+            if self.source_offset:
+                segment = replace(segment, start=segment.start + self.source_offset,
+                    end=segment.end + self.source_offset,
+                    events=tuple(replace(event, start=event.start + self.source_offset,
+                        end=event.end + self.source_offset) for event in segment.events))
             if not self.reading:
                 break  # A saturated/cancelled submission invalidates its tail.
             visual_only = getattr(segment, "visual_only", False)
@@ -289,10 +333,14 @@ class VoiceControls:
             if callable(queue_expressions):
                 queue_expressions(presence, self.epoch, self.segment_id,
                                   segment.original, segment.start, segment.end, segment.events)
+            _label, rate, pause_ms = SPEECH_PROFILES[self.settings.speech_profile]
+            if self.tts_profile is not None:
+                rate *= self.settings.speed / self.tts_profile.speed
             self.submit_phrase(SpeechText(segment.text, original=segment.original,
                 display_text=display, start=segment.start, end=segment.end,
                 events=segment.events, segment_id=self.segment_id, response_id=self.epoch,
-                spectrum_events=events, spectrum_mode=mode, caption_plan=plan))
+                spectrum_events=events, spectrum_mode=mode, caption_plan=plan,
+                rate=rate, pause_ms=pause_ms))
 
     def finish_turn(self, status):
         if status != "complete":
@@ -314,6 +362,9 @@ class VoiceControls:
             self.app.root.after_cancel(self.resume_id)
             self.resume_id = None
         had_audio = self.tts_active
+        if had_audio:
+            self.echo_until = time.monotonic() + self.settings.resume_delay_ms / 1000
+            self.echo_tail_output = tuple(dict.fromkeys((*self.recent_output, *self.submitted_output)))
         if had_audio or not self.listening or status == "error":
             self.speech.stop()
             self.tts_ready = False
@@ -324,6 +375,7 @@ class VoiceControls:
         self.pending_segment_ends.clear()
         self.visual_end_pending = None
         self.pending_phrases.clear()
+        self.replay_source = None
         self.segmenter = SpeechBuffer(speak_code=self.settings.speak_code)
         self.end_pending = False
         self.reading = False
@@ -358,7 +410,148 @@ class VoiceControls:
     def schedule_resume(self):
         if self.resume_id is not None:
             self.app.root.after_cancel(self.resume_id)
-        self.resume_id = self.app.root.after(350, lambda epoch=self.epoch: self._resume_microphone(epoch))
+        self.resume_id = self.app.root.after(self.settings.resume_delay_ms,
+            lambda epoch=self.epoch: self._resume_microphone(epoch))
+
+    def replay_response(self, resume=False):
+        """Replay the canonical archive; resume at a DAC-observed segment boundary."""
+        if self.app.operation:
+            self.status.set("Arrêtez la génération avant de relire sa réponse.")
+            return False
+        row = self.app.store.message(self.replay_mid) if self.replay_mid is not None else None
+        if row is None or row["session_id"] != self.app.session_id or row["role"] != "assistant":
+            row = next((item for item in reversed(self.app.store.messages(self.app.session_id))
+                        if item["role"] == "assistant" and item["content"].strip()), None)
+            self.replay_offset = 0
+        if row is None or not row["content"].strip():
+            self.status.set("Aucune réponse à relire dans cette conversation.")
+            return False
+        offset = self.replay_offset if resume and row["id"] == self.replay_mid else 0
+        if offset >= len(row["content"]):
+            self.status.set("Cette réponse a déjà été lue entièrement ; utilisez Répéter.")
+            return False
+        self.cancel_speech()
+        self.reset_turn_latency()
+        self.replay_mid, self.replay_session = row["id"], self.app.session_id
+        self.replay_offset = self.source_offset = offset
+        self.mid, self.reading, self.segment_id = row["id"], True, 0
+        # Establish the loaded engine's base speed before deriving per-segment
+        # ratios, including after an interrupted worker and a slower command.
+        self.prepare_speech()
+        presence = getattr(self.app, "presence", None)
+        begin = getattr(type(presence), "begin_response", None)
+        if callable(begin):
+            begin(presence)
+        self.replay_source, self.replay_cursor = row["content"][offset:], 0
+        self._feed_replay()
+        if self.reading or self.tts_active:
+            self.status.set("Reprise au début du segment interrompu (alignement approximatif)." if resume
+                            else "Relecture locale de la dernière réponse.")
+        return self.reading or self.tts_active
+
+    def _feed_replay(self):
+        """Respect worker backpressure instead of queueing a whole long archive."""
+        for _ in range(4):
+            if self.replay_source is None or not self.reading or len(self.pending_phrases) >= 4:
+                return
+            end = min(len(self.replay_source), self.replay_cursor + 96)
+            chunk = self.replay_source[self.replay_cursor:end]
+            self.replay_cursor = end
+            final = end == len(self.replay_source)
+            self.feed_speech(chunk, final=final)
+            if final:
+                self.replay_source = None
+                if self.tts_active:
+                    self.end_pending = True
+                else:
+                    self.reading, self.mid = False, None
+                return
+
+    def handle_command(self, command):
+        """Shared explicit-button / recognized-microphone actions; no LLM parsing."""
+        try:
+            result = self._handle_command(command)
+            self.record_diagnostic("voice_command" if result else "voice_command_rejected", command)
+            return result
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            self.halt_without_persistence()
+            self.record_diagnostic("voice_command_error", f"{type(exc).__name__}: {exc}")
+            self.status.set("Commande vocale impossible ; audio arrêté, archive préservée. " + str(exc)[:240])
+            return False
+
+    def _handle_command(self, command):
+        if command == "stop":
+            if self.app.operation:
+                self.app.cancel()
+            self.cancel_speech()
+            self.status.set("Lecture et génération arrêtées ; écoute conservée.")
+        elif command in {"repeat", "resume"}:
+            return self.replay_response(resume=command == "resume")
+        elif command == "continue":
+            if self.app.operation or not self.app.continuation_id:
+                self.status.set("Aucune réponse disponible à continuer maintenant.")
+                return False
+            self.app.continue_response()
+        elif command == "slower":
+            speed = max(.5, round(self.settings.speed - .1, 2))
+            candidate = replace(self.settings, speed=speed).validate()
+            self.app.store.set_preference("voice", candidate.to_dict())
+            self.settings = candidate
+            self.status.set(f"Vitesse Piper : {speed:g}× ; appliquée à la prochaine lecture.")
+        elif command == "expand":
+            row = self.app.store.message(self.replay_mid) if self.replay_mid is not None else None
+            if self.app.operation or row is None or row["session_id"] != self.app.session_id or not row["content"].strip():
+                self.status.set("Aucun passage de cette conversation à développer maintenant.")
+                return False
+            # Reuse the context builder and its recorded provenance/budget.
+            excerpt = row["content"][-1500:]
+            self.app.send(text="Développe ce passage de ta réponse (extrait original, sans inventer de faits) :\n\n" + excerpt)
+        else:
+            return False
+        return True
+
+    def open_actions(self):
+        if self.actions_dialog is not None and self.actions_dialog.winfo_exists():
+            self.actions_dialog.lift()
+            return self.actions_dialog
+        dialog = self.actions_dialog = tk.Toplevel(self.app.root)
+        dialog.title("Lecture et commandes vocales")
+        dialog.geometry("440x420")
+        dialog.minsize(300, 320)
+        footer = ttk.Frame(dialog, padding=8)
+        footer.pack(side="bottom", fill="x")
+        ttk.Button(footer, text="Fermer", command=dialog.destroy).pack(fill="x")
+        viewport = ttk.Frame(dialog)
+        viewport.pack(fill="both", expand=True)
+        canvas = tk.Canvas(viewport, highlightthickness=0, bg="#121c29")
+        scroll = ttk.Scrollbar(viewport, command=canvas.yview)
+        scroll.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        canvas.configure(yscrollcommand=scroll.set)
+        body = ttk.Frame(canvas, padding=12)
+        item = canvas.create_window(0, 0, window=body, anchor="nw")
+        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(item, width=event.width))
+        body.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+        def reveal(event):
+            if not str(event.widget).startswith(str(body) + "."):
+                return
+            y = event.widget.winfo_rooty() - body.winfo_rooty()
+            bottom = y + event.widget.winfo_height()
+            if y < canvas.canvasy(0) or bottom > canvas.canvasy(0) + canvas.winfo_height():
+                canvas.yview_moveto(max(0, bottom - canvas.winfo_height()) / max(1, body.winfo_height()))
+        dialog.bind("<FocusIn>", reveal, add="+")
+        dialog.bind("<MouseWheel>", lambda event: canvas.yview_scroll(-3 if event.delta > 0 else 3, "units"))
+        ttk.Label(body, text="Commandes seules : Stop, Répète, Reprends, Continue,\nPlus lentement, Développe ce passage.", wraplength=270).pack(fill="x", pady=4)
+        ttk.Label(body, text="Casque pour interrompre par la voix. En mode haut-parleurs, le micro reste suspendu pendant la lecture. La reprise peut répéter le segment interrompu.", wraplength=270).pack(fill="x", pady=4)
+        dialog.controls = {}
+        for command, label in (("stop", "Stop"), ("repeat", "Répéter"), ("resume", "Reprendre la lecture"),
+                               ("continue", "Continuer la réponse"), ("slower", "Plus lentement"),
+                               ("expand", "Développer ce passage")):
+            button = ttk.Button(body, name=command, text=label, command=lambda key=command: self.handle_command(key))
+            button.pack(fill="x", pady=2)
+            dialog.controls[command] = button
+        dialog.bind("<Escape>", lambda _event: dialog.destroy())
+        return dialog
 
     def _response_owns_visuals(self):
         # Only speech_start is a new user interruption. A late STT status for
@@ -381,7 +574,8 @@ class VoiceControls:
                 if event.payload.get("last_frame_at") is not None:
                     self.last_pcm_at = event.payload["last_frame_at"]
                 if event.kind == "capture_stage":
-                    self.status.set(str(event.payload.get("stage", "Initialisation audio locale…")))
+                    if not self._response_owns_visuals():
+                        self.status.set(str(event.payload.get("stage", "Initialisation audio locale…")))
                     self.record_diagnostic(event.kind, event.payload)
                 self.refresh_diagnostics()
             elif event.kind in {"sample_armed", "sample_saved", "sample_error"}:
@@ -430,6 +624,9 @@ class VoiceControls:
                 if self.microphone_state == "suspended" or event.generation <= self.heard:
                     continue
                 self.record_diagnostic(event.kind, {"tour": event.generation})
+                self.confirmed_turn = event.generation
+                self.echo_turn_output = tuple(dict.fromkeys((*self.recent_output, *self.submitted_output))) if self.tts_active else (
+                    tuple(self.echo_tail_output or self.recent_output) if self.pending_visuals or now < self.echo_until else ())
                 self.heard = event.generation
                 self.cancel_speech()
                 self.transcribing = False
@@ -455,12 +652,28 @@ class VoiceControls:
                         self.set_mic_state("stt", "Transcription locale" if event.kind == "transcribing" else "Attente du STT local")
                     self.notify_presence("thinking")
             elif event.kind == "transcript" and event.generation == self.heard:
+                if self.transcript_handled == event.generation:
+                    self.record_diagnostic("transcript_ignored", "Tour déjà traité")
+                    continue
+                self.transcript_handled = event.generation
                 self.record_diagnostic("transcript", str(event.payload)[:2000])
                 self.transcribing = False
                 if self.listening and self.microphone_state != "suspended":
                     self.set_mic_state("open")
-                if event.payload.strip() and not self.app.operation:
-                    self.app.send(source="voice", text=event.payload.strip())
+                text = event.payload.strip()
+                if self.microphone_state == "suspended":
+                    self.record_diagnostic("voice_command_ignored", "Microphone suspendu : transcription tardive écartée")
+                    continue
+                command = recognize_command(text, confirmed_user_turn=event.generation == self.confirmed_turn)
+                self.confirmed_turn = None
+                if command and command_echo(text, self.echo_turn_output):
+                    self.record_diagnostic("voice_command_ignored", "Commande présente dans la propre lecture ; écho possible")
+                    self.status.set("Commande écartée : écho possible de JARVIS. Réessayez après la lecture.")
+                    continue
+                if command:
+                    self.handle_command(command)
+                elif text and not self.app.operation:
+                    self.app.send(source="voice", text=text)
                     if self.app.operation != "chat":
                         self.app.input.insert("end", event.payload.strip() + "\n")
                         self.status.set("Transcription conservée dans la saisie ; vérifiez le modèle ou le contexte.")
@@ -488,10 +701,12 @@ class VoiceControls:
                 if event.payload:
                     self.diagnostics.update(event.payload)
                     self.record_diagnostic("capture_ready", event.payload)
-                self.status.set("Écoute locale active")
+                if self.microphone_state != "suspended":
+                    self.status.set("Écoute locale active")
                 if self.listening and self.microphone_state != "suspended":
                     self.set_mic_state("open")
-                self.notify_presence("listening")
+                if not self._response_owns_visuals():
+                    self.notify_presence("listening")
             elif event.kind == "error":
                 if not self.diagnostic_failure:
                     self.diagnostic_failure = str(event.payload)
@@ -562,6 +777,8 @@ class VoiceControls:
                 if not self.app.operation:
                     self.app.stop_button.configure(state="disabled")
                 self.status.set("Lecture terminée")
+                self.echo_until = now + self.settings.resume_delay_ms / 1000
+                self.echo_tail_output = tuple(dict.fromkeys((*self.recent_output, *self.submitted_output)))
                 if self.listening:
                     self.schedule_resume()
                 self.visual_end_pending = (self.epoch, "listening" if self.listening else "silent")
@@ -569,6 +786,7 @@ class VoiceControls:
                 self.cancel_speech(status="error")
                 self.status.set(str(event.payload))
         self._drain_visuals(now)
+        self._feed_replay()
         self.drain_phrases()
         if self.end_pending and not self.pending_phrases and self.speech.send(None):
             self.end_pending = False
@@ -584,11 +802,16 @@ class VoiceControls:
         for due, view, epoch in self.pending_visuals[:]:
             if due <= now:
                 if epoch == self.epoch:
+                    self.replay_offset = int(view.get("original_start", self.replay_offset))
+                    spoken = view.get("spoken_text", view.get("text", ""))
+                    if spoken and (not self.recent_output or self.recent_output[-1] != spoken):
+                        self.recent_output.append(spoken)
                     self.notify_presence("jarvis_speaking", signal=view, caption=view)
                 self.pending_visuals.remove((due, view, epoch))
         for due, payload, epoch in self.pending_segment_ends[:]:
             if due <= now:
                 if epoch == self.epoch:
+                    self.replay_offset = int(payload.get("original_end", self.replay_offset))
                     presence = getattr(self.app, "presence", None)
                     complete = getattr(type(presence), "complete_segment", None)
                     if callable(complete):
@@ -682,6 +905,10 @@ class VoiceControls:
                 + f"\nÉtat : {values.get('state', 'en attente')}   |   Tour : {values.get('turn_seconds', 0):.2f} s"
                 + f"\nPCM : {values.get('native_rate', '—')} → {values.get('rate', '—')} Hz ; trames : {values.get('frame_samples', '—')}"
                 + f"\nDernière fin : {values.get('end_reason', '') or 'aucune'}")
+        if "silence_target_ms" in values:
+            measurements += (f"\nSilence PCM : {values.get('silence_elapsed_ms', 0)} / {values['silence_target_ms']} ms"
+                + f" ; reprise candidate : {'oui' if values.get('resume_pending') else 'non'}"
+                + f" ; début confirmé : {values.get('onset_ms', 160)} ms")
         self.diagnostic_summary.set(
             f"Sélectionné : {selected}\nOuvert : {opened_text}"
             + f"\nRMS : {rms_text}{' (ancien)' if rms is not None and not fresh_pcm else ''} · VAD : {vad_text}"
@@ -823,13 +1050,22 @@ class VoiceControls:
         self.tts_active = True
         self.app.stop_button.configure(state="normal")
         self.last_speech = time.monotonic()
-        self.speech.send("Bonjour. Je suis JARVIS. Voici un aperçu de ma voix française.")
-        self.end_pending = True
         if self.listening and self.settings.acoustic_mode == "speakers":
             if self.capture.send({"kind": "mute", "value": True}):
                 self.set_mic_state("suspended", "Aperçu vocal haut-parleurs")
             else:
                 self.set_mic_state("error", "Suspension du microphone impossible")
+                self.cancel_speech(status="error")
+                self.status.set("Aperçu annulé : suspension du microphone impossible.")
+                return
+        _label, rate, pause_ms = SPEECH_PROFILES[self.settings.speech_profile]
+        rate *= self.settings.speed / self.tts_profile.speed
+        if not self.speech.send(SpeechText("Bonjour. Je suis JARVIS. Voici un aperçu de ma voix française.",
+                                         rate=rate, pause_ms=pause_ms)):
+            self.cancel_speech(status="error")
+            self.status.set("Aperçu non transmis ; réessayez.")
+            return
+        self.end_pending = True
 
     def open_settings(self, focus_key=None):
         """One scrollable editor; the profile remains the sole saved voice state."""
@@ -909,15 +1145,18 @@ class VoiceControls:
         options = {"input_device": [""] + [d["key"] for d in devices["input"]],
                    "output_device": [""] + [d["key"] for d in devices["output"]],
                    "voice": list(VOICES), "acoustic_mode": ["speakers", "headphones"],
+                   "speech_profile": [profile[0] for profile in SPEECH_PROFILES.values()],
                    "personality": ["Personnalisé", *PERSONALITY_PROMPTS]}
         fields = [("input_device", "Microphone (vide = défaut Windows)"), ("output_device", "Sortie audio (vide = défaut Windows)"),
                   ("voice", "Voix : Tom homme / Siwis femme"), ("speed", "Vitesse (0.5–2)"),
+                  ("speech_profile", "Profil de lecture (rythme et pauses Piper)"),
                   ("acoustic_mode", "speakers = haut-parleurs / headphones = casque"),
                   ("silence_ms", "Silence de fin de tour (300–2500 ms)"), ("models_dir", "Dossier modèles (vide = profil local)"),
                   ("personality", "Profil (changer remplace l’instruction système)")]
         def field(parent, key, label):
             note(parent, label)
-            values[key] = tk.StringVar(dialog, value=str(getattr(self.settings, key)))
+            value = SPEECH_PROFILES[self.settings.speech_profile][0] if key == "speech_profile" else str(getattr(self.settings, key))
+            values[key] = tk.StringVar(dialog, value=value)
             if key in options:
                 widget = ttk.Combobox(parent, name=key, textvariable=values[key], values=options[key], state="readonly", width=1)
             else:
@@ -949,13 +1188,15 @@ class VoiceControls:
         field(advanced, "vad_threshold", "Seuil de détection vocale (0.3–0.95)")
         note(advanced, "Valeur conservée tant que vous ne la changez pas. Un seuil plus bas peut détecter davantage de bruit ; consultez le diagnostic avant de l’ajuster.", muted=True)
         field(advanced, "cpu_threads", "Threads CPU audio (1–8)")
+        field(advanced, "resume_delay_ms", "Reprise micro après lecture (100–1500 ms)")
+        note(advanced, "350 ms par défaut. Ce délai laisse retomber le son des haut-parleurs ; il ne mesure pas le délai acoustique Bluetooth. Aucun AEC annoncé.", muted=True)
         note(advanced, "Un nombre élevé peut concurrencer les autres traitements locaux. Ce réglage ne change pas le moteur vocal.", muted=True)
 
         def focus_control(key):
             widget = controls.get(key)
             if widget is None:
                 return False
-            if key in {"vad_threshold", "cpu_threads"}:
+            if key in {"vad_threshold", "cpu_threads", "resume_delay_ms"}:
                 toggle_advanced(True)
             dialog.update_idletasks()
             widget.focus_set()
@@ -966,9 +1207,11 @@ class VoiceControls:
 
         def save(close=True):
             try:
-                candidate = replace(self.settings, **{k: v.get() for k, v in values.items() if k not in {"speed", "silence_ms", "vad_threshold", "cpu_threads"}},
+                candidate = replace(self.settings, **{k: v.get() for k, v in values.items() if k not in {"speed", "silence_ms", "vad_threshold", "cpu_threads", "resume_delay_ms", "speech_profile"}},
                                     speed=float(values["speed"].get()), silence_ms=int(values["silence_ms"].get()),
                                     vad_threshold=float(values["vad_threshold"].get()), cpu_threads=int(values["cpu_threads"].get()),
+                                    resume_delay_ms=int(values["resume_delay_ms"].get()),
+                                    speech_profile=next((key for key, profile in SPEECH_PROFILES.items() if profile[0] == values["speech_profile"].get()), None),
                                     speak_code=speak_code.get()).validate()
                 if candidate.personality != self.settings.personality and candidate.personality in PERSONALITY_PROMPTS:
                     model_settings = replace(self.app.settings, system_prompt=PERSONALITY_PROMPTS[candidate.personality])
