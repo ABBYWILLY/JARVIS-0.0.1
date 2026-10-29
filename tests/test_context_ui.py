@@ -55,7 +55,7 @@ class ContextDesktopTests(unittest.TestCase):
     def open_inspector(self):
         self.app.context_button.invoke()
         return next(widget for widget in self.root.winfo_children()
-                    if isinstance(widget, tk.Toplevel) and widget.title() == "Contexte envoyé à Ollama")
+                    if isinstance(widget, tk.Toplevel) and widget.title() == "Contexte et provenance · observations")
 
     def test_send_records_exact_builder_selection_only_on_assistant(self):
         old_mid = self.previous_turn()
@@ -77,7 +77,18 @@ class ContextDesktopTests(unittest.TestCase):
         self.assertEqual(json.loads(rows[-2]["metadata"]), {"final_transcript": "Question ciblée"})
         metadata = json.loads(rows[-1]["metadata"])
         decision = metadata.pop("cognition")
-        self.assertEqual(metadata, {"final_transcript": "Question ciblée", "context": record})
+        captured = metadata.pop("context")
+        self.assertEqual(metadata, {"final_transcript": "Question ciblée"})
+        self.assertEqual({key: captured[key] for key in record}, record)
+        self.assertEqual(set(captured) - set(record), {"delivery", "retrieval_observed", "retrieved_memory_candidates",
+            "system_instructions", "system_instructions_sha256", "system_instructions_truncated", "preparation_ms"})
+        self.assertEqual(captured["delivery"], "prepared")
+        self.assertTrue(captured["retrieval_observed"])
+        self.assertEqual(captured["retrieved_memory_candidates"], [])
+        self.assertEqual(captured["system_instructions"], [])  # Actual outgoing fixture has no system role.
+        self.assertFalse(captured["system_instructions_truncated"])
+        self.assertEqual(len(captured["system_instructions_sha256"]), 64)
+        self.assertGreaterEqual(captured["preparation_ms"], 0)
         self.assertEqual((decision["mode"], decision["origin"], decision["budget"], decision["usage"]),
                          ("fast", "manual", self.app.settings.voice_tokens, "voice"))
         self.assertEqual(self.app.worker.calls[-1][2], outgoing)

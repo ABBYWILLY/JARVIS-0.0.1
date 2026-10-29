@@ -168,6 +168,8 @@ class MarkdownView:
         self.source_menu.destroy()
         self.action_handler = None
         self._action_selection = None
+        self.action_handler = None
+        self._action_selection = None
         self.links.clear()
         self.tags.clear()
         self.widget = None

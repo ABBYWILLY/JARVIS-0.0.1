@@ -87,3 +87,29 @@ le modèle, les budgets et les permissions existants restent applicables.
 Projection synthétique2780caractères : moyenne6,14ms/P957,30ms ; aucun travail
 supplémentaire par frame ou callback audio. Les tests et essais matériels sont
 rapportés séparément, sans déduire une qualité acoustique du test de sélection.
+
+
+## 5D — provenance observable et réception
+
+L’inspecteur de contexte existant reste unique et se rafraîchit sur ouverture
+explicite. Il sépare les candidats récupérés mais exclus, les extraits préparés,
+les références textuelles formelles reliées à une source connue, et l’acceptation
+HTTP. Une réponse contenant un marqueur inconnu n’obtient aucune source inventée.
+L’inclusion et même HTTP200 ne prouvent ni utilisation d’un souvenir, ni vérité,
+ni succès de génération. Les archives anciennes indiquent ce qui n’a pas été
+observé ; les réglages actuels ne reconstituent jamais une instruction passée.
+
+Instructions système effectives : capture privée bornée65 536caractères et
+empreinte, uniquement depuis les messages réellement préparés. Aucun extrait,
+chemin ou instruction n’est envoyé dans le HUD GPU. Les souvenirs modifiés,
+supprimés ou remplacés sont signalés sans réécrire leur extrait historique.
+Pas de seconde mémoire ni nouvelle télémétrie. Statuts HTTP observés après200,
+jamais avant connexion ni sur refusHTTP ; une erreur de flux après200 reste
+un échec de génération avec acceptation observée.
+
+99 tests ciblés :98 réussis,1 modèle réel opt-in ignoré,24,974s. Le contrôle
+Windows intermédiaire a identifié une ligneHUD supplémentaire dépassant les
+boutons à560×400/250%DPI et une fixture audio sans propriétaireApp ; corrigés,
+sans réduire les assertions de visibilité ou désactiver de tests. En mode compact,
+le HUD réutilise le statut existant. Les variables/callbacks Tk supplémentaires
+sont libérés explicitement à la fermeture ; validation Windows finale à suivre.

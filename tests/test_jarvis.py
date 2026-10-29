@@ -195,10 +195,12 @@ class ProtocolTests(unittest.TestCase):
             worker.start("chat", settings, [{"role": "user", "content": "test"}])
             events = []
             deadline = time.monotonic() + 8
-            while not events and time.monotonic() < deadline:
+            while not any(event.kind == "chunk" for event in events) and time.monotonic() < deadline:
                 events.extend(worker.poll())
                 time.sleep(0.02)
-            self.assertEqual(events[0].kind, "chunk")
+            self.assertEqual(events[0].kind, "request_accepted")
+            self.assertGreaterEqual(events[0].payload["accepted_at"], 0)
+            self.assertTrue(any(event.kind == "chunk" for event in events))
             started = time.monotonic()
             worker.stop()
             self.assertLess(time.monotonic() - started, 1)

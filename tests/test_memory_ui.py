@@ -197,7 +197,7 @@ class MemoryDesktopTests(unittest.TestCase):
         self.store.memory.delete(approved, confirmed=True)
         self.app.open_context()
         inspector = next(widget for widget in self.root.winfo_children()
-                         if isinstance(widget, tk.Toplevel) and widget.title() == "Contexte envoyé à Ollama")
+                         if isinstance(widget, tk.Toplevel) and widget.title() == "Contexte et provenance · observations")
         text = inspector.nametowidget("detail.details").get("1.0", "end")
         self.assertIn("État lors de la requête : approuvé", text)
         self.assertIn("entrée supprimée ou indisponible", text)
@@ -212,7 +212,7 @@ class MemoryDesktopTests(unittest.TestCase):
         self.store.update_message_metadata(mid, {"context": {"sources": [source]}})
         self.app.open_context()
         inspector = next(widget for widget in self.root.winfo_children()
-                         if isinstance(widget, tk.Toplevel) and widget.title() == "Contexte envoyé à Ollama")
+                         if isinstance(widget, tk.Toplevel) and widget.title() == "Contexte et provenance · observations")
         text = inspector.nametowidget("detail.details").get("1.0", "end")
         self.assertIn("Citation historique conservée.", text)
         self.assertIn("Original indisponible", text)
@@ -281,7 +281,7 @@ class MemoryDesktopTests(unittest.TestCase):
                          if getattr(widget, "cget", None) and widget.winfo_class() == "TButton"
                          and widget.cget("text") == "Inspecter le contexte envoyé")
         inspector.invoke()
-        self.assertTrue(any(isinstance(widget, tk.Toplevel) and widget.title() == "Contexte envoyé à Ollama"
+        self.assertTrue(any(isinstance(widget, tk.Toplevel) and widget.title() == "Contexte et provenance · observations"
                             for widget in self.root.winfo_children()))
 
 

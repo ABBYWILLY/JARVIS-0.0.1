@@ -117,13 +117,15 @@ class CognitiveDesktopTests(unittest.TestCase):
         self.deliver(Event("chunk", "Hypothèse : il reste local."), Event("done", {"outcome": "complete"}))
         self.app.open_context()
         dialog = next(child for child in self.root.winfo_children()
-                      if isinstance(child, tk.Toplevel) and child.title() == "Contexte envoyé à Ollama")
+                      if isinstance(child, tk.Toplevel) and child.title() == "Contexte et provenance · observations")
+        self.root.update()  # Map the native inspector before simulating a user selection.
         sources = dialog.nametowidget("sources")
         self.assertIn("Votre demande", sources.get(sources.size() - 2))
         self.assertIn("Réponse non vérifiée", sources.get(sources.size() - 1))
         summary = self.root.getvar(dialog.nametowidget("summary").cget("textvariable"))
         self.assertIn("contexte préparé", summary)
-        self.assertIn("ne prouvent ni sa réception", summary)
+        self.assertIn("acceptation HTTP par Ollama non observée", summary)
+        self.assertIn("l’inclusion ne prouve pas l’utilisation", summary)
         for index, category, original in ((sources.size() - 2, "Donnée fournie", "Mon projet se nomme Atlas."),
                                            (sources.size() - 1, "généré non vérifié", "Hypothèse : il reste local.")):
             sources.selection_clear(0, "end")

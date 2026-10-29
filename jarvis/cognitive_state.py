@@ -226,6 +226,13 @@ class CognitiveState:
         self._prune(self._now(now))
         return tuple(dict(event) for event in self._events)
 
+    def record_event(self, code, *, generation=None, now=None):
+        """Observe a non-activity boundary without changing functional state."""
+        if not self._accept(generation, None) or not isinstance(code, str) or not _SAFE_DETAIL.fullmatch(code):
+            return False
+        self._record(code, True, self._now(now))
+        return True
+
 
 def summary(snapshot, settings=None, now=None):
     """Safe peripheral text shared by COMMAND OS, Canvas and the GPU HUD.

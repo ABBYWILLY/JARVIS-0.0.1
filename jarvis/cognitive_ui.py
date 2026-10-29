@@ -18,6 +18,7 @@ class CognitivePanel:
         self.settings = CognitiveHudSettings.from_dict(raw)
         self.last_revision, self.last_at = -1, 0.
         self.window = self.details = None
+        self.compact = False
         self.text = tk.StringVar(app.root)
         self.label = tk.Label(parent, textvariable=self.text, bg="#0b1019", fg="#a6b8cb",
                               anchor="w", font=(app.font_family, 9), takefocus=True, cursor="hand2")
@@ -26,9 +27,11 @@ class CognitivePanel:
         self.label.bind("<Return>", lambda _event: self.open())
 
     def refresh(self, force=False):
+        if self.app is None:
+            return
         now = time.monotonic()
         changed = self.last_revision != self.app.cognitive.revision
-        if not force and not changed and (self.settings.level == "minimal" or not self.settings.show_durations
+        if not force and not changed and (not self.settings.enabled or self.settings.level == "minimal" or not self.settings.show_durations
                                           or now - self.last_at < 1.):
             return
         presence = getattr(self.app, "presence", None)
@@ -44,7 +47,8 @@ class CognitivePanel:
             update = getattr(presence, "update_cognitive", None)
             if callable(update):
                 update(text[:300])
-        if self.settings.enabled:
+        self.app.status_label.configure(textvariable=self.text if self.compact and self.settings.enabled else self.app.status)
+        if self.settings.enabled and not self.compact:
             if not self.label.winfo_manager():
                 self.label.pack(fill="x", pady=(3, 0))
         else:
@@ -52,7 +56,7 @@ class CognitivePanel:
         if self.details is not None and self.details.winfo_exists() and self.details.winfo_viewable():
             lines = ["Activités observées : " + ", ".join(LABELS[key] for key in snapshot["activities"]),
                      "Mesures disponibles : " + json.dumps(snapshot["metrics"], ensure_ascii=False),
-                     "Événements récents — mémoire temporaire, 64 maximum, 15 minutes :"]
+                     "Événements récents — horodatage monotone (s), 64 maximum, 15 minutes :"]
             lines.extend(f"{event['at']:.3f} · tour {event['turn_id']} / génération {event['generation']} · "
                          f"{event['activity']} {'début' if event['active'] else 'fin'} {event['detail']}"
                          for event in self.app.cognitive.events(now=now))
@@ -63,6 +67,26 @@ class CognitivePanel:
                 self.details.insert("1.0", value)
                 self.details.configure(state="disabled")
         self.last_revision, self.last_at = snapshot["revision"], now
+
+    def set_compact(self, compact):
+        """Share the existing status slot when native DPI leaves no spare row."""
+        self.compact = bool(compact)
+        if self.compact:
+            self.label.pack_forget()
+        self.last_revision = -1
+        self.refresh(force=True)
+
+    def close(self):
+        # Destroy Tcl-owned variables/callbacks on Tk's thread, before the
+        # interpreter can be garbage-collected by an unrelated worker thread.
+        if self.app is None:
+            return
+        if self.window is not None and self.window.winfo_exists():
+            self.window.destroy()
+        self.window = self.details = None
+        self.label.destroy()
+        self.text = None
+        self.app = None
 
     def open(self):
         if self.window is not None and self.window.winfo_exists():
@@ -88,6 +112,7 @@ class CognitivePanel:
         controls["level"] = ttk.Combobox(body, name="level", values=list(levels), state="readonly", textvariable=level)
         controls["level"].pack(fill="x", pady=6)
         ttk.Button(body, text="Contexte et provenance de la réponse", command=self.app.open_context).pack(fill="x", pady=4)
+        ttk.Button(body, text="Diagnostic microphone et voix", command=self.app.voice.open_diagnostics).pack(fill="x", pady=4)
         self.details = tk.Text(body, height=10, wrap="word", bg="#192638", fg="#e4edf6", state="disabled")
         self.details.pack(fill="x", pady=8)
         def save():

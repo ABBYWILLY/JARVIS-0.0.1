@@ -50,7 +50,7 @@ def unsupported_thinking(error):
 
 @dataclass(frozen=True)
 class Event:
-    kind: Literal["models", "chunk", "done", "error", "notice"]
+    kind: Literal["models", "chunk", "done", "error", "notice", "request_accepted"]
     payload: object
     version: int = 1
     metadata: dict | None = None
@@ -66,6 +66,7 @@ class Ollama:
         Settings(endpoint=endpoint).validate()
         self.url = urlsplit(endpoint)
         self.timeout = timeout
+        self.on_request_accepted = None
 
     def _request(self, method, path, payload=None):
         # Direct loopback connection: do not forward private chat to HTTP proxies.
@@ -128,6 +129,8 @@ class Ollama:
             connection, response = self._request("POST", "/api/chat", payload)
         visible_content = False
         try:
+            if callable(self.on_request_accepted):
+                self.on_request_accepted(time.monotonic())
             while True:
                 line = response.readline(MAX_LINE + 1)
                 if not line:

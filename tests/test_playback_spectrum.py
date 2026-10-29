@@ -29,6 +29,7 @@ def observe_shared_policy(value, wake, pipe):
 class PlaybackPolicyTests(unittest.TestCase):
     def controls(self):
         voice = object.__new__(VoiceControls)
+        voice.app = SimpleNamespace()
         voice.speech = Mock()
         voice.speech.kind = "speech"
         voice.speech.process = None

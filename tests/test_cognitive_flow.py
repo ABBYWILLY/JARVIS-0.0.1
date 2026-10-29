@@ -255,3 +255,21 @@ class CognitiveFlowTests(unittest.TestCase):
         self.assertIsNot(next_dialog, dialog)
         self.assertEqual(self.root.getvar(next_dialog.controls["level"].cget("textvariable")), "Minimal")
         next_dialog.destroy()
+
+    def test_disabled_diagnostic_hud_has_no_periodic_work_and_close_releases_tk(self):
+        panel = self.app.cognitive_view
+        panel.settings = replace(panel.settings, enabled=False, level="diagnostic")
+        panel.refresh(force=True)
+        panel.last_at -= 100
+        with patch.object(self.app.cognitive, "snapshot") as snapshot:
+            for _ in range(100):
+                panel.refresh()
+        snapshot.assert_not_called()
+        dialog = panel.open()
+        with patch.object(dialog, "destroy", wraps=dialog.destroy) as destroy:
+            self.app.close()
+        destroy.assert_called_once()
+        self.assertIsNone(panel.text)
+        self.assertIsNone(panel.app)
+        self.assertIsNone(panel.window)
+        panel.close()  # Shutdown is idempotent, with no Tcl call after destruction.

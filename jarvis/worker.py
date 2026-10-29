@@ -13,6 +13,7 @@ def run_worker(outbox, operation, profile, messages):
         if operation == "models":
             outbox.put(Event("models", provider.models()))
         elif operation == "chat":
+            provider.on_request_accepted = lambda stamp: outbox.put(Event("request_accepted", {"accepted_at": stamp}))
             for event in provider.chat(messages, settings):
                 outbox.put(event)
         else:

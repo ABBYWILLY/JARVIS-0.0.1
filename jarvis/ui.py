@@ -405,6 +405,7 @@ class App:
         self.input_font.configure(family=self.markdown.body_font.actual("family"),
             size=min(18, self.markdown.body_font.actual("size")) if compact else self.markdown.body_font.actual("size"))
         self.status_label.configure(height=(1 if height < max(500, round(240 * scale)) else 2) if compact else 0)
+        self.cognitive_view.set_compact(compact)
         if compact:
             self.model_heading.pack_forget()
             self.compose_hint.pack_forget()
@@ -867,7 +868,11 @@ class App:
                 "source_hash": selection_origin.source_hash, "revision": selection_origin.revision}
             metadata = {**(metadata or {}), "selection_origin": selection_data}
         self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model, source=source, metadata=metadata)
-        details = {"context": {**context.stats, "sources": context.sources}, "cognition": decision}
+        from .provenance import context_observations
+        details = {"context": {**context.stats, "sources": context.sources,
+                   **context_observations(context, memories if request_settings.targeted_context else None, context_ms)},
+                   "cognition": decision}
+        self._prepared_context = details["context"]
         if selection_origin is not None:
             details["selection_origin"] = selection_data
         if continuation is not None:
@@ -899,8 +904,16 @@ class App:
 
     def open_context(self):
         """Inspect the recorded selection and its originals without altering it."""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Contexte envoyé à Ollama")
+        current = getattr(self, "context_dialog", None)
+        if current is not None and current.winfo_exists():
+            refresh = getattr(current, "refresh_context", None)
+            if callable(refresh):
+                refresh()
+                current.lift()
+                return current
+            current.destroy()
+        dialog = self.context_dialog = tk.Toplevel(self.root)
+        dialog.title("Contexte et provenance · observations")
         dialog.configure(bg=PANEL, padx=16, pady=14)
         dialog.transient(self.root)
         dialog.geometry("820x660")
@@ -982,6 +995,16 @@ class App:
                 write_details("Aucun message historique sélectionné pour cette demande.")
                 return
             source = sources[indices[0]]
+            if source.get("method") == "system_instructions":
+                write_details("Instructions système effectives archivées pour cette requête :\n\n"
+                              + source["excerpt"] + "\n\nEmpreinte SHA-256 : " + source.get("sha256", "—")
+                              + ("\nAttention : capture tronquée." if source.get("truncated") else ""))
+                return
+            if source.get("method") == "retrieved_only":
+                write_details(f"Souvenir #{source.get('memory_id')} récupéré par la recherche, non inséré dans le contexte.\n"
+                              f"Titre lors de la recherche : {source.get('title', '')}\n"
+                              "Ce résultat n’a pas été fourni comme souvenir à Ollama. Son contenu complet n’est pas recopié dans le diagnostic.")
+                return
             if source.get("method") == "memory":
                 memory_id = source.get("memory_id")
                 memory = self.store.memory.get(memory_id) if isinstance(memory_id, int) else None
@@ -991,7 +1014,11 @@ class App:
                         f"État lors de la requête : {labels.get(source.get('status'), source.get('status', '—'))}\nÉtat actuel : {state}\n"
                         f"\nPassage injecté :\n{source.get('excerpt', '')}\n\nProvenance lors de la requête :\n"
                         + json.dumps(source.get("provenance", {}), ensure_ascii=False, indent=2))
-                if memory is not None:
+                condition = {"modified": "contenu modifié depuis la requête", "identity_mismatch": "identité différente : identifiant réutilisé",
+                             "status_changed": "statut modifié depuis la requête", "missing": "souvenir supprimé",
+                             "unchanged": "contenu identique à l’empreinte enregistrée", "unverified": "empreinte ancienne indisponible"}
+                text += "\n\nVérification actuelle : " + condition.get(source.get("current_condition"), "non vérifiée")
+                if memory is not None and source.get("current_condition") != "identity_mismatch":
                     text += "\n\nContenu actuel de la mémoire :\n" + memory["content"]
                 write_details(text)
                 return
@@ -1018,6 +1045,11 @@ class App:
         def show_response(_event=None):
             response_row, metadata = recorded[picker.current()]
             context = metadata["context"]
+            from .provenance import inspect_provenance
+            memory_ids = {source.get("memory_id") for source in context.get("sources", [])
+                          if isinstance(source, dict) and type(source.get("memory_id")) is int}
+            memory_current = {mid: dict(value) for mid in memory_ids if (value := self.store.memory.get(mid)) is not None}
+            report = inspect_provenance(metadata, response_text=response_row["content"], memory_current=memory_current)
             metrics = generation_metrics(metadata.get("generation_metrics"))
             duration = metrics.get("prompt_eval_duration")
             prompt_time = f"{duration / 1_000_000:.1f} ms" if duration is not None else "—"
@@ -1032,12 +1064,19 @@ class App:
                 f"Messages récents : {context.get('recent_messages', '—')} · Rappels ciblés : {context.get('retrieved_messages', '—')} · "
                 f"Résumés extractifs : {context.get('summary_messages', '—')} · Souvenirs : {context.get('memory_count', 0)} · Hors contexte : {context.get('omitted_messages', '—')}\n"
                 f"Prompt réellement évalué par Ollama : {metrics.get('prompt_eval_count', '—')} tokens · Traitement : {prompt_time}\n"
-                "Les références indiquent le contexte préparé pour l'appel ; elles ne prouvent ni sa réception ni l'utilisation ou la vérité de chaque phrase.\n"
+                "Les sources seules ne prouvent pas l’utilisation ou la vérité de chaque phrase.\n"
                 "Réponse, hypothèses et estimations du modèle non vérifiées." + warning_text
                 + ("\nContinuation : " + " ".join(metadata["continuation"].get("limitations", []))
-                   if isinstance(metadata.get("continuation"), dict) else ""))
-            sources[:] = [source for source in context.get("sources", []) if isinstance(source, dict)]
+                   if isinstance(metadata.get("continuation"), dict) else "")
+                + "\n" + report["summary"] + "\n" + report["usage_note"])
+            sources[:] = report["included"]
             current_user = user_inputs.get(response_row["id"])
+            sources.extend({**entry, "method": "retrieved_only", "role": "memory"}
+                           for entry in report["retrieved"] if not entry["included"])
+            if report["instructions_available"]:
+                sources.append({"method": "system_instructions", "role": "system", "message_id": None,
+                    "excerpt": "\n\n".join(entry["content"] for entry in report["system_instructions"]),
+                    "sha256": report["instructions_sha256"], "truncated": report["instructions_truncated"]})
             for row, method in ((current_user, "user_input"), (response_row, "generated_output")):
                 if row is not None:
                     sources.append({"message_id": row["id"], "session_id": row["session_id"], "created": row["created"],
@@ -1046,17 +1085,41 @@ class App:
             for source in sources:
                 label = {"extractive": "Extrait", "memory": "Mémoire approuvée", "user_input": "Votre demande",
                          "generated_output": "Réponse non vérifiée", "continuation_original": "Continuation",
-                         "continuation_extract": "Continuation · extrait"}.get(source.get("method"), "Récent")
-                source_id = source.get("memory_id") if source.get("method") == "memory" else source.get("message_id", "—")
+                         "continuation_extract": "Continuation · extrait", "retrieved_only": "Récupéré, non inséré",
+                         "system_instructions": "Instructions effectives (privé)"}.get(source.get("method"), "Récent")
+                source_id = source.get("memory_id") if source.get("method") in {"memory", "retrieved_only"} else source.get("message_id", "—")
                 source_list.insert("end", f"{label} · #{source_id} · {source.get('role', '—')} · {source.get('excerpt', '')[:85]}")
             if sources:
-                source_list.selection_set(0)
+                first = next((index for index, source in enumerate(sources)
+                              if source.get("method") not in {"system_instructions", "retrieved_only"}), 0)
+                source_list.selection_set(first)
             show_source()
 
         picker.bind("<<ComboboxSelected>>", show_response)
         source_list.bind("<<ListboxSelect>>", show_source)
-        picker.current(len(recorded) - 1)
-        show_response()
+        def refresh_context():
+            refreshed = list(self.store.messages(self.session_id))
+            user_inputs.clear()
+            user_inputs.update({row["id"]: refreshed[index-1] for index, row in enumerate(refreshed)
+                                if index and row["role"] == "assistant" and refreshed[index-1]["role"] == "user"})
+            recorded[:] = [(row, json.loads(row["metadata"])) for row in refreshed if row["role"] == "assistant"
+                           and isinstance(json.loads(row["metadata"]).get("context"), dict)]
+            picker.configure(values=[f"Réponse #{row['id']} · {row['created']} · {row['content'][:45]}" for row, _ in recorded])
+            if recorded:
+                picker.current(len(recorded)-1)
+                show_response()
+            else:
+                source_list.delete(0, "end")
+                write_details("Cette conversation ne contient plus de contexte enregistré.")
+        dialog.refresh_context = refresh_context
+        def released(event):
+            if event.widget is dialog:
+                dialog.refresh_context = None
+                if self.context_dialog is dialog:
+                    self.context_dialog = None
+        dialog.bind("<Destroy>", released, add="+")
+        refresh_context()
+        return dialog
 
     def finish(self, status, text, error=False, read_partial=False):
         if self.operation == "chat" and self.message_id is not None:
@@ -1099,7 +1162,13 @@ class App:
             if self.operation:
                 changed = False
                 for event in self.worker.poll():
-                    if event.kind == "chunk":
+                    if event.kind == "request_accepted" and self.operation == "chat" and self.message_id is not None:
+                        context = {**self._prepared_context, "delivery": "accepted",
+                                   "accepted_at": event.payload.get("accepted_at")}
+                        self._prepared_context = context
+                        self.store.update_message_metadata(self.message_id, {"context": context})
+                        self.cognitive.record_event("request_accepted")
+                    elif event.kind == "chunk":
                         if str(event.payload).strip():
                             self.cognitive.update("waiting", False)
                             self.cognitive.update("generating")
@@ -1267,6 +1336,7 @@ class App:
             self.worker.stop()
             self.root.after_cancel(self.poll_id)
             self.markdown.close()
+            self.cognitive_view.close()
             self.store.close()
             self.navigation_font = None
             self.input_font = None
