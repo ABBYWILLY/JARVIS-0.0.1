@@ -101,10 +101,15 @@ function ConvertTo-NativeArgument([string]$Value) {
     return '"' + (($Value -replace '(\\*)"', '$1$1\"') -replace '(\\+)$', '$1$1') + '"'
 }
 function Invoke-ExeSmoke([string]$Argument, [string]$Executable = $ExePath,
-                         [string[]]$PrefixArguments = @(), [string]$Label = 'exe') {
-    # Every frozen-process check gets its own database, never the user's profile.
+                         [string[]]$PrefixArguments = @(), [string]$Label = 'exe',
+                         [string]$FixtureDirectory = '') {
+    # The optional shared directory is exclusively seeded by the update check
+    # below. Ordinary probes still own a fresh database, never the user profile.
     $PreviousData = $env:JARVIS_DATA_DIR
-    $SmokeData = Join-Path ([IO.Path]::GetTempPath()) ('jarvis-smoke-' + [guid]::NewGuid())
+    $OwnsSmokeData = -not $FixtureDirectory
+    $SmokeData = if ($OwnsSmokeData) {
+        Join-Path ([IO.Path]::GetTempPath()) ('jarvis-smoke-' + [guid]::NewGuid())
+    } else { $FixtureDirectory }
     try {
         $env:JARVIS_DATA_DIR = $SmokeData
         $Arguments = @($PrefixArguments) + @($Argument)
@@ -126,12 +131,38 @@ function Invoke-ExeSmoke([string]$Argument, [string]$Executable = $ExePath,
         if (-not (Test-Path (Join-Path $SmokeData 'jarvis.sqlite3'))) { throw 'Base de données du test absente.' }
     } finally {
         $env:JARVIS_DATA_DIR = $PreviousData
-        if (Test-Path $SmokeData) { Remove-Item -Recurse -Force $SmokeData }
+        if ($OwnsSmokeData -and (Test-Path $SmokeData)) { Remove-Item -Recurse -Force $SmokeData }
     }
 }
 
 # Covers Tk/SQLite and the existing frozen multiprocessing boundary without Ollama.
 Invoke-ExeSmoke '--smoke-test'
+
+# Verify an EXE update/restart against existing archives/settings. This same
+# synthetic profile survives one source and two frozen launches; a read-only
+# verifier checks it after EACH launch so later recovery cannot hide an error.
+$UpdateToken = [guid]::NewGuid().ToString()
+$UpdateData = Join-Path ([IO.Path]::GetTempPath()) ('jarvis-update-smoke-' + $UpdateToken)
+$OwnsUpdateData = $false
+try {
+    & $Python scripts/check_update_data.py seed $UpdateData
+    Check-Exit 'Création de la recette de conservation des données'
+    $OwnsUpdateData = $true
+    Invoke-ExeSmoke -Argument '--smoke-test' -Executable $Python -PrefixArguments @('run.py') -Label 'update-source' -FixtureDirectory $UpdateData
+    & $Python scripts/check_update_data.py verify $UpdateData
+    Check-Exit 'Conservation après démarrage source'
+    foreach ($Attempt in 1..2) {
+        Invoke-ExeSmoke -Argument '--smoke-test' -Label "update-exe-$Attempt" -FixtureDirectory $UpdateData
+        & $Python scripts/check_update_data.py verify $UpdateData
+        Check-Exit "Conservation après démarrage EXE $Attempt"
+    }
+    New-Item -ItemType Directory -Path 'dist\jalon-2\diagnostics' -Force | Out-Null
+    $UpdateReport = Join-Path $PWD ('dist\jalon-2\diagnostics\update-data-' + $UpdateToken + '.json')
+    & $Python scripts/check_update_data.py verify $UpdateData --report $UpdateReport
+    Check-Exit 'Rapport de conservation des données'
+} finally {
+    if ($OwnsUpdateData -and (Test-Path $UpdateData)) { Remove-Item -Recurse -Force $UpdateData }
+}
 if ($WithVoice) {
     # Adds native audio imports and packaged Silero ONNX through the frozen worker.
     Invoke-ExeSmoke '--voice-smoke-test'

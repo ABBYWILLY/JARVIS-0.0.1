@@ -161,3 +161,21 @@ preuve de saccade ou latence de succès nécessitant de modifier Piper/Ollama da
 le cloud : pas de raccourcissement artificiel des réponses ni d'optimisation
 spéculative de ce parcours. Confirmation GPU finale : 50 tests Tk 9/EGL et
 23 tests Tk 8.6 réussis, y compris annulation de l'aperçu pendant panne.
+
+## 7E — packaging et conservation des données
+
+[Recette Windows/RTX](LOT-7-WINDOWS.md). Le build conserve les probes natifs
+voix/Silero, démarrage sans Ollama/appareil et GPU source/EXE. Il ajoute une
+archive synthétique préremplie utilisée successivement par les sources puis
+deux démarrages du même EXE : comparaison exacte après **chaque** lancement,
+préférences et champs inconnus, mémoire approuvée, FTS, intégrité et récupération
+du fragment. Le vérificateur est en lecture seule pour ne pas masquer un défaut
+de récupération. Rapport `diagnostics/update-data-<GUID>.json` dans l'artefact.
+Seul le dossier synthétique réservé par le test est supprimé ensuite.
+
+Huit tests réussis en 1,460 s, dont deux vrais démarrages source sur le même
+profil et refus des altérations de chaque table/FTS. PowerShell et EXE non
+exécutables ici : compilation et probes Windows confiés aux workflows du SHA
+publié. Une CI verte n'établira ni la qualité acoustique ni le budget RTX sous
+charge. Données/modèles hors EXE, binaire non signé, limites et procédure de
+mise à jour dans le guide. Suite complète et bilan au SHA final en 7F.
