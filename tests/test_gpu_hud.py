@@ -127,6 +127,24 @@ class HudEglTests(unittest.TestCase):
         self.assertEqual(self.hud._size, size)
         self.assertLessEqual(self.hud.allocation_bytes, 4096 * 1024 * 4)
 
+    def test_cognitive_text_changes_only_the_header_and_reuses_the_atlas(self):
+        source = {"state": "thinking", "caption": "Sous-titres préservés 😊"}
+        original = self.draw(source)
+        texture, size = self.hud.texture, self.hud._size
+        source["cognitive"] = "Transcription locale · modèle Qwen · Rapide"
+        cognitive = self.draw(source)
+        self.assertNotEqual(original, cognitive)
+        self.assertIs(self.hud.texture, texture)
+        self.assertEqual(self.hud._size, size)
+        # OpenGL readback starts at the bottom: the top band is at the end.
+        unchanged_bytes = (640 - layout(960, 640)["header_height"]) * 960 * 3
+        self.assertEqual(original[:unchanged_bytes], cognitive[:unchanged_bytes])
+        uploads = self.hud.upload_count
+        self.assertEqual(cognitive, self.draw(source))
+        self.assertEqual(self.hud.upload_count, uploads)
+        source["cognitive"] = ""
+        self.assertEqual(original, self.draw(source))
+
     def test_hidpi_text_uses_physical_pixels_and_releases_atlas_on_monitor_change(self):
         # The HUD goes directly to presentation pixels, never the scene's
         # adaptive/bloom resolution. A 4K monitor must not stretch 1920px text.

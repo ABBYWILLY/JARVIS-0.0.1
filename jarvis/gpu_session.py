@@ -120,6 +120,11 @@ def validate_packet(packet):
         value = packet.get(key, {})
         if not isinstance(value, dict):
             raise ValueError(f"{key} attend un dictionnaire.")
+        if key == "hud" and "cognitive" in value:
+            status = value["cognitive"]
+            if (not isinstance(status, str) or len(status) > 300
+                    or any(ord(char) < 32 for char in status)):
+                raise ValueError("Le résumé cognitif PRESENCE attend au plus 300 caractères sur une ligne.")
         result[key] = _bounded(value)
     for key in ("pcm_at", "frame_at", "expression_until"):
         if packet.get(key) is not None:

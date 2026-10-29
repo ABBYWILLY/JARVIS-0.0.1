@@ -1,8 +1,8 @@
 # JARVIS 0.0.1 — LOT 5
 ## COGNITIVE HUD 1.0 — Transparence cognitive, interactions intelligentes et contrôle contextuel
 
-**Dépôt :** `ABBYWILLY/JARVIS-0.0.1`  
-**Branche :** `feat/jalon-2-voice-presence`  
+**Dépôt :** `ABBYWILLY/JARVIS-0.0.1`
+**Branche :** `feat/jalon-2-voice-presence`
 **Dernier commit connu :** `1985a99` — vérifier le HEAD actuel avant de commencer.
 
 **Ne jamais modifier `main`.**

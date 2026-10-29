@@ -1,3 +1,15 @@
+# LOT 5 — Cognitive HUD en cours, 29 octobre 2026
+
+5A : contrat observable 47ec206, CI Windows/prototype vertes. 5B : mêmes états
+sur COMMAND OS, Canvas et GPU ; préférences et diagnostic borné, tests de flux,
+DPI et caches réussis. Contrôle architectural décrit dans COGNITIVE-HUD.md.
+LOT 4 jugé satisfaisant par l’utilisateur ; GPU 3.1 visuellement approuvée.
+Ne pas les redévelopper. Benchmarks RTX/Ollama/voix physiques encore à effectuer.
+Suite à intégrer : 5C actions sur sélections fiables, 5D provenance, 5E preuves,
+mesures et CI finale. Ne pas modifier main ni commencer LOT 7/agentique.
+
+---
+
 # LOT 4 — Voix naturelle V1, livraison logicielle du 29 octobre 2026
 
 PRESENCE GPU 3.1 approuvée visuellement par l’utilisateur ; rendu conservé sans

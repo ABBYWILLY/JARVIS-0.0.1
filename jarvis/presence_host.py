@@ -363,6 +363,14 @@ class IntegratedPresence(PresenceView):
                 self._gpu_scene.clear_output_energy()
         super().update_operation(key, detail)
 
+    def update_cognitive(self, text):
+        changed = super().update_cognitive(text)
+        if changed and self.active_engine == "gpu" and self._gpu_ready and self._gpu_visible:
+            # Reuse the bounded visual transport. Hidden windows retain only
+            # the latest summary and acquire no new callback or worker.
+            self._render()
+        return changed
+
     def _render(self):
         if self.active_engine != "gpu":
             return super()._render()
@@ -409,6 +417,7 @@ class IntegratedPresence(PresenceView):
                 "core_tau": art.transition_ms/1000},
             "expression_until": until, "window": {"width": 960, "height": 640, "mini": self.settings.mini_mode},
             "hud": {"state": self.state, "microphone": self.microphone_state,
+                "cognitive": self.cognitive_text,
                 "caption": self.caption_text if self.settings.subtitles else "",
                 "caption_copy": self.caption_text, "caption_marks": marks,
                 "caption_accent": tuple(round(channel*255) for channel in scene.color),

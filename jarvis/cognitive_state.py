@@ -182,6 +182,17 @@ class CognitiveState:
         self._record(activity, active, stamp, detail)
         return True
 
+    def attach_context(self, turn_id, *, generation=None, policy="", budget=None, sources=(), now=None):
+        """Bind a prepared request to its newly created archive row, without a new turn."""
+        if not self._accept(generation, None):
+            return False
+        self.turn_id = self._turn(turn_id)
+        self.policy = _label(policy, 64)
+        self.budget = budget if type(budget) is int and 0 < budget <= 1_000_000 else None
+        self.source_count = len(sources) if isinstance(sources, (list, tuple)) else 0
+        self._record("context_bound", True, self._now(now))
+        return True
+
     def observe_metrics(self, values, *, generation=None, turn_id=None, now=None):
         if not self._accept(generation, turn_id) or not isinstance(values, dict):
             return False

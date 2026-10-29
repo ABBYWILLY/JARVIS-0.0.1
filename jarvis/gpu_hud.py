@@ -222,7 +222,7 @@ class GpuHud:
         strings = tuple(str(hud.get(key, ""))[:limit] for key, limit in (
             ("state", 64), ("engine", 120), ("microphone", 180), ("caption", 4096),
             ("caption_note", 160), ("operation", 200), ("preview", 160), ("shortcuts", 200),
-            ("performance", 300)))
+            ("cognitive", 300), ("performance", 300)))
         if not diagnostic:
             strings = strings[:-1] + ("",)
         marks = tuple((mark[0], mark[1]) for mark in hud.get("caption_marks", ())[:64]
@@ -242,7 +242,7 @@ class GpuHud:
         pad = max(5, round(12 * scale))
         heading, body, small = self._font(17 * scale), self._font(19 * scale), self._font(12 * scale)
         cyan, white, muted = (93, 227, 247, 255), (229, 241, 250, 255), (162, 184, 203, 255)
-        state, engine, microphone, caption, note, operation, preview, shortcuts, performance = strings
+        state, engine, microphone, caption, note, operation, preview, shortcuts, cognitive, performance = strings
         # These are genuine hit-tested/focusable actions sent to JARVIS; only
         # the parent may change/persist the engine. No second window is opened
         # by the HUD. The filled segment indicates the actually active engine.
@@ -260,7 +260,7 @@ class GpuHud:
             draw.text((x, y), label, font=font, fill=cyan if chosen else white)
         title_left = (spec["engine_buttons"][-1][1][2] + max(5, round(10 * spec["scale"]))) * ratio
         compact = width < 540 * max(.8, spec["scale"])
-        title = ("GPU · " if compact else "PRESENCE · 2.5D GPU · ") + _STATES.get(state, state or "Repos")
+        title = ("GPU · " if compact else "PRESENCE · 2.5D GPU · ") + (cognitive or _STATES.get(state, state or "Repos"))
         fitting_title = _lines(title, heading, atlas_width - title_left - pad, 1)
         if fitting_title:
             draw.text((title_left, 4), fitting_title[0], font=heading, fill=cyan)

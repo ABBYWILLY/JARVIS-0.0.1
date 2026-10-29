@@ -51,6 +51,8 @@ ROUTES = (
           "police famille taille échelle densité compact confortable monospace code tableau accent gras italique souligné surligné barré markdown", level="personalize"),
     Route("metrics", FAMILIES[3], "Afficher / masquer les métriques", "Basculer les mesures réelles sous les réponses : TTFT, débit et durée.",
           "tokens seconde ttft durée génération modèle statistiques métriques"),
+    Route("cognitive_hud", FAMILIES[3], "Cognitive HUD", "État observé, niveau Minimal/Standard/Diagnostic et actions de sélection.",
+          "hud cognitif activité état minimal standard diagnostic durées modèle politique provenance sélection"),
     Route("navigation", FAMILIES[3], "Replier / ouvrir la barre latérale", "Basculer le menu ; Conversation et PRESENCE restent accessibles.",
           "menu navigation barre latérale réduire sidebar"),
     Route("ollama", FAMILIES[4], "Connexion Ollama et modèle", "Adresse locale dans les paramètres ; modèle installé choisi dans COMMAND OS.",
@@ -346,7 +348,7 @@ class ControlCenter:
                    "gpu": app.presence.open_gpu_settings, "generation": app.open_settings,
                    "memory": app.open_memory, "context": app.open_context,
                    "voice": app.voice.open_settings, "diagnostics": app.voice.open_diagnostics,
-                   "voice_actions": app.voice.open_actions,
+                   "voice_actions": app.voice.open_actions, "cognitive_hud": app.open_cognitive_settings,
                    "reading": app.open_conversation_settings, "navigation": app.toggle_sidebar}
         if key in actions:
             actions[key]()

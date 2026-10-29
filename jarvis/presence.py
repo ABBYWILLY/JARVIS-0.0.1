@@ -504,6 +504,9 @@ class PresenceView:
         self._scenario_index = None
         self.microphone_state = "disabled"
         self.microphone_detail = ""
+        # Presentation only: the conversation owner supplies this safe summary.
+        # It never changes the audio/morphological state or opens a new timer.
+        self.cognitive_text = ""
         self._accent = AccentTransition(self._target_accent())
         self.operation = "inactive"
         self.operation_detail = ""
@@ -1210,6 +1213,19 @@ class PresenceView:
             else:
                 self._update_overlays(self.canvas.winfo_width())
 
+    def update_cognitive(self, text):
+        """Consume an already projected, non-sensitive cognitive status."""
+        if not isinstance(text, str):
+            raise ValueError("Le résumé cognitif doit être du texte.")
+        text = " ".join(text.split())
+        text = text if len(text) <= 300 else text[:299] + "…"
+        if text == self.cognitive_text:
+            return False
+        self.cognitive_text = text
+        if self._visible():
+            self._update_overlays(self.canvas.winfo_width())
+        return True
+
     def _render_timing(self, width, height):
         key = (width, height, self.settings, tuple(sorted(self.timings.items())),
                tuple(self.timing_history), self.state == "dormant")
@@ -1412,11 +1428,25 @@ class PresenceView:
         if mic == "disabled" and listening and not hasattr(self.app.voice, "microphone_state"):
             mic = "open"
         key = (width, self.state, listening, mic, self.settings, self.tone.name,
-               self.dominant_tone.name, self._preview_text, self.operation, self.operation_detail)
+               self.dominant_tone.name, self._preview_text, self.operation, self.operation_detail,
+               self.cognitive_text)
         if key != self._overlay_key:
             self._overlay_key = key
-            self.state_label.configure(text=("APERÇU HORS LIGNE · " if self._preview_text is not None else "")
-                                       + STATE_LABELS[self.state] + (" · SOUS-TITRES ≈" if self.state == "jarvis_speaking" else ""))
+            status = (("APERÇU HORS LIGNE · " if self._preview_text is not None else "")
+                      + STATE_LABELS[self.state] + (" · SOUS-TITRES ≈" if self.state == "jarvis_speaking" else ""))
+            if self.cognitive_text and self._preview_text is None:
+                status = self.cognitive_text
+                family = tkfont.Font(root=self.window, font=self.state_label.cget("font"))
+                available = max(20, width * .91)
+                if self.settings.mini_mode:
+                    switch = getattr(self, "_engine_bar", None)
+                    left = 12 if switch is None else 24 + switch.winfo_reqwidth()
+                    available = max(20, width * .97 - self.header_controls.winfo_reqwidth() - left - 8)
+                while status and family.measure(status + "…") > available:
+                    status = status[:-1]
+                if status != self.cognitive_text:
+                    status += "…"
+            self.state_label.configure(text=status)
             self.mic_label.configure(text=MIC_LABELS[mic] + (" · écoute maintenue" if mic == "error" and listening else " · LOCAL"),
                                      fg=readable_accent(OPERATIONAL["error"]["color"], self.settings.background)
                                      if mic == "error" else palette(self.settings.background)["muted"])

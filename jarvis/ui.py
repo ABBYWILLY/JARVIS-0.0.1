@@ -1,6 +1,7 @@
 """COMMAND OS: Tk main thread owns widgets/storage; inference is isolated."""
 import json
 import sqlite3
+import time
 import tkinter as tk
 from dataclasses import replace
 from tkinter import font, messagebox, ttk
@@ -72,6 +73,9 @@ class App:
         self.dead_polls = 0
         self.closed = False
         self.settings = store.settings()
+        from .cognitive_state import CognitiveState
+        self.cognitive = CognitiveState()
+        self.cognitive.begin(None, 0, model=self.settings.model)
         families = {family.casefold(): family for family in font.families(root)}
         self.font_family = next((families[name] for name in ("segoe ui", "dejavu sans", "helvetica") if name in families), "TkDefaultFont")
         root.title("JARVIS UNHINGED NEXT · 0.0.1")
@@ -217,6 +221,8 @@ class App:
         self.status_label.bind("<Button-1>", self.show_status)
         self.status_label.bind("<Return>", self.show_status)
         top.bind("<Configure>", lambda e: self.status_label.configure(wraplength=max(200, e.width - 40)))
+        from .cognitive_ui import CognitivePanel
+        self.cognitive_view = CognitivePanel(self, top)
 
         chat_frame = tk.Frame(root, bg=BG, padx=20)
         chat_frame.grid(row=2, column=1, sticky="nsew")
@@ -625,6 +631,24 @@ class App:
         self.status_label.configure(fg=OPERATIONAL[key]["color"])
         if hasattr(self, "presence"):
             self.presence.update_operation(key, text)
+        if error:
+            self.cognitive.update("error", detail="app_error")
+
+    def observe_audio_activity(self, activity=None, active=True, *, epoch=None, generation=None, metrics=None):
+        """Accept observations only after VoiceControls' own epoch/PCM guards."""
+        if epoch is not None and epoch != self.voice.epoch:
+            return False
+        changed = self.cognitive.update(activity, active, generation=generation) if activity is not None else False
+        if metrics:
+            changed |= self.cognitive.observe_metrics(metrics, generation=generation)
+        return changed
+
+    def begin_audio_observation(self, mid=None):
+        self.cognitive.begin(mid, self.cognitive.generation + 1, model=self.settings.model)
+        return self.cognitive.generation
+
+    def open_cognitive_settings(self):
+        return self.cognitive_view.open()
 
     def append(self, text, tag=None):
         at_bottom = self.chat.yview()[1] >= 0.98
@@ -652,6 +676,7 @@ class App:
         if metrics != self.response_metrics:
             self.store.update_message_metadata(self.message_id, {"generation_metrics": metrics})
             self.response_metrics = metrics
+            self.cognitive.observe_metrics(metrics)
 
     def render_session(self):
         self.markdown.reset()
@@ -754,6 +779,8 @@ class App:
     def refresh_models(self):
         if self.operation:
             return
+        self.cognitive.begin(None, self.cognitive.generation + 1, model=self.settings.model)
+        self.cognitive.update("waiting")
         self.worker.start("models", self.settings)
         self.busy("models")
         self.set_status("Connexion à Ollama…")
@@ -771,6 +798,9 @@ class App:
         if not self.settings.model or self.settings.model not in self.models:
             self.set_status("Choisissez un modèle installé. Cliquez sur Actualiser ; si la liste est vide, utilisez « ollama pull qwen2.5:3b ».", True)
             return
+        self.cognitive.begin(None, self.cognitive.generation + 1, model=self.settings.model)
+        self.cognitive.update("context")
+        prepared_at = time.monotonic()
         try:
             from .cognition import build_continuation, continuation_origin, route_request
             records = self.store.messages(self.session_id) if continuation is not None else None
@@ -786,14 +816,20 @@ class App:
                        if continuation is not None else ContextBuilder(request_settings).build(
                            self.store.context_records(self.session_id) + [{"role": "user", "content": text}], memories=memories))
         except ValueError as exc:
+            self.cognitive.update("context", False)
             self.set_status(str(exc), True)
             return
+        context_ms = (time.monotonic() - prepared_at) * 1000
+        self.cognitive.update("context", False)
         metadata = {"final_transcript": text} if source == "voice" else None
         self.message_id = self.store.begin_turn(self.session_id, text, self.settings.model, source=source, metadata=metadata)
         details = {"context": {**context.stats, "sources": context.sources}, "cognition": decision}
         if continuation is not None:
             details["continuation"] = context.stats["continuation"]
         self.store.update_message_metadata(self.message_id, details)
+        self.cognitive.attach_context(self.message_id, policy=decision.get("mode", ""),
+                                      budget=decision.get("budget"), sources=context.sources)
+        self.cognitive.observe_metrics({"context_ms": context_ms})
         self.voice.begin_turn(self.message_id, source)
         self.response = ""
         self.response_metrics = {}
@@ -802,6 +838,7 @@ class App:
         self.reload_history()
         self.render_session()
         self.worker.start("chat", request_settings, context.messages)
+        self.cognitive.update("waiting")
         self.busy("chat")
         omitted = context.stats["omitted_messages"]
         self.set_status("Génération locale…" + (f" {omitted} anciens messages hors contexte actif, conservés dans l’historique." if omitted else ""))
@@ -991,6 +1028,12 @@ class App:
             self.append("Texte généré non vérifié · Contexte / provenance dans le menu.\n", "policy")
             self.append(metrics_label(self.response_metrics) + "\n", "metrics")
         self.worker.stop()
+        self.cognitive.update("waiting", False)
+        self.cognitive.update("generating", False)
+        if error or status == "error":
+            self.cognitive.update("error", detail="inference_error")
+        elif status in {"cancelled", "interrupted"} and not read_partial:
+            self.cognitive.update(status)
         self.busy(None)
         if not self.voice.tts_active:
             self.voice.notify_presence("listening" if self.voice.listening else "silent")
@@ -1011,6 +1054,9 @@ class App:
                 changed = False
                 for event in self.worker.poll():
                     if event.kind == "chunk":
+                        if str(event.payload).strip():
+                            self.cognitive.update("waiting", False)
+                            self.cognitive.update("generating")
                         self.remember_generation_metrics(event.metadata)
                         self.response += event.payload
                         changed = True
@@ -1053,6 +1099,8 @@ class App:
                     self.dead_polls += 1
                     if self.dead_polls > 5:
                         self.finish("error", "Le processus Ollama s’est arrêté sans résultat. Actualisez ou réessayez ; l’historique est conservé.", True)
+            if not self.closed:
+                self.cognitive_view.refresh()
         except Exception as exc:
             self.callback_error(type(exc), exc, exc.__traceback__)
         if not self.closed:

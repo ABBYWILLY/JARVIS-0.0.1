@@ -89,6 +89,13 @@ class VoiceControls:
         if hasattr(self.app, "presence"):
             self.app.presence.update_event(state, signal=signal, caption=caption)
 
+    def observe_activity(self, activity=None, active=True, *, response=True, metrics=None):
+        observer = getattr(type(self.app), "observe_audio_activity", None)
+        if callable(observer):
+            observer(self.app, activity, active, epoch=self.epoch,
+                     generation=getattr(self, "cognitive_generation", None) if response else None,
+                     metrics=metrics)
+
     def set_mic_state(self, state, detail=""):
         """Publish capture status separately from the emotional/audio visual."""
         if state not in self.MICROPHONE_STATES:
@@ -99,6 +106,13 @@ class VoiceControls:
         update = getattr(getattr(self.app, "presence", None), "update_microphone", None)
         if changed and callable(update):
             update(state, detail=detail)
+        if changed:
+            self.observe_activity("audio_loading", state == "starting", response=False)
+            self.observe_activity("listening", state in {"open", "voice", "stt"}, response=False)
+            self.observe_activity("user_speaking", state == "voice", response=False)
+            self.observe_activity("transcribing", state == "stt", response=False)
+            if state == "error":
+                self.observe_activity("error", response=False)
 
     def toggle(self):
         if self.listening:
@@ -193,6 +207,7 @@ class VoiceControls:
 
     def begin_turn(self, mid, source):
         self.cancel_speech()
+        self.cognitive_generation = getattr(getattr(self.app, "cognitive", None), "generation", None)
         presence = getattr(self.app, "presence", None)
         reset_field = getattr(type(presence), "begin_response", None)
         if callable(reset_field):
@@ -217,6 +232,7 @@ class VoiceControls:
         if (self.speech.process is None or not self.speech.alive() or self.tts_profile is None
                 or any(getattr(self.tts_profile, key) != getattr(self.settings, key) for key in engine_keys)):
             self.speech.start("speech", self.settings, self.epoch)
+            self.observe_activity("synthesis")
             self.tts_profile = self.settings
             self.tts_ready = False
             self.last_speech = time.monotonic()
@@ -257,6 +273,7 @@ class VoiceControls:
             self.prepare_speech()
             self.record_diagnostic("tts_engine", {"ready_before_phrase": self.tts_ready})
             self.tts_active = True
+            self.observe_activity("synthesis")
             self.app.stop_button.configure(state="normal")
             self.last_speech = time.monotonic()
             self.app.store.update_message_metadata(self.mid, {"tts_engine": "piper", "voice": self.settings.voice,
@@ -369,6 +386,11 @@ class VoiceControls:
             self.speech.stop()
             self.tts_ready = False
         self.tts_active = False
+        self.observe_activity("speaking", False)
+        self.observe_activity("synthesis", False)
+        if had_audio:
+            self.observe_activity("error" if status == "error" else "interrupted")
+        self._cognitive_segment = None
         self.playing_sample = False
         self.epoch += 1
         self.pending_visuals.clear()
@@ -432,6 +454,9 @@ class VoiceControls:
             return False
         self.cancel_speech()
         self.reset_turn_latency()
+        begin_observation = getattr(type(self.app), "begin_audio_observation", None)
+        if callable(begin_observation):
+            self.cognitive_generation = begin_observation(self.app, row["id"])
         self.replay_mid, self.replay_session = row["id"], self.app.session_id
         self.replay_offset = self.source_offset = offset
         self.mid, self.reading, self.segment_id = row["id"], True, 0
@@ -724,6 +749,8 @@ class VoiceControls:
             self.last_speech = now
             if event.kind == "tts_ready":
                 self.tts_ready = True
+                if not self.tts_active:
+                    self.observe_activity("synthesis", False)
                 self.record_diagnostic("tts_loaded", event.payload)
                 if event.generation == self.epoch and event.payload:
                     self.set_latency("Chargement Piper (worker)", event.payload["load_ms"])
@@ -802,6 +829,9 @@ class VoiceControls:
         for due, view, epoch in self.pending_visuals[:]:
             if due <= now:
                 if epoch == self.epoch:
+                    self._cognitive_segment = (epoch, view.get("segment_id"))
+                    self.observe_activity("synthesis", False)
+                    self.observe_activity("speaking")
                     self.replay_offset = int(view.get("original_start", self.replay_offset))
                     spoken = view.get("spoken_text", view.get("text", ""))
                     if spoken and (not self.recent_output or self.recent_output[-1] != spoken):
@@ -811,6 +841,9 @@ class VoiceControls:
         for due, payload, epoch in self.pending_segment_ends[:]:
             if due <= now:
                 if epoch == self.epoch:
+                    if getattr(self, "_cognitive_segment", None) == (epoch, payload.get("segment_id")):
+                        self.observe_activity("speaking", False)
+                        self.observe_activity("synthesis", self.tts_active)
                     self.replay_offset = int(payload.get("original_end", self.replay_offset))
                     presence = getattr(self.app, "presence", None)
                     complete = getattr(type(presence), "complete_segment", None)
@@ -821,11 +854,15 @@ class VoiceControls:
             epoch, state = self.visual_end_pending
             self.visual_end_pending = None
             if epoch == self.epoch:
+                self.observe_activity("speaking", False)
+                self.observe_activity("synthesis", False)
                 self.notify_presence(state)
 
     def record_diagnostic(self, kind, payload):
         stamp = time.strftime("%H:%M:%S")
         self.diagnostic_events.append(f"{stamp} · {kind} · {payload}")
+        if kind in {"stt_error", "capture_error", "voice_command_error"}:
+            self.observe_activity("error", response=False)
         self.refresh_diagnostics()
 
     def reset_turn_latency(self):
@@ -836,6 +873,12 @@ class VoiceControls:
 
     def set_latency(self, label, milliseconds):
         self.latencies[label] = max(0, round(milliseconds))
+        key = {"Whisper : transcription": "stt_ms", "Silence de fin de tour (PCM)": "silence_ms",
+               "Piper : synthèse du premier bloc": "piper_ms",
+               "Phrase TTS → premier PCM (DAC estimé)": "tts_first_pcm_ms",
+               "Fin de tour détectée → premier PCM (DAC estimé)": "end_to_pcm_estimate_ms"}.get(label)
+        if key:
+            self.observe_activity(metrics={key: self.latencies[label]})
         self.refresh_diagnostics()
         self.publish_timing()
 
@@ -1009,6 +1052,9 @@ class VoiceControls:
             self.status.set("Aucun échantillon demandé et enregistré dans cette session.")
             return
         self.cancel_speech()
+        begin_observation = getattr(type(self.app), "begin_audio_observation", None)
+        if callable(begin_observation):
+            self.cognitive_generation = begin_observation(self.app)
         self.playing_sample = self.tts_active = True
         self.tts_ready = False
         self.tts_profile = None
@@ -1044,6 +1090,9 @@ class VoiceControls:
         if hasattr(self.app, "presence") and self.app.presence.state == "dormant":
             self.app.presence.wake()
         self.cancel_speech()
+        begin_observation = getattr(type(self.app), "begin_audio_observation", None)
+        if callable(begin_observation):
+            self.cognitive_generation = begin_observation(self.app)
         self.reset_turn_latency()
         self.tts_requested_at = time.monotonic()
         self.prepare_speech()

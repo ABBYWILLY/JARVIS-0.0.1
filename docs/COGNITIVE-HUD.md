@@ -42,3 +42,22 @@ recette utilisateur, jamais une conséquence d’un test simulé vert.
 
 5A : contrat pur, 14 tests réussis (générations, concurrence, bornes, confidentialité,
 préférences). Aucune interrogation de périphérique/SQLite ou minuterie créée.
+
+
+## 5B — intégration et contrôle architectural
+
+Même contrat consommé dans COMMAND OS, Canvas et GPU ; affichage désactivable,
+Minimal/Standard/Diagnostic, réglages dans le Centre de contrôle existant.
+Les observations viennent des propriétaires App et VoiceControls, après leurs
+gardes de génération et aux échéances PCM. Les activités peuvent se chevaucher.
+Journal consultable explicitement ; aucune copie de souvenirs/instructions au GPU.
+
+Contrôle avant 5C/5D : tests de flux Tk 9/Tk 8.6 réussis ; 100 rafraîchissements
+inchangés ne créent ni snapshot supplémentaire, ni lecture SQLite, ni timer.
+Vues masquées mises en cache ; durées rafraîchies au plus une fois par seconde
+via la boucle existante. Tests OpenGL : géométrie centrale et pied de fenêtre
+identiques avec/sans HUD, atlas réutilisé et allocation propre inchangée.
+Les séquences audio, interruptions et générations périmées sont couvertes.
+Une fixture qui injectait directement un faux statut de vue a été corrigée
+pour alimenter le vrai propriétaire App, qui restait la source de vérité.
+La fluidité RTX réelle ne se déduit pas de Mesa et reste à mesurer sur le PC.
