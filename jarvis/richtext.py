@@ -232,15 +232,19 @@ def _speech_text(text):
 
 
 class _Scanner:
-    def __init__(self, text, final, speak_code):
+    def __init__(self, text, final, speak_code, source_map=False):
         self.text, self.final, self.speak_code = text, final, speak_code
         self.spans, self.speech, self.events = [], [], []
         self.protected, self.incomplete = [], []
+        # Source projection is built only on explicit selection actions. The
+        # ordinary display/stream/speech path allocates no per-character map.
+        self.source_map = [] if source_map else None
+        self.add = self._add_mapped if source_map else self._add_plain
         self.expression_exclusions = context_exclusions(text)
         self.ascii_expressions = {start: (end, value) for start, end, value in
                                   ascii_expressions(text, self.expression_exclusions)}
 
-    def add(self, text, tags=(), url=None, speech=None):
+    def _add_plain(self, text, tags=(), url=None, speech=None, *, source=None, mapping=None):
         if not text and speech is None:
             return
         tags = tuple(dict.fromkeys(tags))
@@ -251,6 +255,21 @@ class _Scanner:
             else:
                 self.spans.append(Span(text, tags, url))
         self.speech.append(text if speech is None else speech)
+
+    def _add_mapped(self, text, tags=(), url=None, speech=None, *, source=None, mapping=None):
+        self._add_plain(text, tags, url, speech)
+        if mapping is not None:
+            self.source_map.extend(mapping)
+        elif source is not None:
+            left, right = source
+            if self.text[left:right] == text:
+                self.source_map.extend((index, index + 1) for index in range(left, right))
+            else:
+                # A synthetic glyph (for example a bullet) has a known source
+                # interval, but no character-for-character original substring.
+                self.source_map.extend((left, right) for _ in text)
+        else:
+            self.source_map.extend((None, None) for _ in text)
 
     def event(self, kind, start, end, value):
         self.events.append(TextEvent(kind, start, end, value))
@@ -332,21 +351,27 @@ class _Scanner:
         for row_index, row in enumerate(rows):
             cells = []
             for column, (left, right) in enumerate(row):
-                saved_spans, saved_speech = self.spans, self.speech
+                saved_spans, saved_speech, saved_map = self.spans, self.speech, self.source_map
                 self.spans, self.speech = [], []
+                if saved_map is not None:
+                    self.source_map = []
                 self.scan(left, right, inherited + ("table",) + (("tableheader",) if row_index == 0 else ()))
                 spans, speech = self.spans, "".join(self.speech)
-                self.spans, self.speech = saved_spans, saved_speech
+                cell_map = self.source_map
+                self.spans, self.speech, self.source_map = saved_spans, saved_speech, saved_map
                 width = len("".join(span.text for span in spans))
                 widths[column] = max(widths[column], min(40, width))
-                cells.append((spans, speech, width))
+                cells.append((spans, speech, width, cell_map))
             prepared.append(cells)
         for row in prepared:
-            for column, (spans, speech, width) in enumerate(row):
+            for column, (spans, speech, width, cell_map) in enumerate(row):
                 if column:
                     self.add(" │ ", inherited + ("table",), speech=" ; ")
+                offset = 0
                 for span in spans:
-                    self.add(span.text, span.tags, span.url, speech="")
+                    self.add(span.text, span.tags, span.url, speech="",
+                             mapping=cell_map[offset:offset + len(span.text)] if cell_map is not None else None)
+                    offset += len(span.text)
                 self.add(" " * max(0, widths[column] - width), inherited + ("table",), speech=speech)
             self.add("\n", inherited + ("table",))
         return stop
@@ -368,11 +393,12 @@ class _Scanner:
                     stop = content_start + close.end() if close else end
                     content = text[content_start:content_end]
                     speech = " " + content + " " if self.speak_code else " Bloc de code non lu. "
-                    self.add(content, inherited + ("codeblock",), speech=speech)
+                    self.add(content, inherited + ("codeblock",), speech=speech,
+                             source=(content_start, content_end))
                     self.event("code", i, stop, content)
                     self.protect(i, stop, close is not None)
                     if close and stop > content_end and text[stop - 1:stop] == "\n":
-                        self.add("\n", inherited)
+                        self.add("\n", inherited, source=(stop - 1, stop))
                     i = stop
                     continue
                 table_end = self._table(i, end, inherited)
@@ -382,7 +408,7 @@ class _Scanner:
                 separator = re.match(r" {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})(?:\n|$)", text[i:end])
                 if separator:
                     stop = i + separator.end()
-                    self.add("────────────────────────\n", inherited + ("separator",), speech="\n")
+                    self.add("────────────────────────\n", inherited + ("separator",), speech="\n", source=(i, stop))
                     self.event("markup", i, stop, text[i:stop])
                     self.protect(i, stop, stop < end or self.final or text[stop - 1:stop] == "\n")
                     i = stop
@@ -399,7 +425,7 @@ class _Scanner:
                         depth = min(6, len(indent.expandtabs(4)) // 2)
                         block += (f"list_depth_{depth}",)
                         self.add(("•" if marker in "-+*" else marker) + " ",
-                                 inherited + block, speech="")
+                                 inherited + block, speech="", source=(i, i + match.end()))
                     self.event("markup", i, i + match.end(), text[i:i + match.end()])
                     i += match.end()
                     continue
@@ -408,23 +434,23 @@ class _Scanner:
             expression = self.ascii_expressions.get(i)
             if expression and not {"code", "codeblock", "link", "math"}.intersection(tags):
                 stop, value = expression
-                self.add(value, tags, speech=" ")
+                self.add(value, tags, speech=" ", source=(i, stop))
                 self.event("expression", i, stop, value)
                 self.protect(i, stop)
                 i = stop
                 continue
             keycap = re.match("\\*[\ufe0e\ufe0f]?\u20e3", text[i:i + 3])
             if keycap:
-                self.add(keycap[0], tags)
+                self.add(keycap[0], tags, source=(i, i + keycap.end()))
                 i += keycap.end()
                 continue
             if char == "\n":
-                self.add(char, inherited)
+                self.add(char, inherited, source=(i, i + 1))
                 block = ()
                 i += 1
                 continue
             if char == "\\" and i + 1 < end and text[i + 1] in r"\`*_{}[]<>#$!+=|~":
-                self.add(text[i + 1], tags)
+                self.add(text[i + 1], tags, source=(i, i + 2))
                 self.protect(i, i + 2)
                 i += 2
                 continue
@@ -434,7 +460,7 @@ class _Scanner:
                 close = text.find(run, i + len(run), end)
                 stop = close + len(run) if close >= 0 else end
                 value = text[i + len(run):close if close >= 0 else end]
-                self.add(value, tags + ("code",))
+                self.add(value, tags + ("code",), source=(i + len(run), close if close >= 0 else end))
                 self.event("code", i, stop, value)
                 self.protect(i, stop, close >= 0)
                 i = stop
@@ -460,7 +486,7 @@ class _Scanner:
                         i = stop
                         continue
                     if not self.final:
-                        self.add(text[i + 2:end], tags)
+                        self.add(text[i + 2:end], tags, source=(i + 2, end))
                         self.protect(i, end, False)
                         i = end
                         continue
@@ -496,7 +522,8 @@ class _Scanner:
             if math:
                 body_start, body_end, stop, complete = math
                 value = text[body_start:body_end]
-                self.add(value, tags + ("math",), speech=" " + verbalize_math(value) + " ")
+                self.add(value, tags + ("math",), speech=" " + verbalize_math(value) + " ",
+                         source=(body_start, body_end))
                 self.event("math", i, stop, verbalize_math(value))
                 self.protect(i, stop, complete)
                 i = stop
@@ -505,7 +532,7 @@ class _Scanner:
             if url_match:
                 value = url_match[0].rstrip(".,!?;:")
                 stop = i + len(value)
-                self.add(value, tags + ("link",), safe_url(value), " lien ")
+                self.add(value, tags + ("link",), safe_url(value), " lien ", source=(i, stop))
                 self.event("link", i, stop, value)
                 self.protect(i, stop, i + url_match.end() < end or self.final)
                 i = stop
@@ -519,7 +546,7 @@ class _Scanner:
                 # approximation tilde, an inline ~~~run~~~ or intraword code.
                 # Fenced code was already handled before entering this branch.
                 if char == "~" and count != 2:
-                    self.add(char * count, tags)
+                    self.add(char * count, tags, source=(i, run_end))
                     if not self.final and run_end == end:
                         self.protect(i, end, False)
                     i = run_end
@@ -539,7 +566,7 @@ class _Scanner:
                         stack.append((char * length, "strike" if char == "~" else "bold" if length == 2 else "italic", i))
                         remaining -= length
                 if intraword or remaining:
-                    self.add(char * remaining, tags)
+                    self.add(char * remaining, tags, source=(run_end - remaining, run_end))
                     if not self.final and run_end == end:
                         self.protect(i, end, False)
                 self.event("markup", i, run_end, text[i:run_end])
@@ -551,7 +578,7 @@ class _Scanner:
                    and text[stop] not in "\n\\`[*_$+=~"
                    and not text.startswith(("http://", "https://", "ftp://", "www."), stop)):
                 stop += 1
-            self.add(text[i:stop], tags)
+            self.add(text[i:stop], tags, source=(i, stop))
             i = stop
         for _, _, opening in stack:
             self.protect(opening, end, False)
@@ -627,6 +654,18 @@ class _Scanner:
 
 def parse_text(text, final=True, speak_code=False):
     return _Scanner(text, final, speak_code).document()
+
+
+def parse_mapped_text(text, final=True):
+    """Return the ordinary document and exact rendered-codepoint source ranges.
+
+    Called on demand by selection tools, never by the streaming/audio loops.
+    ``(None, None)`` denotes generated table spacing, which cannot be mistaken
+    for user/model source characters.
+    """
+    scanner = _Scanner(text, final, False, source_map=True)
+    document = scanner.document()
+    return document, tuple(scanner.source_map)
 
 
 class SpeechBuffer:

@@ -69,6 +69,7 @@ class VoiceControls:
         self.source_offset = 0
         self.replay_source = None
         self.replay_cursor = 0
+        self.selection_scope = None
         self.last_capture_event = "aucun"
         self.last_capture_event_at = self.last_pcm_at = None
         self.diagnostic_failure = ""
@@ -207,6 +208,7 @@ class VoiceControls:
 
     def begin_turn(self, mid, source):
         self.cancel_speech()
+        self.selection_scope = None
         self.cognitive_generation = getattr(getattr(self.app, "cognitive", None), "generation", None)
         presence = getattr(self.app, "presence", None)
         reset_field = getattr(type(presence), "begin_response", None)
@@ -441,6 +443,12 @@ class VoiceControls:
             self.status.set("Arrêtez la génération avant de relire sa réponse.")
             return False
         row = self.app.store.message(self.replay_mid) if self.replay_mid is not None else None
+        if self.selection_scope is not None and self.selection_scope.session_id == self.app.session_id:
+            from .selection import source_hash
+            if row is None or source_hash(row["content"]) != self.selection_scope.source_hash:
+                self.selection_scope = None
+                self.status.set("Le passage original a été modifié ou supprimé ; sélectionnez-le de nouveau.")
+                return False
         if row is None or row["session_id"] != self.app.session_id or row["role"] != "assistant":
             row = next((item for item in reversed(self.app.store.messages(self.app.session_id))
                         if item["role"] == "assistant" and item["content"].strip()), None)
@@ -448,8 +456,12 @@ class VoiceControls:
         if row is None or not row["content"].strip():
             self.status.set("Aucune réponse à relire dans cette conversation.")
             return False
+        scope = self.selection_scope
+        if scope is not None and (scope.session_id != self.app.session_id or scope.message_id != row["id"]):
+            self.selection_scope = scope = None
+        source = scope.speech_source if scope is not None else row["content"]
         offset = self.replay_offset if resume and row["id"] == self.replay_mid else 0
-        if offset >= len(row["content"]):
+        if offset >= len(source):
             self.status.set("Cette réponse a déjà été lue entièrement ; utilisez Répéter.")
             return False
         self.cancel_speech()
@@ -467,12 +479,31 @@ class VoiceControls:
         begin = getattr(type(presence), "begin_response", None)
         if callable(begin):
             begin(presence)
-        self.replay_source, self.replay_cursor = row["content"][offset:], 0
+        self.replay_source, self.replay_cursor = source[offset:], 0
         self._feed_replay()
         if self.reading or self.tts_active:
             self.status.set("Reprise au début du segment interrompu (alignement approximatif)." if resume
                             else "Relecture locale de la dernière réponse.")
         return self.reading or self.tts_active
+
+    def read_selection(self, selection):
+        """Keep a frozen, bounded selection scope through interruption/replay."""
+        if self.app.operation:
+            self.status.set("Terminez ou arrêtez la génération avant la lecture du passage.")
+            return False
+        from .selection import source_hash
+        row = self.app.store.message(selection.message_id)
+        if (row is None or row["role"] != "assistant" or row["session_id"] != self.app.session_id
+                or selection.session_id != self.app.session_id or source_hash(row["content"]) != selection.source_hash):
+            self.status.set("L’origine de ce passage n’est plus disponible ; sélectionnez-le de nouveau.")
+            return False
+        if not parse_text(selection.speech_source, speak_code=self.settings.speak_code).speech.strip():
+            self.status.set("Ce passage ne contient aucun texte à prononcer.")
+            return False
+        self.selection_scope = selection
+        self.replay_mid, self.replay_session = selection.message_id, selection.session_id
+        self.replay_offset = 0
+        return self.replay_response()
 
     def _feed_replay(self):
         """Respect worker backpressure instead of queueing a whole long archive."""

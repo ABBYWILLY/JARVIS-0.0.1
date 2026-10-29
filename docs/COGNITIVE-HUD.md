@@ -61,3 +61,29 @@ Les séquences audio, interruptions et générations périmées sont couvertes.
 Une fixture qui injectait directement un faux statut de vue a été corrigée
 pour alimenter le vrai propriétaire App, qui restait la source de vérité.
 La fluidité RTX réelle ne se déduit pas de Mesa et reste à mesurer sur le PC.
+
+
+## 5C — actions sur passage
+
+Dans une réponse : sélectionner, clic droit ou Maj+F10, puis Lire/Répéter,
+Expliquer/Développer/Résumer, Continuer ou Copier. Les préférences HUD permettent
+de masquer ces entrées ; Ctrl+C et copie de la réponse originale restent présents.
+La projection source est construite seulement à l’action, avec les vrais offsets
+du scanner : aucun alignement deviné par recherche d’un mot répété. Un message,
+une révision et une empreinte sont vérifiés contre l’archive ; sélections ambiguës,
+inter-messages ou trop longues refusées avec explication. Limites : réponse65 536
+caractères, sélection8192. Tables, code, liens, titres et Unicode sont couverts.
+
+Lecture/relecture réutilisent Piper et les préférences LOT4, sans ouverture micro
+ni Ollama. Reprends reste dans le périmètre sélectionné après interruption, au
+début du segment PCM approximatif ; une origine modifiée/supprimée est refusée.
+Pendant streaming, copier reste possible ; les autres actions demandent de
+terminer/arrêter la génération. Continuer cible seulement la fin de la dernière
+réponse et réutilise C1. Les trois demandes à Ollama contiennent la sélection
+exacte dans une donnée JSON explicitement citée, jamais dans un rôle système.
+Leurs deux messages archivés conservent IDs, offsets et empreinte d’origine ;
+le modèle, les budgets et les permissions existants restent applicables.
+
+Projection synthétique2780caractères : moyenne6,14ms/P957,30ms ; aucun travail
+supplémentaire par frame ou callback audio. Les tests et essais matériels sont
+rapportés séparément, sans déduire une qualité acoustique du test de sélection.

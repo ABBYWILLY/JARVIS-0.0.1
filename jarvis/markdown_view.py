@@ -6,6 +6,7 @@ from difflib import SequenceMatcher
 from tkinter import font, messagebox, ttk
 
 from .richtext import parse_text, safe_url
+from .selection import SelectionResult, project_selection, source_hash
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,10 @@ class AssistantRegion:
     end: str
     text: str = ""
     original: str = ""
+    message_id: int | None = None
+    session_id: str | None = None
+    final: bool = True
+    revision: int = 0
 
 
 class MarkdownView:
@@ -67,6 +72,10 @@ class MarkdownView:
         self.link_serial = 0
         self.regions = []
         self._source_index = None
+        self.action_handler = None
+        self.actions_enabled = True
+        self._action_selection = None
+        self.selection_error = "Sélectionnez un passage d’une seule réponse JARVIS."
         self.typography = ConversationTypography(family=self.family)
         self.body_font = font.Font(root=widget, family=self.family, size=12)
         families = {name.casefold(): name for name in font.families(widget)}
@@ -110,9 +119,30 @@ class MarkdownView:
         self.source_menu = tk.Menu(widget, tearoff=False)
         self.source_menu.add_command(label="Copier la sélection affichée", command=lambda: widget.event_generate("<<Copy>>"))
         self.source_menu.add_command(label="Copier la réponse originale", command=self.copy_original)
+        self._build_action_entries()
         widget.bind("<Button-3>", self._source_context, add="+")
         widget.bind("<Control-Shift-C>", self.copy_original, add="+")
+        widget.bind("<Shift-F10>", self._keyboard_context, add="+")
         self.configure_typography(self.typography)
+
+    def _build_action_entries(self):
+        end = self.source_menu.index("end")
+        if end is not None and end >= 2:
+            self.source_menu.delete(2, "end")
+        self._action_entries = {}
+        self._reason_entry = None
+        if not self.actions_enabled:
+            return
+        self.source_menu.add_separator()
+        for action, label in (("read", "Lire le passage"), ("repeat", "Répéter le passage"),
+                              ("explain", "Expliquer plus simplement"), ("expand", "Développer le passage"),
+                              ("summarize", "Résumer le passage"), ("continue", "Continuer la réponse"),
+                              ("copy", "Copier le passage")):
+            self.source_menu.add_command(label=label, command=lambda key=action: self.invoke_action(key))
+            self._action_entries[action] = self.source_menu.index("end")
+        self.source_menu.add_separator()
+        self.source_menu.add_command(label=self.selection_error, state="disabled")
+        self._reason_entry = self.source_menu.index("end")
 
     def reset(self):
         widget = self.widget
@@ -125,6 +155,7 @@ class MarkdownView:
         self.links.clear()
         self.regions.clear()
         self._source_index = None
+        self._action_selection = None
 
     def close(self):
         # Release Font objects while their Tcl interpreter still exists and on
@@ -135,6 +166,8 @@ class MarkdownView:
         self.body_font = None
         self.regions.clear()
         self.source_menu.destroy()
+        self.action_handler = None
+        self._action_selection = None
         self.links.clear()
         self.tags.clear()
         self.widget = None
@@ -145,10 +178,10 @@ class MarkdownView:
     def offset(self, start, text):
         return self.widget.index(f"{start}+{self.units(text)}c")
 
-    def append(self, source, *, final=True):
+    def append(self, source, *, final=True, message_id=None, session_id=None):
         self.serial += 1
         prefix = f"md_region_{self.serial}"
-        region = AssistantRegion(prefix + "_start", prefix + "_end")
+        region = AssistantRegion(prefix + "_start", prefix + "_end", message_id=message_id, session_id=session_id)
         widget = self.widget
         widget.mark_set(region.start, "end-1c")
         widget.mark_gravity(region.start, "left")
@@ -251,7 +284,10 @@ class MarkdownView:
 
     def update(self, region, source, *, final=False):
         document = parse_text(source, final=final)
+        if (region.original, region.final) != (source, final):
+            region.revision += 1
         region.original = source
+        region.final = final
         widget = self.widget
         at_bottom = widget.yview()[1] >= 0.98
         widget.mark_set("md_viewport", "@0,0")
@@ -371,8 +407,91 @@ class MarkdownView:
         self._source_index = self.widget.index(f"@{event.x},{event.y}")
         region = self._region_at(self._source_index)
         self.source_menu.entryconfigure(1, state="normal" if region else "disabled")
+        self.prepare_actions()
         try:
             self.source_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.source_menu.grab_release()
+        return "break"
+
+    def set_action_handler(self, callback, *, enabled=True):
+        self.action_handler = callback
+        enabled = bool(enabled)
+        if enabled != self.actions_enabled:
+            self.actions_enabled = enabled
+            self._action_selection = None
+            self._build_action_entries()
+
+    def resolve_selection(self):
+        widget = self.widget
+        ranges = widget.tag_ranges("sel")
+        if len(ranges) != 2:
+            raise ValueError("Sélectionnez un passage continu d’une seule réponse JARVIS.")
+        first, last = ranges
+        regions = [region for region in self.regions
+                   if widget.compare(first, ">=", region.start) and widget.compare(last, "<=", region.end)]
+        if len(regions) != 1 or not widget.compare(first, "<", last):
+            raise ValueError("La sélection doit rester dans une seule réponse, hors en-têtes et métriques.")
+        region = regions[0]
+        start = len(widget.get(region.start, first))
+        end = len(widget.get(region.start, last))
+        # A foreign edit/tag cannot silently substitute the selected display.
+        if widget.get(region.start, region.end) != region.text:
+            raise ValueError("Le rendu a changé ; sélectionnez de nouveau le passage.")
+        return project_selection(region.original, region.text, start, end,
+            message_id=region.message_id, session_id=region.session_id, region_key=region.start,
+            revision=region.revision, final=region.final)
+
+    def validate_selection(self, selection):
+        if not isinstance(selection, SelectionResult):
+            return False
+        region = next((region for region in self.regions if region.start == selection.region_key), None)
+        return bool(region is not None and region.revision == selection.revision
+                    and region.message_id == selection.message_id and region.session_id == selection.session_id
+                    and source_hash(region.original) == selection.source_hash)
+
+    def prepare_actions(self):
+        self._action_selection = None
+        try:
+            if not self.actions_enabled:
+                raise ValueError("Actions de sélection masquées dans les préférences du HUD.")
+            self._action_selection = self.resolve_selection()
+            self.selection_error = "Passage relié à sa réponse originale ; texte traité comme donnée."
+        except ValueError as exc:
+            self.selection_error = str(exc)
+        for action, index in self._action_entries.items():
+            available = self._action_selection is not None and (self.action_handler is not None or action == "copy")
+            self.source_menu.entryconfigure(index, state="normal" if available else "disabled")
+        if self._reason_entry is not None:
+            self.source_menu.entryconfigure(self._reason_entry, label=self.selection_error)
+        return self._action_selection
+
+    def invoke_action(self, action):
+        if not self.actions_enabled or action not in self._action_entries:
+            return False
+        selection = self._action_selection
+        if selection is None or not self.validate_selection(selection):
+            self.selection_error = "La réponse a changé ; sélectionnez de nouveau le passage."
+            if self._reason_entry is not None:
+                self.source_menu.entryconfigure(self._reason_entry, label=self.selection_error)
+            return False
+        if action == "copy":
+            self.widget.clipboard_clear()
+            self.widget.clipboard_append(selection.display_text)
+        elif self.action_handler is not None:
+            self.action_handler(action, selection)
+        else:
+            return False
+        return True
+
+    def _keyboard_context(self, _event=None):
+        self._source_index = None
+        self.prepare_actions()
+        widget = self.widget
+        box = widget.bbox("insert")
+        x, y = (box[0], box[1] + box[3]) if box else (0, 0)
+        try:
+            self.source_menu.tk_popup(widget.winfo_rootx() + x, widget.winfo_rooty() + y)
         finally:
             self.source_menu.grab_release()
         return "break"
