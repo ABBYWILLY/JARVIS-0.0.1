@@ -1,3 +1,18 @@
+# LOT 7 — optimisation globale en cours, 29 octobre 2026
+
+Reprise depuis `19c003a`, branche `feat/jalon-2-voice-presence` uniquement.
+Demande : `LOT-7-SPEC.md` ; audit et décisions : `LOT-7.md`.
+Référence initiale : 120 tests exécutés, 119 réussis, 1 ignoré (modèle réel opt-in),
+29,293 s. Le rendu GPU 3.1 approuvé, LOT 4 et Cognitive HUD sont conservés.
+7A : instrumentation opt-in, mesures sans texte/PCM exporté, aucune base utilisateur
+ouverte. 7B–7F : optimisation SQLite, nettoyages résilients, diagnostic capture,
+packaging et transition documentaire à livrer par commits séparés.
+Validation matérielle Windows/RTX 3070 + Ollama + voix en attente.
+Les interdictions LOT 7 des anciens comptes rendus ci-dessous sont historiques ;
+la demande actuelle autorise exclusivement ce lot, sans agentique/vision.
+
+---
+
 # LOT 5 — Cognitive HUD 1.0 livré côté logiciel, 29 octobre 2026
 
 5A47ec206 contrat observé et audit ;5B48ebfae vuescommunes et réglages ;
