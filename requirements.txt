@@ -1,0 +1,2 @@
+# Offline IANA timezone fallback for Windows; no model or runtime downloader.
+tzdata==2026.6

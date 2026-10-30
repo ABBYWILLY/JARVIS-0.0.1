@@ -1,4 +1,5 @@
-# Build only. Runtime and tests use Python's standard library.
+# Build tools plus the small offline IANA timezone database.
+-r requirements.txt
 pyinstaller==6.16.0
 pyinstaller-hooks-contrib==2025.9
 altgraph==0.17.4

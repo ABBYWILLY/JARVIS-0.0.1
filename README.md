@@ -25,10 +25,12 @@ permet de prévisualiser, comparer et appliquer les réglages graphiques.
 4. Ouvrir PowerShell **dans le dossier du dépôt** (celui qui contient `run.py`) :
 
    ```powershell
+   py -3.12 -m pip install -r requirements.txt
    py -3.12 run.py
    ```
 
-Pas de `pip install` nécessaire pour lancer le code. Dans la fenêtre, cliquer sur
+La seule dépendance de base est `tzdata` (environ 340 Kio), pour les fuseaux IANA
+hors ligne sous Windows ; aucun modèle n'est téléchargé. Dans la fenêtre, cliquer sur
 **Actualiser**, choisir le modèle, écrire et cliquer sur **Envoyer** ou **Ctrl+Entrée**.
 Entrée insère une nouvelle ligne. **Arrêter** conserve la réponse partielle.
 L’historique à gauche permet de reprendre une conversation ou de la supprimer avec confirmation.

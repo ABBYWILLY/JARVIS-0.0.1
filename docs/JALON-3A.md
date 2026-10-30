@@ -54,3 +54,20 @@ clés JSON dupliquées, valeurs non finies, appels multiples et outils inexistan
 refusés. Définitions et propositions immuables, copies de transport validées,
 vérification explicitement distincte d'une vérité générale. Les deux workflows
 existants suivent la nouvelle branche, sans changement de `main`.
+
+## 3A.2 — horloge déterministe
+
+`system_clock.get_datetime()` lit une seule fois l'horloge UTC réelle, puis
+utilise le fuseau local du système ou une conversion IANA explicitement demandée.
+La réponse contient l'instant observé, l'heure locale, l'offset, la date cible et
+le jour français. Les décalages de jours sont calendaires : aucune heure future
+ni règle DST future n'est inventée à partir de l'offset actuel. La vérification
+porte sur la cohérence de cette observation, pas sur le bon réglage Windows/NTP.
+
+Reconnaissance française entière et prudente : heures/dates/jours, demain,
+décalages et fuseaux explicites ; citations, code et demandes de rappel exclus.
+19 tests horloge + 12 contrats réussis, dont minuit, mois/année, bissextile, DST,
+fuseaux et données falsifiées. Essais avec base système IANA désactivée pour
+vérifier le repli empaqueté. `tzdata==2026.6`, archive PyPI vérifiée de 348 210
+octets, est la seule dépendance de base ajoutée, collectée dans l'EXE et son
+smoke ; aucun téléchargement au lancement. Intégration texte/voix en 3A.5.

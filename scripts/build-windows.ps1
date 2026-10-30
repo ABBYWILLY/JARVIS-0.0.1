@@ -76,6 +76,7 @@ $BuildArguments = @(
     '--name', 'Jarvis', '--noupx', '--distpath', 'dist\jalon-2',
     '--workpath', 'build\jalon-2', '--specpath', 'build\jalon-2'
 )
+$BuildArguments += @('--collect-all', 'tzdata', '--copy-metadata', 'tzdata')
 if ($WithVoice) {
     foreach ($Package in @('piper', 'faster_whisper', 'ctranslate2', 'onnxruntime', 'sounddevice', 'soxr')) {
         $BuildArguments += @('--collect-all', $Package)

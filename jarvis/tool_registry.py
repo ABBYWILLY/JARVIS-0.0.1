@@ -20,7 +20,7 @@ MAX_ARGUMENT_BYTES = 4096
 MAX_RESULT_BYTES = 32768
 MAX_EVENT_BYTES = MAX_RESULT_BYTES + 4096
 STATUSES = frozenset({"proposed", "denied", "authorized", "running", "received",
-                      "verified", "error", "cancelled"})
+                      "verified", "error", "cancelled", "interrupted"})
 _TOKEN = re.compile(r"[A-Za-z0-9_.:-]{1,80}\Z")
 _TASK_ID = re.compile(r"[0-9a-f]{32}\Z")
 _TIMEZONE = re.compile(r"[A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+)*\Z")
@@ -57,7 +57,12 @@ def _thaw(value):
 
 def _json_bytes(value, *, limit, code="oversized_result"):
     """Validate JSON types/depth before encoding; never stringify arbitrary objects."""
-    nodes = 0
+    nodes = lower_bound_bytes = 0
+    def charge(amount):
+        nonlocal lower_bound_bytes
+        lower_bound_bytes += amount
+        if lower_bound_bytes > limit:
+            _invalid(code, "Résultat d'outil trop volumineux.")
     def visit(item, depth=0):
         nonlocal nodes
         nodes += 1
@@ -66,12 +71,27 @@ def _json_bytes(value, *, limit, code="oversized_result"):
         if isinstance(item, Mapping):
             if any(type(key) is not str or len(key) > 128 for key in item):
                 _invalid(code, "Clés de résultat invalides.")
+            charge(2)
+            for key in item:
+                charge(len(key.encode("utf-8")) + 3)
             return {key: visit(child, depth + 1) for key, child in item.items()}
         if type(item) in (tuple, list):
+            charge(2)
             return [visit(child, depth + 1) for child in item]
-        if item is None or type(item) in (str, bool, int):
+        if type(item) is str:
+            # Reject before dumping/copying potentially huge or repeated leaves.
+            if len(item) > limit:
+                _invalid(code, "Résultat d'outil trop volumineux.")
+            charge(len(item.encode("utf-8")) + 2)
+            return item
+        if item is None or type(item) is bool:
+            charge(1)
+            return item
+        if type(item) is int:
+            charge(max(1, item.bit_length() // 4))
             return item
         if type(item) is float and math.isfinite(item):
+            charge(1)
             return item
         _invalid(code, "Seules des données JSON finies sont autorisées.")
     try:
@@ -201,6 +221,8 @@ def validate_arguments(tool_id, arguments):
         if key == "path":
             value = _relative_path(value, allow_directory=tool_id == "files.list_selected_directory")
         result[key] = value
+    if tool_id == "system.get_datetime" and result["kind"] == "time" and result["days"]:
+        _invalid("invalid_arguments", "L'heure d'une date future ne peut pas être déduite de l'heure actuelle.")
     return result
 
 

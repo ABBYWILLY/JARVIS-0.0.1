@@ -5,6 +5,7 @@ import math
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
 from jarvis.tool_registry import (MAX_ARGUMENT_BYTES, MAX_PROPOSAL_BYTES, MAX_RESULT_BYTES,
     REGISTRY, STATUSES, PermissionDecision, ToolProposal, ToolResult, ToolTask,
@@ -67,7 +68,8 @@ class RegistryTests(unittest.TestCase):
                         {"kind": "shell"}, {"timezone": None}, {"timezone": ""},
                         {"timezone": "../secret"}, {"timezone": "/Europe/Paris"},
                         {"timezone": "France heure locale"}, {"timezone": "UTC\n"},
-                        {"timezone": "A"*129}, {"permission": True}, {"days": math.nan}):
+                        {"timezone": "A"*129}, {"permission": True}, {"days": math.nan},
+                        {"kind": "time", "days": 1}):
             with self.subTest(changes=changes), self.assertRaises(ToolValidationError):
                 validate_arguments("system.get_datetime", changes)
         for days in (-36600, 0, 36600):
@@ -197,6 +199,14 @@ class RegistryTests(unittest.TestCase):
         for change in ({"status": "executed_and_true"}, {"version": False}, {"extra": "private"}):
             with self.subTest(change=change), self.assertRaises(ToolValidationError):
                 ToolResult.from_dict({**result.to_dict(), **change})
+
+    def test_oversized_leaves_and_aggregate_are_rejected_before_encoding(self):
+        task = ToolTask.new(ToolProposal("system.get_basic_info"), 0)
+        for data in ({"raw": "x"*100000}, {"rows": ["x"*3000]*3}, {"integer": 1 << 100000}):
+            with self.subTest(kind=tuple(data)), \
+                    patch("jarvis.tool_registry.json.dumps", side_effect=AssertionError("must reject before encoding")):
+                with self.assertRaises(ToolValidationError):
+                    ToolResult(task.task_id, 0, task.tool_id, "received", data)
 
 
 if __name__ == "__main__":

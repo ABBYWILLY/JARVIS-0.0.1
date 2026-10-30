@@ -37,6 +37,10 @@ def main():
     root.deiconify()
     result = [0]
     if smoke:
+        # Windows has no guaranteed system IANA database; exercise packaged data.
+        import tzdata
+        from zoneinfo import ZoneInfo
+        assert ZoneInfo('America/New_York').key == 'America/New_York'
         # Exercise frozen multiprocessing as well as Tk/SQLite, without Ollama.
         app.settings = replace(app.settings, endpoint="http://127.0.0.1:1")
         app.refresh_models()
