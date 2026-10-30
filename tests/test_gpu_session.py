@@ -284,6 +284,83 @@ class ProcessContractTests(SessionWaitMixin, unittest.TestCase):
         self.assertTrue(session._quit.is_set())
         self.assertEqual(session.shutdown_report["status"], "termination_failed")
 
+    def test_reader_is_closed_before_feeder_sentinel_to_prevent_native_double_close(self):
+        import multiprocessing as mp
+        class DeadProcess:
+            def join(self, _timeout): pass
+            def is_alive(self): return False
+            def close(self): pass
+        class SentinelQueue:
+            def __init__(self):
+                self._reader, self._writer = mp.Pipe(duplex=False)
+                self.native_closed, self.release_close = threading.Event(), threading.Event()
+                self._thread = threading.Thread(target=self.consume_sentinel)
+                native_close = self._reader._close
+                def controlled_native_close():
+                    native_close()
+                    if threading.current_thread() is self._thread:
+                        # Hold the native-close / _handle=None interval open.
+                        # Closing this reader after posting the sentinel would
+                        # deterministically double-close the same OS handle.
+                        self.native_closed.set()
+                        self.release_close.wait(1.)
+                self._reader._close = controlled_native_close
+            def consume_sentinel(self):
+                self._reader.close()
+                self.native_closed.set()
+            def cancel_join_thread(self): pass
+            def close(self):
+                self._thread.start()
+                if not self.native_closed.wait(1.):
+                    raise RuntimeError("sentinel fixture did not run")
+        channel = SentinelQueue()
+        session = GpuSession()
+        session._process, session._frames = DeadProcess(), channel
+        session._quit = threading.Event()
+        try:
+            report = session.stop(timeout=.6)
+            self.assertEqual(report["status"], "unconfirmed")
+            self.assertFalse(channel._thread.is_alive())
+            self.assertIsNone(session._process)
+            self.assertIsNone(session._frames)
+        finally:
+            channel.release_close.set()
+            if channel._thread.ident is not None:
+                channel._thread.join(1.)
+            channel._reader.close()
+            channel._writer.close()
+
+    def test_channel_cleanup_can_retry_without_joining_an_already_closed_process(self):
+        class DeadProcess:
+            closed, joins = False, 0
+            def join(self, _timeout):
+                if self.closed:
+                    raise ValueError("process object is closed")
+                self.joins += 1
+            def is_alive(self): return False
+            def close(self): self.closed = True
+        class FlakyChannel:
+            calls = 0
+            def cancel_join_thread(self): pass
+            def close(self):
+                self.calls += 1
+                if self.calls == 1:
+                    raise OSError("temporary channel cleanup failure")
+        session = GpuSession()
+        process = session._process = DeadProcess()
+        channel = session._frames = FlakyChannel()
+        session._quit = threading.Event()
+        with self.assertRaisesRegex(OSError, "temporary channel"):
+            session.stop()
+        self.assertTrue(process.closed)
+        self.assertIsNone(session._process)
+        self.assertIs(session._frames, channel)
+        report = session.stop()
+        self.assertEqual(process.joins, 1)
+        self.assertEqual(channel.calls, 2)
+        self.assertEqual(report["status"], "unconfirmed")
+        self.assertIsNone(session._frames)
+
     def test_visible_engine_commands_cross_real_spawn_transport_with_stop_priority(self):
         session = GpuSession(target=action_child)
         self.addCleanup(session.stop)

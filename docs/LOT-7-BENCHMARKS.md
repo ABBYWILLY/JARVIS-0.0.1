@@ -120,6 +120,10 @@ fenêtre s'est ouverte.
 - La comparaison refuse les différences de conditions observables : plateforme,
   Python/Tk, renderer, moteur réellement actif, dimensions/échelles, profils,
   voix, contexte, budgets, cache, durées/préchauffage et empreintes des réglages.
+  La taille interne réellement allouée (`internal_size` dans les heartbeats
+  intégrés), son échelle effective et le niveau d'adaptation sont contrôlés à
+  partir des mesures brutes, y compris pour les anciens rapports. Ils ne sont
+  jamais déduits du seul préréglage et aucun ancien fichier n'est réécrit.
   Un delta brut sur un petit échantillon n'est pas une amélioration statistique.
   Comparer volontairement des profils différents reste possible en lisant les
   rapports côte à côte, sans un faux delta « toutes choses égales ».

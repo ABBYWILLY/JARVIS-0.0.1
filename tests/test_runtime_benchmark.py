@@ -94,6 +94,25 @@ class RuntimeBenchmarkTests(unittest.TestCase):
                 benchmark.write_exports(folder, {**report, "status": "error"})
             self.assertEqual((Path(folder) / "report.json").read_bytes(), original)
 
+    def test_comparison_checks_actual_internal_gpu_resolution_and_adaptation_from_old_reports(self):
+        before = {"status": "complete", "conditions": {"scenario": "gpu-balanced", "gpu_render_size": None},
+                  "summary": {"startup_ms": 12}, "gpu_renderer": {"resolution": {
+                      "internal_size": [960, 640], "effective_scale": 1., "adaptive_level": 0}}}
+        after = json.loads(json.dumps(before))
+        after["conditions"]["gpu_render_size"] = [960, 640]
+        original = json.dumps(before, sort_keys=True)
+        self.assertTrue(benchmark.comparison(before, after)["comparable_conditions"])
+        for field, value, mismatch in (("internal_size", [720, 480], "gpu_render_size"),
+                                       ("effective_scale", .75, "gpu_effective_scale"),
+                                       ("adaptive_level", 1, "gpu_adaptive_level")):
+            changed = json.loads(json.dumps(after))
+            changed["gpu_renderer"]["resolution"][field] = value
+            compared = benchmark.comparison(before, changed)
+            self.assertFalse(compared["comparable_conditions"])
+            self.assertIn(mismatch, compared["condition_mismatches"])
+            self.assertEqual(compared["metrics"], {})
+        self.assertEqual(json.dumps(before, sort_keys=True), original)
+
     def test_cli_rejects_existing_output_and_invalid_profile_before_launch(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(benchmark.subprocess, "Popen") as launch:
             with contextlib.redirect_stderr(io.StringIO()):

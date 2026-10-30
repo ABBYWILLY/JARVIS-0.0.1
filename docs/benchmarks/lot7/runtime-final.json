@@ -1,0 +1,2659 @@
+{
+  "benchmark_suite_version": 1,
+  "baseline_commit": "19c003a2a77178b41f20aa6152fcfd311634b111",
+  "final_source_git_head": "8b89101ad2485070ac842054d7cb587cff80bd00",
+  "source_snapshot_verified_against_checkout": true,
+  "bytecode_cache_conditions": "Both baseline19c003a and final snapshot have no __pycache__/pyc before launch, and child PYTHONDONTWRITEBYTECODE=1. OS/shader caches are not purged; cache_state remains unspecified.",
+  "scope": "Fresh real App/Tk/Store and integrated Canvas/ModernGL; software cloud, no models or physical devices. Six short2s single samples, not hardware validation or statistical evidence. THINKING explicitly synthetic in renderer workloads. No private content exported. Snapshot .py SHA256 match final production checkout exactly, including corrective GPU source not yet committed at capture; source hashes are authoritative.",
+  "scenarios": {
+    "idle": {
+      "benchmark_version": 1,
+      "created_utc": "2026-10-29T20:11:54.018523+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "tool_sha256": "81c3d26879cce91da7b5f303e4cdbeb4571248aa02602b709ebb29271cc409fc",
+      "status": "complete",
+      "conditions": {
+        "scenario": "idle",
+        "model": "",
+        "context": 4096,
+        "max_tokens": 1024,
+        "reasoning_mode": "fast",
+        "cognitive_mode": "manual",
+        "requested_size": [
+          1100,
+          760
+        ],
+        "requested_tk_scaling": null,
+        "visual_state": "idle",
+        "cache_state": "unspecified",
+        "requested_gpu_profile": null,
+        "sample_seconds_requested": 2.0,
+        "warmup_seconds": 1.0,
+        "input_preferences_sha256": "e21868aab8b5f76b3de5ea5f59a0234b737359fffcbc25864c160ca8763c7e23",
+        "disposable_archive": true,
+        "synthetic_visual_state": false,
+        "synthetic_audio": false,
+        "interactive": false,
+        "software_gpu_explicitly_allowed": true,
+        "audio_input": "system_default",
+        "audio_output": "system_default",
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0,
+        "speech_profile": "normal",
+        "acoustic_mode": "speakers",
+        "silence_ms": 800,
+        "vad_threshold": 0.6,
+        "cpu_threads": 4,
+        "tk_patchlevel": "9.0.4",
+        "actual_tk_scaling": 1.3343840294194902,
+        "actual_size": [
+          1100,
+          760
+        ],
+        "actual_engine": "canvas",
+        "gpu_render_size": null,
+        "gpu_window_size": null,
+        "gpu_dpi_scale": null,
+        "gpu_effective_scale": null,
+        "gpu_adaptive_level": null,
+        "effective_voice_sha256": "919153437406622df5cecd1eb3ade63c1d45b75ef95d9dad02d705c430c505f9",
+        "effective_canvas_sha256": "38dbf2549c127f900451c88482ad875bd6a1e5c91d2d8c0b84eea82d24ebc406",
+        "effective_gpu_sha256": "25fd32f80b018cd75216b517d69c6a54b5505e67e15b5916ae5814906cb0af0e",
+        "effective_settings_sha256": "cccea893a0a5cbea39da22b7d64d33404f077957af57782eb07eb668c0fcb1e9"
+      },
+      "summary": {
+        "startup_ms": 461.98575699236244,
+        "sample_seconds": 2.0068083919759374,
+        "process_cpu_percent_one_core": 0.8928152319693324,
+        "process_cpu_ms": 17.917090999999996,
+        "rss_before_bytes": 41959424,
+        "rss_after_bytes": 41959424,
+        "shutdown_ms": 3.215859003830701,
+        "process_sample_count": 4,
+        "observed_engine_changes": 0
+      },
+      "metrics": {},
+      "observations": [
+        {
+          "elapsed_seconds": 0.0006173849978949875,
+          "process_cpu_seconds": 0.0006145510000000187,
+          "rss_bytes": 41959424,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 0.5074054709984921,
+          "process_cpu_seconds": 0.005354743999999967,
+          "rss_bytes": 41959424,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.0133650259813294,
+          "process_cpu_seconds": 0.009205289000000005,
+          "rss_bytes": 41959424,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.5205516429850832,
+          "process_cpu_seconds": 0.01398237699999999,
+          "rss_bytes": 41959424,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        }
+      ],
+      "unavailable": {
+        "physical_vram_bytes": "No attributable physical VRAM counter read.",
+        "electrical_power_watts": "No power meter sampled.",
+        "acoustic_latency_ms": "No acoustic loopback measured.",
+        "inference_audio_child_cpu": "No per-process OS counters for inference/audio children read.",
+        "stt_ms": "No valid observation in this run; no value inferred.",
+        "ttft_seconds": "No valid observation in this run; no value inferred.",
+        "tokens_per_second": "No valid observation in this run; no value inferred.",
+        "piper_ms": "No valid observation in this run; no value inferred.",
+        "tts_first_pcm_ms": "No valid observation in this run; no value inferred.",
+        "end_to_pcm_estimate_ms": "No valid observation in this run; no value inferred."
+      },
+      "limitations": [
+        "Bounded opt-in run; not proof of absence of memory leaks.",
+        "Sampled metrics may miss transient events; numeric observations only.",
+        "An idle visualizer does not establish animation performance.",
+        "Closing the window early shortens the sample; no automatic restart."
+      ],
+      "startup_scope": "Child imports, temporary Store and real Tk/App initialization; excludes OS process launch.",
+      "source_sha256": {
+        "ui.py": "4d21c8668490e7d8d15a43119d0d0d53c265b7c032224d43d9a653aca4b67e38",
+        "voice_ui.py": "9c066572e5748f702e6595838d67039e0765353e1c768828da16b0b7836432c6",
+        "voice_runtime.py": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+        "gpu_session.py": "a44531c0a9e54b3b6dd616268eb7babe0953ce5e243b38623205295150885fba",
+        "gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+        "storage.py": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85"
+      },
+      "pipeline_turns_with_metrics": 0,
+      "pipeline_sample_capacity": 512,
+      "sampled_gpu_heartbeat_windows": [],
+      "gpu_window_sample_capacity": 120,
+      "event_counts": {
+        "app_poll_callbacks": 73,
+        "observed_state_idle": 4,
+        "observed_microphone_disabled": 4
+      },
+      "callback_errors": [],
+      "workload_checks": {
+        "sample_received": true
+      },
+      "comparison": {
+        "comparable_conditions": true,
+        "condition_mismatches": [],
+        "scope": "Short observations; no statistical significance or hardware extrapolation.",
+        "metrics": {
+          "startup_ms": {
+            "before": 443.03063198458403,
+            "after": 461.98575699236244,
+            "delta": 18.955125007778406,
+            "delta_percent": 4.2785134117854815
+          },
+          "shutdown_ms": {
+            "before": 2.776876004645601,
+            "after": 3.215859003830701,
+            "delta": 0.4389829991851002,
+            "delta_percent": 15.808520022165176
+          },
+          "process_cpu_percent_one_core": {
+            "before": 0.8775018597442745,
+            "after": 0.8928152319693324,
+            "delta": 0.015313372225057909,
+            "delta_percent": 1.7451099453533465
+          },
+          "rss_after_bytes": {
+            "before": 42029056,
+            "after": 41959424,
+            "delta": -69632,
+            "delta_percent": -0.16567586005262644
+          }
+        }
+      }
+    },
+    "command": {
+      "benchmark_version": 1,
+      "created_utc": "2026-10-29T20:11:57.665015+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "tool_sha256": "81c3d26879cce91da7b5f303e4cdbeb4571248aa02602b709ebb29271cc409fc",
+      "status": "complete",
+      "conditions": {
+        "scenario": "command",
+        "model": "",
+        "context": 4096,
+        "max_tokens": 1024,
+        "reasoning_mode": "fast",
+        "cognitive_mode": "manual",
+        "requested_size": [
+          1100,
+          760
+        ],
+        "requested_tk_scaling": null,
+        "visual_state": "idle",
+        "cache_state": "unspecified",
+        "requested_gpu_profile": null,
+        "sample_seconds_requested": 2.0,
+        "warmup_seconds": 1.0,
+        "input_preferences_sha256": "e21868aab8b5f76b3de5ea5f59a0234b737359fffcbc25864c160ca8763c7e23",
+        "disposable_archive": true,
+        "synthetic_visual_state": false,
+        "synthetic_audio": false,
+        "interactive": false,
+        "software_gpu_explicitly_allowed": true,
+        "audio_input": "system_default",
+        "audio_output": "system_default",
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0,
+        "speech_profile": "normal",
+        "acoustic_mode": "speakers",
+        "silence_ms": 800,
+        "vad_threshold": 0.6,
+        "cpu_threads": 4,
+        "tk_patchlevel": "9.0.4",
+        "actual_tk_scaling": 1.3343840294194902,
+        "actual_size": [
+          1100,
+          760
+        ],
+        "actual_engine": "canvas",
+        "gpu_render_size": null,
+        "gpu_window_size": null,
+        "gpu_dpi_scale": null,
+        "gpu_effective_scale": null,
+        "gpu_adaptive_level": null,
+        "effective_voice_sha256": "919153437406622df5cecd1eb3ade63c1d45b75ef95d9dad02d705c430c505f9",
+        "effective_canvas_sha256": "38dbf2549c127f900451c88482ad875bd6a1e5c91d2d8c0b84eea82d24ebc406",
+        "effective_gpu_sha256": "25fd32f80b018cd75216b517d69c6a54b5505e67e15b5916ae5814906cb0af0e",
+        "effective_settings_sha256": "cccea893a0a5cbea39da22b7d64d33404f077957af57782eb07eb668c0fcb1e9"
+      },
+      "summary": {
+        "startup_ms": 427.68722999608144,
+        "sample_seconds": 2.0042862750124186,
+        "process_cpu_percent_one_core": 0.8241633546035072,
+        "process_cpu_ms": 16.518593000000024,
+        "rss_before_bytes": 42115072,
+        "rss_after_bytes": 42115072,
+        "shutdown_ms": 4.204333003144711,
+        "process_sample_count": 4,
+        "observed_engine_changes": 0
+      },
+      "metrics": {},
+      "observations": [
+        {
+          "elapsed_seconds": 0.0006927470094524324,
+          "process_cpu_seconds": 0.0006892620000000238,
+          "rss_bytes": 42115072,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 0.5068813510006294,
+          "process_cpu_seconds": 0.004817271000000012,
+          "rss_bytes": 42115072,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.0132444640039466,
+          "process_cpu_seconds": 0.009257449000000029,
+          "rss_bytes": 42115072,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.5195024209970143,
+          "process_cpu_seconds": 0.013521139000000015,
+          "rss_bytes": 42115072,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        }
+      ],
+      "unavailable": {
+        "physical_vram_bytes": "No attributable physical VRAM counter read.",
+        "electrical_power_watts": "No power meter sampled.",
+        "acoustic_latency_ms": "No acoustic loopback measured.",
+        "inference_audio_child_cpu": "No per-process OS counters for inference/audio children read.",
+        "stt_ms": "No valid observation in this run; no value inferred.",
+        "ttft_seconds": "No valid observation in this run; no value inferred.",
+        "tokens_per_second": "No valid observation in this run; no value inferred.",
+        "piper_ms": "No valid observation in this run; no value inferred.",
+        "tts_first_pcm_ms": "No valid observation in this run; no value inferred.",
+        "end_to_pcm_estimate_ms": "No valid observation in this run; no value inferred."
+      },
+      "limitations": [
+        "Bounded opt-in run; not proof of absence of memory leaks.",
+        "Sampled metrics may miss transient events; numeric observations only.",
+        "An idle visualizer does not establish animation performance.",
+        "Closing the window early shortens the sample; no automatic restart."
+      ],
+      "startup_scope": "Child imports, temporary Store and real Tk/App initialization; excludes OS process launch.",
+      "source_sha256": {
+        "ui.py": "4d21c8668490e7d8d15a43119d0d0d53c265b7c032224d43d9a653aca4b67e38",
+        "voice_ui.py": "9c066572e5748f702e6595838d67039e0765353e1c768828da16b0b7836432c6",
+        "voice_runtime.py": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+        "gpu_session.py": "a44531c0a9e54b3b6dd616268eb7babe0953ce5e243b38623205295150885fba",
+        "gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+        "storage.py": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85"
+      },
+      "pipeline_turns_with_metrics": 0,
+      "pipeline_sample_capacity": 512,
+      "sampled_gpu_heartbeat_windows": [],
+      "gpu_window_sample_capacity": 120,
+      "event_counts": {
+        "app_poll_callbacks": 72,
+        "observed_state_idle": 4,
+        "observed_microphone_disabled": 4
+      },
+      "callback_errors": [],
+      "workload_checks": {
+        "sample_received": true
+      },
+      "comparison": {
+        "comparable_conditions": true,
+        "condition_mismatches": [],
+        "scope": "Short observations; no statistical significance or hardware extrapolation.",
+        "metrics": {
+          "startup_ms": {
+            "before": 390.1266499888152,
+            "after": 427.68722999608144,
+            "delta": 37.56058000726625,
+            "delta_percent": 9.627791387320785
+          },
+          "shutdown_ms": {
+            "before": 4.353033000370488,
+            "after": 4.204333003144711,
+            "delta": -0.14869999722577631,
+            "delta_percent": -3.416008957734077
+          },
+          "process_cpu_percent_one_core": {
+            "before": 0.9400898954922069,
+            "after": 0.8241633546035072,
+            "delta": -0.11592654088869969,
+            "delta_percent": -12.331431434863315
+          },
+          "rss_after_bytes": {
+            "before": 42016768,
+            "after": 42115072,
+            "delta": 98304,
+            "delta_percent": 0.23396373562097875
+          }
+        }
+      }
+    },
+    "canvas": {
+      "benchmark_version": 1,
+      "created_utc": "2026-10-29T20:12:01.264655+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "tool_sha256": "81c3d26879cce91da7b5f303e4cdbeb4571248aa02602b709ebb29271cc409fc",
+      "status": "complete",
+      "conditions": {
+        "scenario": "canvas",
+        "model": "",
+        "context": 4096,
+        "max_tokens": 1024,
+        "reasoning_mode": "fast",
+        "cognitive_mode": "manual",
+        "requested_size": [
+          1100,
+          760
+        ],
+        "requested_tk_scaling": null,
+        "visual_state": "thinking",
+        "cache_state": "unspecified",
+        "requested_gpu_profile": null,
+        "sample_seconds_requested": 2.0,
+        "warmup_seconds": 1.0,
+        "input_preferences_sha256": "e21868aab8b5f76b3de5ea5f59a0234b737359fffcbc25864c160ca8763c7e23",
+        "disposable_archive": true,
+        "synthetic_visual_state": true,
+        "synthetic_audio": false,
+        "interactive": false,
+        "software_gpu_explicitly_allowed": true,
+        "audio_input": "system_default",
+        "audio_output": "system_default",
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0,
+        "speech_profile": "normal",
+        "acoustic_mode": "speakers",
+        "silence_ms": 800,
+        "vad_threshold": 0.6,
+        "cpu_threads": 4,
+        "tk_patchlevel": "9.0.4",
+        "actual_tk_scaling": 1.3343840294194902,
+        "actual_size": [
+          1100,
+          760
+        ],
+        "actual_engine": "canvas",
+        "gpu_render_size": null,
+        "gpu_window_size": null,
+        "gpu_dpi_scale": null,
+        "gpu_effective_scale": null,
+        "gpu_adaptive_level": null,
+        "effective_voice_sha256": "919153437406622df5cecd1eb3ade63c1d45b75ef95d9dad02d705c430c505f9",
+        "effective_canvas_sha256": "38dbf2549c127f900451c88482ad875bd6a1e5c91d2d8c0b84eea82d24ebc406",
+        "effective_gpu_sha256": "25fd32f80b018cd75216b517d69c6a54b5505e67e15b5916ae5814906cb0af0e",
+        "effective_settings_sha256": "cccea893a0a5cbea39da22b7d64d33404f077957af57782eb07eb668c0fcb1e9"
+      },
+      "summary": {
+        "startup_ms": 527.6702539995313,
+        "sample_seconds": 2.0021143999765627,
+        "process_cpu_percent_one_core": 2.259149377304788,
+        "process_cpu_ms": 45.23075500000001,
+        "rss_before_bytes": 41975808,
+        "rss_after_bytes": 41975808,
+        "shutdown_ms": 12.916084000607952,
+        "process_sample_count": 4,
+        "observed_engine_changes": 0
+      },
+      "metrics": {},
+      "observations": [
+        {
+          "elapsed_seconds": 0.0008973600051831454,
+          "process_cpu_seconds": 0.00089381500000002,
+          "rss_bytes": 41975808,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 0.5149651009996887,
+          "process_cpu_seconds": 0.012190149000000039,
+          "rss_bytes": 41975808,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.0303773789783008,
+          "process_cpu_seconds": 0.023759377999999998,
+          "rss_bytes": 41975808,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.5468469529878348,
+          "process_cpu_seconds": 0.03504025799999999,
+          "rss_bytes": 41975808,
+          "active_engine": "canvas",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        }
+      ],
+      "unavailable": {
+        "physical_vram_bytes": "No attributable physical VRAM counter read.",
+        "electrical_power_watts": "No power meter sampled.",
+        "acoustic_latency_ms": "No acoustic loopback measured.",
+        "inference_audio_child_cpu": "No per-process OS counters for inference/audio children read.",
+        "stt_ms": "No valid observation in this run; no value inferred.",
+        "ttft_seconds": "No valid observation in this run; no value inferred.",
+        "tokens_per_second": "No valid observation in this run; no value inferred.",
+        "piper_ms": "No valid observation in this run; no value inferred.",
+        "tts_first_pcm_ms": "No valid observation in this run; no value inferred.",
+        "end_to_pcm_estimate_ms": "No valid observation in this run; no value inferred."
+      },
+      "limitations": [
+        "Bounded opt-in run; not proof of absence of memory leaks.",
+        "Sampled metrics may miss transient events; numeric observations only.",
+        "An idle visualizer does not establish animation performance.",
+        "Closing the window early shortens the sample; no automatic restart."
+      ],
+      "startup_scope": "Child imports, temporary Store and real Tk/App initialization; excludes OS process launch.",
+      "source_sha256": {
+        "ui.py": "4d21c8668490e7d8d15a43119d0d0d53c265b7c032224d43d9a653aca4b67e38",
+        "voice_ui.py": "9c066572e5748f702e6595838d67039e0765353e1c768828da16b0b7836432c6",
+        "voice_runtime.py": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+        "gpu_session.py": "a44531c0a9e54b3b6dd616268eb7babe0953ce5e243b38623205295150885fba",
+        "gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+        "storage.py": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85"
+      },
+      "pipeline_turns_with_metrics": 0,
+      "pipeline_sample_capacity": 512,
+      "sampled_gpu_heartbeat_windows": [],
+      "gpu_window_sample_capacity": 120,
+      "event_counts": {
+        "app_poll_callbacks": 73,
+        "observed_state_idle": 4,
+        "observed_microphone_disabled": 4
+      },
+      "callback_errors": [],
+      "workload_checks": {
+        "sample_received": true
+      },
+      "comparison": {
+        "comparable_conditions": true,
+        "condition_mismatches": [],
+        "scope": "Short observations; no statistical significance or hardware extrapolation.",
+        "metrics": {
+          "startup_ms": {
+            "before": 506.27436401555315,
+            "after": 527.6702539995313,
+            "delta": 21.395889983978122,
+            "delta_percent": 4.226145249440444
+          },
+          "shutdown_ms": {
+            "before": 10.227560997009277,
+            "after": 12.916084000607952,
+            "delta": 2.688523003598675,
+            "delta_percent": 26.28703954329725
+          },
+          "process_cpu_percent_one_core": {
+            "before": 2.271592917280107,
+            "after": 2.259149377304788,
+            "delta": -0.012443539975318885,
+            "delta_percent": -0.5477891694704773
+          },
+          "rss_after_bytes": {
+            "before": 42045440,
+            "after": 41975808,
+            "delta": -69632,
+            "delta_percent": -0.16561130053580125
+          }
+        }
+      }
+    },
+    "gpu-eco": {
+      "benchmark_version": 1,
+      "created_utc": "2026-10-29T20:12:05.021675+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "tool_sha256": "81c3d26879cce91da7b5f303e4cdbeb4571248aa02602b709ebb29271cc409fc",
+      "status": "complete",
+      "conditions": {
+        "scenario": "gpu-eco",
+        "model": "",
+        "context": 4096,
+        "max_tokens": 1024,
+        "reasoning_mode": "fast",
+        "cognitive_mode": "manual",
+        "requested_size": [
+          1100,
+          760
+        ],
+        "requested_tk_scaling": null,
+        "visual_state": "thinking",
+        "cache_state": "unspecified",
+        "requested_gpu_profile": "eco",
+        "sample_seconds_requested": 2.0,
+        "warmup_seconds": 1.0,
+        "input_preferences_sha256": "e21868aab8b5f76b3de5ea5f59a0234b737359fffcbc25864c160ca8763c7e23",
+        "disposable_archive": true,
+        "synthetic_visual_state": true,
+        "synthetic_audio": false,
+        "interactive": false,
+        "software_gpu_explicitly_allowed": true,
+        "audio_input": "system_default",
+        "audio_output": "system_default",
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0,
+        "speech_profile": "normal",
+        "acoustic_mode": "speakers",
+        "silence_ms": 800,
+        "vad_threshold": 0.6,
+        "cpu_threads": 4,
+        "tk_patchlevel": "9.0.4",
+        "actual_tk_scaling": 1.3343840294194902,
+        "actual_size": [
+          1100,
+          760
+        ],
+        "actual_engine": "gpu",
+        "gpu_render_size": [
+          960,
+          640
+        ],
+        "gpu_window_size": [
+          960,
+          640
+        ],
+        "gpu_dpi_scale": [
+          1.0,
+          1.0
+        ],
+        "gpu_effective_scale": 1.0,
+        "gpu_adaptive_level": 0,
+        "effective_voice_sha256": "919153437406622df5cecd1eb3ade63c1d45b75ef95d9dad02d705c430c505f9",
+        "effective_canvas_sha256": "38dbf2549c127f900451c88482ad875bd6a1e5c91d2d8c0b84eea82d24ebc406",
+        "effective_gpu_sha256": "2556e957cdfce52466db3722a33e47229200f6b4afb979e3580123ee5f652737",
+        "effective_settings_sha256": "cccea893a0a5cbea39da22b7d64d33404f077957af57782eb07eb668c0fcb1e9"
+      },
+      "summary": {
+        "startup_ms": 540.480308001861,
+        "sample_seconds": 2.00825601501856,
+        "process_cpu_percent_one_core": 2.6960674632661137,
+        "process_cpu_ms": 54.14393700000003,
+        "rss_before_bytes": 42393600,
+        "rss_after_bytes": 42405888,
+        "shutdown_ms": 55.48900298890658,
+        "process_sample_count": 4,
+        "observed_engine_changes": 0,
+        "gpu_last_heartbeat_actual_draw_fps": 14.999325883210822,
+        "gpu_last_heartbeat_animated_fps": 14.996532833817742,
+        "gpu_last_heartbeat_frame_p95_ms": 67.43710502632894,
+        "gpu_last_heartbeat_frame_p99_ms": 67.43710502632894,
+        "gpu_last_heartbeat_render_p95_ms": 25.06240498041734,
+        "gpu_last_heartbeat_render_p99_ms": 25.06240498041734
+      },
+      "metrics": {},
+      "observations": [
+        {
+          "elapsed_seconds": 0.0004943530075252056,
+          "process_cpu_seconds": 0.0004915380000000136,
+          "rss_bytes": 42393600,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 0.5055193680163939,
+          "process_cpu_seconds": 0.015817475000000025,
+          "rss_bytes": 42393600,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.0083033319970127,
+          "process_cpu_seconds": 0.028448289000000015,
+          "rss_bytes": 42401792,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.5271805740194395,
+          "process_cpu_seconds": 0.041250324000000005,
+          "rss_bytes": 42405888,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        }
+      ],
+      "unavailable": {
+        "physical_vram_bytes": "No attributable physical VRAM counter read.",
+        "electrical_power_watts": "No power meter sampled.",
+        "acoustic_latency_ms": "No acoustic loopback measured.",
+        "inference_audio_child_cpu": "No per-process OS counters for inference/audio children read.",
+        "stt_ms": "No valid observation in this run; no value inferred.",
+        "ttft_seconds": "No valid observation in this run; no value inferred.",
+        "tokens_per_second": "No valid observation in this run; no value inferred.",
+        "piper_ms": "No valid observation in this run; no value inferred.",
+        "tts_first_pcm_ms": "No valid observation in this run; no value inferred.",
+        "end_to_pcm_estimate_ms": "No valid observation in this run; no value inferred."
+      },
+      "limitations": [
+        "Bounded opt-in run; not proof of absence of memory leaks.",
+        "Sampled metrics may miss transient events; numeric observations only.",
+        "An idle visualizer does not establish animation performance.",
+        "Closing the window early shortens the sample; no automatic restart."
+      ],
+      "startup_scope": "Child imports, temporary Store and real Tk/App initialization; excludes OS process launch.",
+      "source_sha256": {
+        "ui.py": "4d21c8668490e7d8d15a43119d0d0d53c265b7c032224d43d9a653aca4b67e38",
+        "voice_ui.py": "9c066572e5748f702e6595838d67039e0765353e1c768828da16b0b7836432c6",
+        "voice_runtime.py": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+        "gpu_session.py": "a44531c0a9e54b3b6dd616268eb7babe0953ce5e243b38623205295150885fba",
+        "gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+        "storage.py": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85"
+      },
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending"
+      },
+      "gpu_renderer": {
+        "timing": {
+          "frames_drawn": 8,
+          "animated_frames_drawn": 8,
+          "swap_calls": 8,
+          "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+          "actual_draw_fps": 14.999325883210822,
+          "animated_fps": 14.996532833817742,
+          "elapsed_seconds": 0.5333573030075058,
+          "target_fps": 15.0,
+          "long_frames": 0,
+          "long_frame_threshold_ms": 100.0,
+          "sample_capacity": 600,
+          "sampled_render_frames": 8,
+          "sampled_frame_intervals": 7,
+          "percentile_method": "nearest_rank",
+          "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+          "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+          "cpu_percent": 117.67145503793124,
+          "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+          "rss_current_bytes": 109854720,
+          "rss_peak_bytes": 110211072,
+          "memory_source": "/proc/self/status",
+          "memory_unavailable_reason": null,
+          "physical_vram_bytes": null,
+          "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+          "render_mean_ms": 19.782002869760618,
+          "render_p50_ms": 19.17658999445848,
+          "render_p95_ms": 25.06240498041734,
+          "render_p99_ms": 25.06240498041734,
+          "frame_mean_ms": 66.68207985681615,
+          "frame_p50_ms": 66.62550300825387,
+          "frame_p95_ms": 67.43710502632894,
+          "frame_p99_ms": 67.43710502632894,
+          "adaptive_level": 0,
+          "frame_time_s": 2.0370412390038837
+        },
+        "process": {
+          "pid": 194003,
+          "cpu_percent": 117.67145503793124,
+          "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+          "rss_current_bytes": 109854720,
+          "rss_peak_bytes": 110211072,
+          "memory_source": "/proc/self/status",
+          "memory_unavailable_reason": null,
+          "physical_vram_bytes": null,
+          "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+        },
+        "resolution": {
+          "physical_size": [
+            960,
+            640
+          ],
+          "requested_scale": "auto",
+          "internal_size": [
+            960,
+            640
+          ],
+          "bloom_size": [
+            120,
+            80
+          ],
+          "effective_scale": 1.0,
+          "capped": false,
+          "adaptive_level": 0,
+          "estimated_owned_bytes": 6920064,
+          "limits": {
+            "max_pixels": 8294400,
+            "max_dimension": 4096
+          },
+          "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+        },
+        "presentation": {
+          "monitor_refresh_hz": 60,
+          "vsync_requested": true,
+          "physical_scanout_observable": false
+        },
+        "size": [
+          960,
+          640
+        ],
+        "logical_size": [
+          960,
+          640
+        ],
+        "dpi_scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "gpu_device_global": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "pipeline_turns_with_metrics": 0,
+      "pipeline_sample_capacity": 512,
+      "sampled_gpu_heartbeat_windows": [
+        {
+          "timing": {
+            "frames_drawn": 7,
+            "animated_frames_drawn": 6,
+            "swap_calls": 7,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 13.368299406177591,
+            "animated_fps": 14.968996409421615,
+            "elapsed_seconds": 0.523626812006114,
+            "target_fps": 15.0,
+            "long_frames": 0,
+            "long_frame_threshold_ms": 100.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 7,
+            "sampled_frame_intervals": 5,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 115.59510726370758,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109752320,
+            "rss_peak_bytes": 110166016,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 26.86425086410184,
+            "render_p50_ms": 19.36820399714634,
+            "render_p95_ms": 64.96982299722731,
+            "render_p99_ms": 64.96982299722731,
+            "frame_mean_ms": 66.80474579916336,
+            "frame_p50_ms": 66.68154799262993,
+            "frame_p95_ms": 67.12135599809699,
+            "frame_p99_ms": 67.12135599809699,
+            "adaptive_level": 0,
+            "frame_time_s": 0.4197175359819084
+          },
+          "process": {
+            "pid": 194003,
+            "cpu_percent": 115.59510726370758,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109752320,
+            "rss_peak_bytes": 110166016,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              120,
+              80
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 6920064,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 8,
+            "animated_frames_drawn": 8,
+            "swap_calls": 8,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 15.085241031105195,
+            "animated_fps": 16.969655708461424,
+            "elapsed_seconds": 0.5303196669847239,
+            "target_fps": 15.0,
+            "long_frames": 0,
+            "long_frame_threshold_ms": 100.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 8,
+            "sampled_frame_intervals": 7,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 121.29744945297863,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109834240,
+            "rss_peak_bytes": 110166016,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 21.018310504587134,
+            "render_p50_ms": 18.962342001032084,
+            "render_p95_ms": 27.027442993130535,
+            "render_p99_ms": 27.027442993130535,
+            "frame_mean_ms": 58.928714711717994,
+            "frame_p50_ms": 66.55648199375719,
+            "frame_p95_ms": 67.6680289907381,
+            "frame_p99_ms": 67.6680289907381,
+            "adaptive_level": 0,
+            "frame_time_s": 0.9705274589941837
+          },
+          "process": {
+            "pid": 194003,
+            "cpu_percent": 121.29744945297863,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109834240,
+            "rss_peak_bytes": 110166016,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              120,
+              80
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 6920064,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 8,
+            "animated_frames_drawn": 8,
+            "swap_calls": 8,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 15.001239299045286,
+            "animated_fps": 15.056121132680627,
+            "elapsed_seconds": 0.53328927300754,
+            "target_fps": 15.0,
+            "long_frames": 0,
+            "long_frame_threshold_ms": 100.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 8,
+            "sampled_frame_intervals": 7,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 110.88583887409997,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109846528,
+            "rss_peak_bytes": 110211072,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 19.902143383660587,
+            "render_p50_ms": 19.447141006821766,
+            "render_p95_ms": 27.515702007804066,
+            "render_p99_ms": 27.515702007804066,
+            "frame_mean_ms": 66.41816914114835,
+            "frame_p50_ms": 66.58329098718241,
+            "frame_p95_ms": 67.26556099602021,
+            "frame_p99_ms": 67.26556099602021,
+            "adaptive_level": 0,
+            "frame_time_s": 1.503731037984835
+          },
+          "process": {
+            "pid": 194003,
+            "cpu_percent": 110.88583887409997,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109846528,
+            "rss_peak_bytes": 110211072,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              120,
+              80
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 6920064,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 8,
+            "animated_frames_drawn": 8,
+            "swap_calls": 8,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 14.999325883210822,
+            "animated_fps": 14.996532833817742,
+            "elapsed_seconds": 0.5333573030075058,
+            "target_fps": 15.0,
+            "long_frames": 0,
+            "long_frame_threshold_ms": 100.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 8,
+            "sampled_frame_intervals": 7,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 117.67145503793124,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109854720,
+            "rss_peak_bytes": 110211072,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 19.782002869760618,
+            "render_p50_ms": 19.17658999445848,
+            "render_p95_ms": 25.06240498041734,
+            "render_p99_ms": 25.06240498041734,
+            "frame_mean_ms": 66.68207985681615,
+            "frame_p50_ms": 66.62550300825387,
+            "frame_p95_ms": 67.43710502632894,
+            "frame_p99_ms": 67.43710502632894,
+            "adaptive_level": 0,
+            "frame_time_s": 2.0370412390038837
+          },
+          "process": {
+            "pid": 194003,
+            "cpu_percent": 117.67145503793124,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109854720,
+            "rss_peak_bytes": 110211072,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              120,
+              80
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 6920064,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "gpu_window_sample_capacity": 120,
+      "event_counts": {
+        "app_poll_callbacks": 71,
+        "observed_state_idle": 4,
+        "observed_microphone_disabled": 4
+      },
+      "callback_errors": [],
+      "workload_checks": {
+        "sample_received": true,
+        "requested_gpu_active": true
+      },
+      "comparison": {
+        "comparable_conditions": true,
+        "condition_mismatches": [],
+        "scope": "Short observations; no statistical significance or hardware extrapolation.",
+        "metrics": {
+          "startup_ms": {
+            "before": 512.5592699914705,
+            "after": 540.480308001861,
+            "delta": 27.921038010390475,
+            "delta_percent": 5.447377434195095
+          },
+          "shutdown_ms": {
+            "before": 81.15453700884245,
+            "after": 55.48900298890658,
+            "delta": -25.665534019935876,
+            "delta_percent": -31.62550729251207
+          },
+          "process_cpu_percent_one_core": {
+            "before": 2.6614923577045237,
+            "after": 2.6960674632661137,
+            "delta": 0.034575105561589936,
+            "delta_percent": 1.2990871629408012
+          },
+          "rss_after_bytes": {
+            "before": 42364928,
+            "after": 42405888,
+            "delta": 40960,
+            "delta_percent": 0.09668374746205163
+          }
+        }
+      },
+      "gpu_last_heartbeat_comparison": {
+        "scope": "Separate final heartbeat windows; not pooled frame percentiles nor whole-run timing.",
+        "before_window_seconds": 0.5333473589853384,
+        "after_window_seconds": 0.5333573030075058,
+        "metrics": {
+          "actual_draw_fps": {
+            "before": 14.999605538910934,
+            "after": 14.999325883210822,
+            "delta": -0.00027965570011190266
+          },
+          "animated_fps": {
+            "before": 14.989748189409184,
+            "after": 14.996532833817742,
+            "delta": 0.006784644408558194
+          },
+          "frame_p95_ms": {
+            "before": 67.16810900252312,
+            "after": 67.43710502632894,
+            "delta": 0.268996023805812
+          },
+          "frame_p99_ms": {
+            "before": 67.16810900252312,
+            "after": 67.43710502632894,
+            "delta": 0.268996023805812
+          },
+          "render_p95_ms": {
+            "before": 21.536636020755395,
+            "after": 25.06240498041734,
+            "delta": 3.5257689596619457
+          },
+          "render_p99_ms": {
+            "before": 21.536636020755395,
+            "after": 25.06240498041734,
+            "delta": 3.5257689596619457
+          }
+        }
+      }
+    },
+    "gpu-balanced": {
+      "benchmark_version": 1,
+      "created_utc": "2026-10-29T20:12:08.843725+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "tool_sha256": "81c3d26879cce91da7b5f303e4cdbeb4571248aa02602b709ebb29271cc409fc",
+      "status": "complete",
+      "conditions": {
+        "scenario": "gpu-balanced",
+        "model": "",
+        "context": 4096,
+        "max_tokens": 1024,
+        "reasoning_mode": "fast",
+        "cognitive_mode": "manual",
+        "requested_size": [
+          1100,
+          760
+        ],
+        "requested_tk_scaling": null,
+        "visual_state": "thinking",
+        "cache_state": "unspecified",
+        "requested_gpu_profile": "balanced",
+        "sample_seconds_requested": 2.0,
+        "warmup_seconds": 1.0,
+        "input_preferences_sha256": "e21868aab8b5f76b3de5ea5f59a0234b737359fffcbc25864c160ca8763c7e23",
+        "disposable_archive": true,
+        "synthetic_visual_state": true,
+        "synthetic_audio": false,
+        "interactive": false,
+        "software_gpu_explicitly_allowed": true,
+        "audio_input": "system_default",
+        "audio_output": "system_default",
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0,
+        "speech_profile": "normal",
+        "acoustic_mode": "speakers",
+        "silence_ms": 800,
+        "vad_threshold": 0.6,
+        "cpu_threads": 4,
+        "tk_patchlevel": "9.0.4",
+        "actual_tk_scaling": 1.3343840294194902,
+        "actual_size": [
+          1100,
+          760
+        ],
+        "actual_engine": "gpu",
+        "gpu_render_size": [
+          960,
+          640
+        ],
+        "gpu_window_size": [
+          960,
+          640
+        ],
+        "gpu_dpi_scale": [
+          1.0,
+          1.0
+        ],
+        "gpu_effective_scale": 1.0,
+        "gpu_adaptive_level": 0,
+        "effective_voice_sha256": "919153437406622df5cecd1eb3ade63c1d45b75ef95d9dad02d705c430c505f9",
+        "effective_canvas_sha256": "38dbf2549c127f900451c88482ad875bd6a1e5c91d2d8c0b84eea82d24ebc406",
+        "effective_gpu_sha256": "25fd32f80b018cd75216b517d69c6a54b5505e67e15b5916ae5814906cb0af0e",
+        "effective_settings_sha256": "cccea893a0a5cbea39da22b7d64d33404f077957af57782eb07eb668c0fcb1e9"
+      },
+      "summary": {
+        "startup_ms": 557.0692319888622,
+        "sample_seconds": 2.0147563170176,
+        "process_cpu_percent_one_core": 4.541006087298489,
+        "process_cpu_ms": 91.49020700000004,
+        "rss_before_bytes": 42401792,
+        "rss_after_bytes": 42414080,
+        "shutdown_ms": 34.323792991926894,
+        "process_sample_count": 4,
+        "observed_engine_changes": 0,
+        "gpu_last_heartbeat_actual_draw_fps": 46.51853960589365,
+        "gpu_last_heartbeat_animated_fps": 46.92256031873713,
+        "gpu_last_heartbeat_frame_p95_ms": 29.186831990955397,
+        "gpu_last_heartbeat_frame_p99_ms": 29.740953992586583,
+        "gpu_last_heartbeat_render_p95_ms": 28.09634499135427,
+        "gpu_last_heartbeat_render_p99_ms": 29.339698987314478
+      },
+      "metrics": {},
+      "observations": [
+        {
+          "elapsed_seconds": 0.0006788370083086193,
+          "process_cpu_seconds": 0.0006776239999999878,
+          "rss_bytes": 42401792,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 0.5178031760151498,
+          "process_cpu_seconds": 0.02369749900000001,
+          "rss_bytes": 42401792,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.0204059960087761,
+          "process_cpu_seconds": 0.04795912600000002,
+          "rss_bytes": 42409984,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.5335344409977552,
+          "process_cpu_seconds": 0.07259101100000004,
+          "rss_bytes": 42414080,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        }
+      ],
+      "unavailable": {
+        "physical_vram_bytes": "No attributable physical VRAM counter read.",
+        "electrical_power_watts": "No power meter sampled.",
+        "acoustic_latency_ms": "No acoustic loopback measured.",
+        "inference_audio_child_cpu": "No per-process OS counters for inference/audio children read.",
+        "stt_ms": "No valid observation in this run; no value inferred.",
+        "ttft_seconds": "No valid observation in this run; no value inferred.",
+        "tokens_per_second": "No valid observation in this run; no value inferred.",
+        "piper_ms": "No valid observation in this run; no value inferred.",
+        "tts_first_pcm_ms": "No valid observation in this run; no value inferred.",
+        "end_to_pcm_estimate_ms": "No valid observation in this run; no value inferred."
+      },
+      "limitations": [
+        "Bounded opt-in run; not proof of absence of memory leaks.",
+        "Sampled metrics may miss transient events; numeric observations only.",
+        "An idle visualizer does not establish animation performance.",
+        "Closing the window early shortens the sample; no automatic restart."
+      ],
+      "startup_scope": "Child imports, temporary Store and real Tk/App initialization; excludes OS process launch.",
+      "source_sha256": {
+        "ui.py": "4d21c8668490e7d8d15a43119d0d0d53c265b7c032224d43d9a653aca4b67e38",
+        "voice_ui.py": "9c066572e5748f702e6595838d67039e0765353e1c768828da16b0b7836432c6",
+        "voice_runtime.py": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+        "gpu_session.py": "a44531c0a9e54b3b6dd616268eb7babe0953ce5e243b38623205295150885fba",
+        "gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+        "storage.py": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85"
+      },
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending"
+      },
+      "gpu_renderer": {
+        "timing": {
+          "frames_drawn": 24,
+          "animated_frames_drawn": 24,
+          "swap_calls": 24,
+          "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+          "actual_draw_fps": 46.51853960589365,
+          "animated_fps": 46.92256031873713,
+          "elapsed_seconds": 0.5159233330050483,
+          "target_fps": 60.0,
+          "long_frames": 4,
+          "long_frame_threshold_ms": 25.0,
+          "sample_capacity": 600,
+          "sampled_render_frames": 24,
+          "sampled_frame_intervals": 23,
+          "percentile_method": "nearest_rank",
+          "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+          "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+          "cpu_percent": 378.4093777322718,
+          "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+          "rss_current_bytes": 109961216,
+          "rss_peak_bytes": 110276608,
+          "memory_source": "/proc/self/status",
+          "memory_unavailable_reason": null,
+          "physical_vram_bytes": null,
+          "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+          "render_mean_ms": 20.661251376926277,
+          "render_p50_ms": 19.496355002047494,
+          "render_p95_ms": 28.09634499135427,
+          "render_p99_ms": 29.339698987314478,
+          "frame_mean_ms": 21.311710043253537,
+          "frame_p50_ms": 19.834776991046965,
+          "frame_p95_ms": 29.186831990955397,
+          "frame_p99_ms": 29.740953992586583,
+          "adaptive_level": 0,
+          "frame_time_s": 1.9849460169789381
+        },
+        "process": {
+          "pid": 194038,
+          "cpu_percent": 378.4093777322718,
+          "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+          "rss_current_bytes": 109961216,
+          "rss_peak_bytes": 110276608,
+          "memory_source": "/proc/self/status",
+          "memory_unavailable_reason": null,
+          "physical_vram_bytes": null,
+          "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+        },
+        "resolution": {
+          "physical_size": [
+            960,
+            640
+          ],
+          "requested_scale": "auto",
+          "internal_size": [
+            960,
+            640
+          ],
+          "bloom_size": [
+            240,
+            160
+          ],
+          "effective_scale": 1.0,
+          "capped": false,
+          "adaptive_level": 0,
+          "estimated_owned_bytes": 7380864,
+          "limits": {
+            "max_pixels": 8294400,
+            "max_dimension": 4096
+          },
+          "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+        },
+        "presentation": {
+          "monitor_refresh_hz": 60,
+          "vsync_requested": true,
+          "physical_scanout_observable": false
+        },
+        "size": [
+          960,
+          640
+        ],
+        "logical_size": [
+          960,
+          640
+        ],
+        "dpi_scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "gpu_device_global": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "pipeline_turns_with_metrics": 0,
+      "pipeline_sample_capacity": 512,
+      "sampled_gpu_heartbeat_windows": [
+        {
+          "timing": {
+            "frames_drawn": 18,
+            "animated_frames_drawn": 17,
+            "swap_calls": 18,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 34.66594616596689,
+            "animated_fps": 42.364058167872955,
+            "elapsed_seconds": 0.5192415609781165,
+            "target_fps": 60.0,
+            "long_frames": 5,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 18,
+            "sampled_frame_intervals": 16,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 292.0220848931438,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109838336,
+            "rss_peak_bytes": 110137344,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 22.65772572233497,
+            "render_p50_ms": 18.69055797578767,
+            "render_p95_ms": 54.84284399426542,
+            "render_p99_ms": 54.84284399426542,
+            "frame_mean_ms": 23.60491518629715,
+            "frame_p50_ms": 19.21715898788534,
+            "frame_p95_ms": 55.813052982557565,
+            "frame_p99_ms": 55.813052982557565,
+            "adaptive_level": 0,
+            "frame_time_s": 0.4007349859981332
+          },
+          "process": {
+            "pid": 194038,
+            "cpu_percent": 292.0220848931438,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109838336,
+            "rss_peak_bytes": 110137344,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 21,
+            "animated_frames_drawn": 21,
+            "swap_calls": 21,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 41.75379390957702,
+            "animated_fps": 46.36382004861278,
+            "elapsed_seconds": 0.5029483080143109,
+            "target_fps": 60.0,
+            "long_frames": 3,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 21,
+            "sampled_frame_intervals": 20,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 342.6044739673267,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109924352,
+            "rss_peak_bytes": 110202880,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 20.758632811651164,
+            "render_p50_ms": 19.623163010692224,
+            "render_p95_ms": 28.507315000751987,
+            "render_p99_ms": 29.090194002492353,
+            "frame_mean_ms": 21.568542000022717,
+            "frame_p50_ms": 20.11569301248528,
+            "frame_p95_ms": 29.50064800097607,
+            "frame_p99_ms": 29.561251983977854,
+            "adaptive_level": 0,
+            "frame_time_s": 0.9720714369905181
+          },
+          "process": {
+            "pid": 194038,
+            "cpu_percent": 342.6044739673267,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109924352,
+            "rss_peak_bytes": 110202880,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 25,
+            "animated_frames_drawn": 25,
+            "swap_calls": 25,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 49.79821266224085,
+            "animated_fps": 50.51495960148149,
+            "elapsed_seconds": 0.5020260500023142,
+            "target_fps": 60.0,
+            "long_frames": 2,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 25,
+            "sampled_frame_intervals": 24,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 384.0774127141633,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109944832,
+            "rss_peak_bytes": 110227456,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 19.404189761262387,
+            "render_p50_ms": 17.87175697972998,
+            "render_p95_ms": 25.6360030034557,
+            "render_p99_ms": 32.139094022568315,
+            "frame_mean_ms": 19.796115999876445,
+            "frame_p50_ms": 18.430651020025834,
+            "frame_p95_ms": 25.58969901292585,
+            "frame_p99_ms": 33.18751900224015,
+            "adaptive_level": 0,
+            "frame_time_s": 1.46765035300632
+          },
+          "process": {
+            "pid": 194038,
+            "cpu_percent": 384.0774127141633,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109944832,
+            "rss_peak_bytes": 110227456,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 24,
+            "animated_frames_drawn": 24,
+            "swap_calls": 24,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 46.51853960589365,
+            "animated_fps": 46.92256031873713,
+            "elapsed_seconds": 0.5159233330050483,
+            "target_fps": 60.0,
+            "long_frames": 4,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 24,
+            "sampled_frame_intervals": 23,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 378.4093777322718,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109961216,
+            "rss_peak_bytes": 110276608,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 20.661251376926277,
+            "render_p50_ms": 19.496355002047494,
+            "render_p95_ms": 28.09634499135427,
+            "render_p99_ms": 29.339698987314478,
+            "frame_mean_ms": 21.311710043253537,
+            "frame_p50_ms": 19.834776991046965,
+            "frame_p95_ms": 29.186831990955397,
+            "frame_p99_ms": 29.740953992586583,
+            "adaptive_level": 0,
+            "frame_time_s": 1.9849460169789381
+          },
+          "process": {
+            "pid": 194038,
+            "cpu_percent": 378.4093777322718,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109961216,
+            "rss_peak_bytes": 110276608,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "gpu_window_sample_capacity": 120,
+      "event_counts": {
+        "app_poll_callbacks": 68,
+        "observed_state_idle": 4,
+        "observed_microphone_disabled": 4
+      },
+      "callback_errors": [],
+      "workload_checks": {
+        "sample_received": true,
+        "requested_gpu_active": true
+      },
+      "comparison": {
+        "comparable_conditions": true,
+        "condition_mismatches": [],
+        "scope": "Short observations; no statistical significance or hardware extrapolation.",
+        "metrics": {
+          "startup_ms": {
+            "before": 559.5300830027554,
+            "after": 557.0692319888622,
+            "delta": -2.4608510138932616,
+            "delta_percent": -0.4398067393779689
+          },
+          "shutdown_ms": {
+            "before": 64.41612099297345,
+            "after": 34.323792991926894,
+            "delta": -30.092328001046553,
+            "delta_percent": -46.71552328388269
+          },
+          "process_cpu_percent_one_core": {
+            "before": 4.491321656573013,
+            "after": 4.541006087298489,
+            "delta": 0.04968443072547579,
+            "delta_percent": 1.1062318516591443
+          },
+          "rss_after_bytes": {
+            "before": 42471424,
+            "after": 42414080,
+            "delta": -57344,
+            "delta_percent": -0.13501784164336
+          }
+        }
+      },
+      "gpu_last_heartbeat_comparison": {
+        "scope": "Separate final heartbeat windows; not pooled frame percentiles nor whole-run timing.",
+        "before_window_seconds": 0.5107891240040772,
+        "after_window_seconds": 0.5159233330050483,
+        "metrics": {
+          "actual_draw_fps": {
+            "before": 50.90163196151464,
+            "after": 46.51853960589365,
+            "delta": -4.383092355620988
+          },
+          "animated_fps": {
+            "before": 50.760802709112355,
+            "after": 46.92256031873713,
+            "delta": -3.838242390375221
+          },
+          "frame_p95_ms": {
+            "before": 26.814126991666853,
+            "after": 29.186831990955397,
+            "delta": 2.372704999288544
+          },
+          "frame_p99_ms": {
+            "before": 29.24743399489671,
+            "after": 29.740953992586583,
+            "delta": 0.493519997689873
+          },
+          "render_p95_ms": {
+            "before": 26.47499501472339,
+            "after": 28.09634499135427,
+            "delta": 1.6213499766308814
+          },
+          "render_p99_ms": {
+            "before": 28.945575992111117,
+            "after": 29.339698987314478,
+            "delta": 0.3941229952033609
+          }
+        }
+      }
+    },
+    "gpu-cinematic": {
+      "benchmark_version": 1,
+      "created_utc": "2026-10-29T20:12:12.582548+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "python": "3.12.14",
+      "tool_sha256": "81c3d26879cce91da7b5f303e4cdbeb4571248aa02602b709ebb29271cc409fc",
+      "status": "complete",
+      "conditions": {
+        "scenario": "gpu-cinematic",
+        "model": "",
+        "context": 4096,
+        "max_tokens": 1024,
+        "reasoning_mode": "fast",
+        "cognitive_mode": "manual",
+        "requested_size": [
+          1100,
+          760
+        ],
+        "requested_tk_scaling": null,
+        "visual_state": "thinking",
+        "cache_state": "unspecified",
+        "requested_gpu_profile": "cinematic",
+        "sample_seconds_requested": 2.0,
+        "warmup_seconds": 1.0,
+        "input_preferences_sha256": "e21868aab8b5f76b3de5ea5f59a0234b737359fffcbc25864c160ca8763c7e23",
+        "disposable_archive": true,
+        "synthetic_visual_state": true,
+        "synthetic_audio": false,
+        "interactive": false,
+        "software_gpu_explicitly_allowed": true,
+        "audio_input": "system_default",
+        "audio_output": "system_default",
+        "voice": "fr_FR-tom-medium",
+        "speed": 1.0,
+        "speech_profile": "normal",
+        "acoustic_mode": "speakers",
+        "silence_ms": 800,
+        "vad_threshold": 0.6,
+        "cpu_threads": 4,
+        "tk_patchlevel": "9.0.4",
+        "actual_tk_scaling": 1.3343840294194902,
+        "actual_size": [
+          1100,
+          760
+        ],
+        "actual_engine": "gpu",
+        "gpu_render_size": [
+          960,
+          640
+        ],
+        "gpu_window_size": [
+          960,
+          640
+        ],
+        "gpu_dpi_scale": [
+          1.0,
+          1.0
+        ],
+        "gpu_effective_scale": 1.0,
+        "gpu_adaptive_level": 0,
+        "effective_voice_sha256": "919153437406622df5cecd1eb3ade63c1d45b75ef95d9dad02d705c430c505f9",
+        "effective_canvas_sha256": "38dbf2549c127f900451c88482ad875bd6a1e5c91d2d8c0b84eea82d24ebc406",
+        "effective_gpu_sha256": "d4aa0a0539a07980be07f7e9c07cd07caa83558087307cbbb843a90f3e74fcb8",
+        "effective_settings_sha256": "cccea893a0a5cbea39da22b7d64d33404f077957af57782eb07eb668c0fcb1e9"
+      },
+      "summary": {
+        "startup_ms": 472.14411199092865,
+        "sample_seconds": 2.008964595006546,
+        "process_cpu_percent_one_core": 3.9431843247462433,
+        "process_cpu_ms": 79.21717699999998,
+        "rss_before_bytes": 42397696,
+        "rss_after_bytes": 42409984,
+        "shutdown_ms": 32.51756000099704,
+        "process_sample_count": 4,
+        "observed_engine_changes": 0,
+        "gpu_last_heartbeat_actual_draw_fps": 53.67642146120367,
+        "gpu_last_heartbeat_animated_fps": 53.64847039158012,
+        "gpu_last_heartbeat_frame_p95_ms": 24.085048004053533,
+        "gpu_last_heartbeat_frame_p99_ms": 24.43077100906521,
+        "gpu_last_heartbeat_render_p95_ms": 23.772063985234126,
+        "gpu_last_heartbeat_render_p99_ms": 24.021903984248638
+      },
+      "metrics": {},
+      "observations": [
+        {
+          "elapsed_seconds": 0.0005929490143898875,
+          "process_cpu_seconds": 0.0005888430000000056,
+          "rss_bytes": 42397696,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 0.5172985779936425,
+          "process_cpu_seconds": 0.02195185300000002,
+          "rss_bytes": 42397696,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.0285190239956137,
+          "process_cpu_seconds": 0.04189072599999999,
+          "rss_bytes": 42405888,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        },
+        {
+          "elapsed_seconds": 1.530927606014302,
+          "process_cpu_seconds": 0.062257406000000015,
+          "rss_bytes": 42409984,
+          "active_engine": "gpu",
+          "microphone_state": "disabled",
+          "capture": {},
+          "state": "idle"
+        }
+      ],
+      "unavailable": {
+        "physical_vram_bytes": "No attributable physical VRAM counter read.",
+        "electrical_power_watts": "No power meter sampled.",
+        "acoustic_latency_ms": "No acoustic loopback measured.",
+        "inference_audio_child_cpu": "No per-process OS counters for inference/audio children read.",
+        "stt_ms": "No valid observation in this run; no value inferred.",
+        "ttft_seconds": "No valid observation in this run; no value inferred.",
+        "tokens_per_second": "No valid observation in this run; no value inferred.",
+        "piper_ms": "No valid observation in this run; no value inferred.",
+        "tts_first_pcm_ms": "No valid observation in this run; no value inferred.",
+        "end_to_pcm_estimate_ms": "No valid observation in this run; no value inferred."
+      },
+      "limitations": [
+        "Bounded opt-in run; not proof of absence of memory leaks.",
+        "Sampled metrics may miss transient events; numeric observations only.",
+        "An idle visualizer does not establish animation performance.",
+        "Closing the window early shortens the sample; no automatic restart."
+      ],
+      "startup_scope": "Child imports, temporary Store and real Tk/App initialization; excludes OS process launch.",
+      "source_sha256": {
+        "ui.py": "4d21c8668490e7d8d15a43119d0d0d53c265b7c032224d43d9a653aca4b67e38",
+        "voice_ui.py": "9c066572e5748f702e6595838d67039e0765353e1c768828da16b0b7836432c6",
+        "voice_runtime.py": "0102b2390bb1bf979ce17077b5d2cc54e702cf68dce51e795bdd13a12b14e607",
+        "gpu_session.py": "a44531c0a9e54b3b6dd616268eb7babe0953ce5e243b38623205295150885fba",
+        "gpu_renderer.py": "f1f19f97c7e6b1e46ba06647005fc4c26f335126b59afc3dc2109a3bc073beeb",
+        "storage.py": "9e776c0681c3f54e86375af1ad10aa40e941b0c7ff54922fe8bef5829c3d9e85"
+      },
+      "renderer": {
+        "vendor": "Mesa",
+        "renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+        "version": "4.5 (Core Profile) Mesa 25.0.7-2+deb13u1",
+        "acceleration": "software",
+        "hardware_validation": "pending"
+      },
+      "gpu_renderer": {
+        "timing": {
+          "frames_drawn": 27,
+          "animated_frames_drawn": 27,
+          "swap_calls": 27,
+          "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+          "actual_draw_fps": 53.67642146120367,
+          "animated_fps": 53.64847039158012,
+          "elapsed_seconds": 0.5030141590104904,
+          "target_fps": 60.0,
+          "long_frames": 0,
+          "long_frame_threshold_ms": 25.0,
+          "sample_capacity": 600,
+          "sampled_render_frames": 27,
+          "sampled_frame_intervals": 26,
+          "percentile_method": "nearest_rank",
+          "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+          "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+          "cpu_percent": 394.83634176559633,
+          "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+          "rss_current_bytes": 109961216,
+          "rss_peak_bytes": 110415872,
+          "memory_source": "/proc/self/status",
+          "memory_unavailable_reason": null,
+          "physical_vram_bytes": null,
+          "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+          "render_mean_ms": 18.008242367715056,
+          "render_p50_ms": 17.386908002663404,
+          "render_p95_ms": 23.772063985234126,
+          "render_p99_ms": 24.021903984248638,
+          "frame_mean_ms": 18.63986042287881,
+          "frame_p50_ms": 17.912337003508583,
+          "frame_p95_ms": 24.085048004053533,
+          "frame_p99_ms": 24.43077100906521,
+          "adaptive_level": 0,
+          "frame_time_s": 1.9638079939759336
+        },
+        "process": {
+          "pid": 194073,
+          "cpu_percent": 394.83634176559633,
+          "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+          "rss_current_bytes": 109961216,
+          "rss_peak_bytes": 110415872,
+          "memory_source": "/proc/self/status",
+          "memory_unavailable_reason": null,
+          "physical_vram_bytes": null,
+          "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+        },
+        "resolution": {
+          "physical_size": [
+            960,
+            640
+          ],
+          "requested_scale": "auto",
+          "internal_size": [
+            960,
+            640
+          ],
+          "bloom_size": [
+            240,
+            160
+          ],
+          "effective_scale": 1.0,
+          "capped": false,
+          "adaptive_level": 0,
+          "estimated_owned_bytes": 7380864,
+          "limits": {
+            "max_pixels": 8294400,
+            "max_dimension": 4096
+          },
+          "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+        },
+        "presentation": {
+          "monitor_refresh_hz": 60,
+          "vsync_requested": true,
+          "physical_scanout_observable": false
+        },
+        "size": [
+          960,
+          640
+        ],
+        "logical_size": [
+          960,
+          640
+        ],
+        "dpi_scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "gpu_device_global": {
+        "available": false,
+        "scope": "device_global_not_process",
+        "device_index": null,
+        "device_name": null,
+        "memory_used_bytes": null,
+        "memory_total_bytes": null,
+        "utilization_percent": null,
+        "peak_memory_used_bytes": null,
+        "peak_utilization_percent": null,
+        "memory_pressure_fraction": null,
+        "sample_count": 0,
+        "unavailable_reason": "NVIDIA telemetry unavailable (FileNotFoundError).",
+        "attribution": "Global device usage; no process, Ollama or GL attribution."
+      },
+      "pipeline_turns_with_metrics": 0,
+      "pipeline_sample_capacity": 512,
+      "sampled_gpu_heartbeat_windows": [
+        {
+          "timing": {
+            "frames_drawn": 20,
+            "animated_frames_drawn": 19,
+            "swap_calls": 20,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 39.72351559021884,
+            "animated_fps": 49.14229616225303,
+            "elapsed_seconds": 0.5034801100264303,
+            "target_fps": 60.0,
+            "long_frames": 1,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 20,
+            "sampled_frame_intervals": 18,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 294.35910028743734,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109834240,
+            "rss_peak_bytes": 110268416,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 19.644206551311072,
+            "render_p50_ms": 17.643908999161795,
+            "render_p95_ms": 23.86741599184461,
+            "render_p99_ms": 47.98997999751009,
+            "frame_mean_ms": 20.349069500096245,
+            "frame_p50_ms": 17.966736981179565,
+            "frame_p95_ms": 48.8670100166928,
+            "frame_p99_ms": 48.8670100166928,
+            "adaptive_level": 0,
+            "frame_time_s": 0.4011985769844614
+          },
+          "process": {
+            "pid": 194073,
+            "cpu_percent": 294.35910028743734,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109834240,
+            "rss_peak_bytes": 110268416,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 24,
+            "animated_frames_drawn": 24,
+            "swap_calls": 24,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 47.589609668362236,
+            "animated_fps": 52.8630112758182,
+            "elapsed_seconds": 0.5043117640016135,
+            "target_fps": 60.0,
+            "long_frames": 1,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 24,
+            "sampled_frame_intervals": 23,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 349.9486297913038,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109920256,
+            "rss_peak_bytes": 110350336,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 18.2028213700202,
+            "render_p50_ms": 17.981860000872985,
+            "render_p95_ms": 22.931257990421727,
+            "render_p99_ms": 25.091490999329835,
+            "frame_mean_ms": 18.91681869544656,
+            "frame_p50_ms": 18.556802009698004,
+            "frame_p95_ms": 23.868747986853123,
+            "frame_p99_ms": 25.405435997527093,
+            "adaptive_level": 0,
+            "frame_time_s": 0.9597734209964983
+          },
+          "process": {
+            "pid": 194073,
+            "cpu_percent": 349.9486297913038,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109920256,
+            "rss_peak_bytes": 110350336,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 27,
+            "animated_frames_drawn": 27,
+            "swap_calls": 27,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 53.944438849029865,
+            "animated_fps": 53.738454146426776,
+            "elapsed_seconds": 0.5005149849748705,
+            "target_fps": 60.0,
+            "long_frames": 1,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 27,
+            "sampled_frame_intervals": 26,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 382.91430876864246,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109944832,
+            "rss_peak_bytes": 110383104,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 17.91144040503746,
+            "render_p50_ms": 16.84477398521267,
+            "render_p95_ms": 24.459984007989988,
+            "render_p99_ms": 31.995987985283136,
+            "frame_mean_ms": 18.608648422881604,
+            "frame_p50_ms": 17.253259982680902,
+            "frame_p95_ms": 24.75977799622342,
+            "frame_p99_ms": 32.50786699936725,
+            "adaptive_level": 0,
+            "frame_time_s": 1.4620092469849624
+          },
+          "process": {
+            "pid": 194073,
+            "cpu_percent": 382.91430876864246,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109944832,
+            "rss_peak_bytes": 110383104,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "timing": {
+            "frames_drawn": 27,
+            "animated_frames_drawn": 27,
+            "swap_calls": 27,
+            "presentation_observation": "swap_buffers_returned_not_physical_scanout",
+            "actual_draw_fps": 53.67642146120367,
+            "animated_fps": 53.64847039158012,
+            "elapsed_seconds": 0.5030141590104904,
+            "target_fps": 60.0,
+            "long_frames": 0,
+            "long_frame_threshold_ms": 25.0,
+            "sample_capacity": 600,
+            "sampled_render_frames": 27,
+            "sampled_frame_intervals": 26,
+            "percentile_method": "nearest_rank",
+            "render_scope": "draw_wall_time_including_recorded_driver_and_swap_wait_not_GPU_query",
+            "frame_scope": "consecutive_animated_draw_start_intervals_excluding_idle_and_hidden",
+            "cpu_percent": 394.83634176559633,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109961216,
+            "rss_peak_bytes": 110415872,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read.",
+            "render_mean_ms": 18.008242367715056,
+            "render_p50_ms": 17.386908002663404,
+            "render_p95_ms": 23.772063985234126,
+            "render_p99_ms": 24.021903984248638,
+            "frame_mean_ms": 18.63986042287881,
+            "frame_p50_ms": 17.912337003508583,
+            "frame_p95_ms": 24.085048004053533,
+            "frame_p99_ms": 24.43077100906521,
+            "adaptive_level": 0,
+            "frame_time_s": 1.9638079939759336
+          },
+          "process": {
+            "pid": 194073,
+            "cpu_percent": 394.83634176559633,
+            "cpu_scope": "renderer_process_one_core_percent_may_exceed_100",
+            "rss_current_bytes": 109961216,
+            "rss_peak_bytes": 110415872,
+            "memory_source": "/proc/self/status",
+            "memory_unavailable_reason": null,
+            "physical_vram_bytes": null,
+            "physical_vram_unavailable_reason": "No attributable process VRAM counter was read."
+          },
+          "resolution": {
+            "physical_size": [
+              960,
+              640
+            ],
+            "requested_scale": "auto",
+            "internal_size": [
+              960,
+              640
+            ],
+            "bloom_size": [
+              240,
+              160
+            ],
+            "effective_scale": 1.0,
+            "capped": false,
+            "adaptive_level": 0,
+            "estimated_owned_bytes": 7380864,
+            "limits": {
+              "max_pixels": 8294400,
+              "max_dimension": 4096
+            },
+            "memory_scope": "owned attachments and vertex payload; physical VRAM/driver memory not measured"
+          },
+          "presentation": {
+            "monitor_refresh_hz": 60,
+            "vsync_requested": true,
+            "physical_scanout_observable": false
+          },
+          "size": [
+            960,
+            640
+          ],
+          "logical_size": [
+            960,
+            640
+          ],
+          "dpi_scale": [
+            1.0,
+            1.0
+          ]
+        }
+      ],
+      "gpu_window_sample_capacity": 120,
+      "event_counts": {
+        "app_poll_callbacks": 70,
+        "observed_state_idle": 4,
+        "observed_microphone_disabled": 4
+      },
+      "callback_errors": [],
+      "workload_checks": {
+        "sample_received": true,
+        "requested_gpu_active": true
+      },
+      "comparison": {
+        "comparable_conditions": true,
+        "condition_mismatches": [],
+        "scope": "Short observations; no statistical significance or hardware extrapolation.",
+        "metrics": {
+          "startup_ms": {
+            "before": 519.3605550157372,
+            "after": 472.14411199092865,
+            "delta": -47.21644302480854,
+            "delta_percent": -9.091264742540533
+          },
+          "shutdown_ms": {
+            "before": 34.48092102189548,
+            "after": 32.51756000099704,
+            "delta": -1.9633610208984464,
+            "delta_percent": -5.694050398629742
+          },
+          "process_cpu_percent_one_core": {
+            "before": 4.121723700394559,
+            "after": 3.9431843247462433,
+            "delta": -0.17853937564831535,
+            "delta_percent": -4.331667734817459
+          },
+          "rss_after_bytes": {
+            "before": 42467328,
+            "after": 42409984,
+            "delta": -57344,
+            "delta_percent": -0.13503086419753085
+          }
+        }
+      },
+      "gpu_last_heartbeat_comparison": {
+        "scope": "Separate final heartbeat windows; not pooled frame percentiles nor whole-run timing.",
+        "before_window_seconds": 0.5163877380255144,
+        "after_window_seconds": 0.5030141590104904,
+        "metrics": {
+          "actual_draw_fps": {
+            "before": 52.28629189228724,
+            "after": 53.67642146120367,
+            "delta": 1.3901295689164286
+          },
+          "animated_fps": {
+            "before": 52.32412335165385,
+            "after": 53.64847039158012,
+            "delta": 1.3243470399262662
+          },
+          "frame_p95_ms": {
+            "before": 25.384568027220666,
+            "after": 24.085048004053533,
+            "delta": -1.2995200231671333
+          },
+          "frame_p99_ms": {
+            "before": 26.602377998642623,
+            "after": 24.43077100906521,
+            "delta": -2.1716069895774126
+          },
+          "render_p95_ms": {
+            "before": 25.00113900168799,
+            "after": 23.772063985234126,
+            "delta": -1.2290750164538622
+          },
+          "render_p99_ms": {
+            "before": 26.274621981428936,
+            "after": 24.021903984248638,
+            "delta": -2.252717997180298
+          }
+        }
+      }
+    }
+  },
+  "uncommitted_product_source_changes_at_capture": [
+    "jarvis/gpu_session.py"
+  ]
+}

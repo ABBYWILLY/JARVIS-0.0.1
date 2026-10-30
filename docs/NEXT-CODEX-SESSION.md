@@ -1,15 +1,30 @@
-# LOT 7 — optimisation globale en cours, 29 octobre 2026
+# LOT 7 — validation logicielle finale, 30 octobre 2026
 
-Reprise depuis `19c003a`, branche `feat/jalon-2-voice-presence` uniquement.
-Demande : `LOT-7-SPEC.md` ; audit et décisions : `LOT-7.md`.
-Référence initiale : 120 tests exécutés, 119 réussis, 1 ignoré (modèle réel opt-in),
-29,293 s. Le rendu GPU 3.1 approuvé, LOT 4 et Cognitive HUD sont conservés.
-7A : instrumentation opt-in, mesures sans texte/PCM exporté, aucune base utilisateur
-ouverte. 7B–7F : optimisation SQLite, nettoyages résilients, diagnostic capture,
-packaging et transition documentaire à livrer par commits séparés.
-Validation matérielle Windows/RTX 3070 + Ollama + voix en attente.
-Les interdictions LOT 7 des anciens comptes rendus ci-dessous sont historiques ;
-la demande actuelle autorise exclusivement ce lot, sans agentique/vision.
+Branche `feat/jalon-2-voice-presence` ; `main` préservée. A `7ee4d1f`,
+B `2df097c`, C `34d889e`, D `8fbdbb1`, E `8b89101` publiés, deux CI vertes
+pour chacune de ces étapes. Le commit F portant ce compte rendu inclut la
+correction finale de course des pipes GPU ; vérifier les CI de son SHA avant
+validation de l'EXE. Aucun changement artistique, modèle ou permission ajouté.
+
+Livré : benchmark opt-in 12 scénarios, JSON/CSV/Markdown sans conversation/PCM ;
+lecture SQLite 8,324→3,695 ms / pic Python −79,6 % sur données synthétiques ;
+rollback des spawns, arrêt/ownership/réessai robustes, feeders GPU libérés,
+nettoyage GL vérifié ; diagnostic micro sans attendre un STT bloqué ; recette
+source + deux EXE sur même profil pour archives/préférences/mémoire/FTS.
+Le benchmark a révélé puis fait corriger un double-close GPU introduit en C.
+
+Tests finaux : 1003 exécutés, 994 réussis, 9 ignorés, 130,953 s Linux/Tk9/EGL ;
+34 tests supplémentaires Tk8.6 verts, 13,012 s. Stress synthétique 100 cycles,
+réponses/annulations/relectures/PCM périmés et restart vérifiés ; aucune preuve
+universelle d'absence de fuite. Six benchmarks finaux complets, ~40 Mio RSS parent,
+CPU repos ~0,9 % d'un cœur, échantillons 2 s sans gain global/RTX prétendu.
+
+Bilan, commits/CI, preuves et risques : `LOT-7.md` ; recette PC :
+`LOT-7-WINDOWS.md` ; commandes : `LOT-7-BENCHMARKS.md` ; architecture future
+strictement documentaire : `NEXT-JALON-ARCHITECTURE.md`.
+Validation matérielle en attente : RTX3070+Ollama+voix, micro/Piper/Bluetooth,
+DPI multiécran, latences/énergie/VRAM et longue durée. Prochaine action : recette
+Windows, sans commencer l'agentique/vision ni télécharger de modèles.
 
 ---
 

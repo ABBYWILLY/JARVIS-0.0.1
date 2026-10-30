@@ -668,7 +668,7 @@ class GpuSession:
     def start(self, packet=None):
         if self.alive():
             return False
-        if self._process is not None:
+        if self._process is not None or self._frames is not None or self._events is not None:
             self.stop()
         import multiprocessing as mp
         context = self._context or mp.get_context("spawn")
@@ -791,7 +791,8 @@ class GpuSession:
         import time
         deadline = time.monotonic()+timeout
         process = self._process
-        if process is None and self._shutdown_report is not None:
+        if (process is None and self._frames is None and self._events is None
+                and self._shutdown_report is not None):
             return self.shutdown_report
         forced = False
         if process is not None:
@@ -818,22 +819,29 @@ class GpuSession:
                 pass
             self._drain_shutdown_events()
             process.close()
+            # The child handle is closed even if a later channel cleanup
+            # raises. A manual retry must not join that closed Process object.
+            self._process = None
+            self._ready = False
         for channel in (self._frames, self._events):
             if channel is not None:
                 channel.cancel_join_thread()
-                channel.close()
                 # Queue.close only enqueues a sentinel. A feeder writing a
                 # packet larger than the OS pipe can never reach that sentinel
                 # if the child has exited and this parent keeps its reader open.
                 # The child is confirmed dead here; abandon only visual data.
+                # Close the reader BEFORE posting the sentinel: otherwise the
+                # feeder can enter Connection.close concurrently, double-close
+                # its native handle and raise EBADF on normal shutdown.
                 reader = getattr(channel, "_reader", None)
                 if reader is not None:
                     reader.close()
+                channel.close()
                 feeder = getattr(channel, "_thread", None)
                 if feeder is not None:
                     feeder.join(max(0., deadline-time.monotonic()))
                 writer = getattr(channel, "_writer", None)
-                if writer is not None:
+                if writer is not None and (feeder is None or not feeder.is_alive()):
                     writer.close()
                 if feeder is not None and feeder.is_alive():
                     self._remember_terminal({"kind": "error", "message":

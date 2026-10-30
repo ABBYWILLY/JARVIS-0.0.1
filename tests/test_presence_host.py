@@ -227,6 +227,18 @@ class DualEngineTests(test_presence_integration.PresenceIntegrationTests):
             self.assertNotIn("utilise Canvas", self.app.status.get())
         self.assertTrue(self.presence.set_engine("canvas"))
 
+    def test_failed_preview_render_is_not_called_again_while_clearing_preview(self):
+        child = self.ready_gpu()
+        with patch.object(child, "submit", side_effect=RuntimeError("visual transport failed")) as submit:
+            self.presence.preview_gpu_state("Sourire 😊")
+            self.assertEqual(submit.call_count, 1)
+        self.assertEqual(child.stops, 1)
+        self.assertFalse(child.alive())
+        self.assertIsNone(self.presence._gpu)
+        self.assertIsNone(self.presence._preview_text)
+        self.assertEqual(self.presence.active_engine, "canvas")
+        self.assertIn("visual transport failed", self.app.status.get())
+
     def test_old_batch_is_discarded_immediately_after_engine_switch(self):
         child = self.ready_gpu()
         diagnostics = copy.deepcopy(self.presence.gpu_diagnostics)

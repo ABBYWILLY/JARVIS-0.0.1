@@ -179,3 +179,87 @@ exécutables ici : compilation et probes Windows confiés aux workflows du SHA
 publié. Une CI verte n'établira ni la qualité acoustique ni le budget RTX sous
 charge. Données/modèles hors EXE, binaire non signé, limites et procédure de
 mise à jour dans le guide. Suite complète et bilan au SHA final en 7F.
+
+## 7F — bilan logiciel et transition
+
+**Suite finale : 1 003 tests exécutés, 994 réussis, 9 ignorés, 130,953 s**
+(Linux/Python 3.12/Tk 9/EGL réel requis). Six ignorés concernent des composants
+audio natifs absents ici, trois des essais de vrais modèles opt-in ; aucun test
+désactivé. Aucune erreur, traceback, alerte `ResourceWarning` ou `resource_tracker`.
+34 tests finaux supplémentaires Python 3.13/Tk 8.6 réussis en 13,012 s ; les
+trois nouvelles régressions de pipe passent aussi sur ces deux Python.
+
+Le benchmark a précisément détecté un défaut introduit en 7C : le parent et le
+feeder pouvaient fermer le même lecteur simultanément (`EBADF`), puis le réessai
+tentait de rejoindre un `Process` déjà fermé. La version finale ferme le lecteur
+avant le sentinel et met immédiatement à jour la propriété du processus fermé.
+Test déterministe à vrai pipe + réessai après erreur, trois reproductions froides
+puis six scénarios finaux réussis. Aucun délai d'arrêt n'a été augmenté.
+
+[Comparaison avant/après](benchmarks/lot7/runtime-comparison.md),
+[données finales](benchmarks/lot7/runtime-final.json) et
+[soak borné](benchmarks/lot7/runtime-soak.json) :
+
+- CPU repos masqué 0,878 → 0,893 % d'un cœur ; COMMAND OS 0,940 → 0,824 %,
+  RSS parent environ 40 Mio. Un échantillon de 2 s/cas ne démontre aucun gain
+  global ; les variations de démarrage, RAM et FPS ne sont pas des promesses.
+- Mesa logiciel 960 × 640 : derniers FPS dessinés Éco 15,00 → 15,00,
+  Équilibré 50,90 → 46,52, Cinématique 52,29 → 53,68. Le profil Équilibré est
+  inférieur dans ce court échantillon, à revérifier sur le matériel cible ;
+  aucun réglage artistique/résolution n'a été baissé pour améliorer les chiffres.
+  P95/P99 et CPU/RSS du renderer séparés sont publiés, sans VRAM attribuée fictive.
+- 100 cycles synthétiques de conversation : 50 réponses terminées, 50 annulations,
+  100 relectures locales sélectionnées et 100 PCM obsolètes rejetés. Widgets,
+  callbacks, commandes Tcl, objets Canvas et marques restent constants entre
+  cinq cohortes après nettoyage des archives de test ; journaux/files bornés.
+  RSS 40,57 → 40,94 Mo ; pic Python 553 787 octets. Ce court essai ne prouve
+  **pas** l'absence de fuite. Fermeture avec fragment, SQLite et préférences au
+  redémarrage vérifiées sans nouvelle inférence ni micro.
+
+Pour un essai logiciel prolongé et reproductible, dans un nouveau chemin :
+
+```powershell
+$env:JARVIS_SOAK_CYCLES = '1000'
+$env:JARVIS_SOAK_REPORT = 'C:/mesures/nouveau-soak.json'
+python -m unittest -v tests.test_runtime_stability
+Remove-Item Env:JARVIS_SOAK_CYCLES, Env:JARVIS_SOAK_REPORT
+```
+
+Entre 100 et 1 000 cycles, sans modèle/appareil ; prévoir un timeout externe de
+300 s. Ce stress synthétique complète la session réelle de 20–30 min du guide
+Windows, sans la remplacer. Aucun texte/PCM n'est exporté par ce rapport.
+
+### Publication et CI
+
+| Étape | Commit | CI application / prototype |
+| --- | --- | --- |
+| 7A mesures | `7ee4d1f` | [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40944065788) / [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40944065868) |
+| 7B SQLite | `2df097c` | [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40944137294) / [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40944137543) |
+| 7C ressources | `34d889e` | [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40944603094) / [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40944603206) |
+| 7D capture | `8fbdbb1` | [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40945444085) / [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40945443937) |
+| 7E packaging | `8b89101` | [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40945537994) / [verte](https://github.com/ABBYWILLY/JARVIS-0.0.1/actions/runs/40945537908) |
+| 7F bilan et régressions finales | commit portant cette section | consulter les deux workflows de ce SHA final avant validation du build |
+
+Les CI vertes intermédiaires n'avaient pas détecté la course de fermeture : le
+benchmark répété et son test déterministe sont nécessaires. La CI finale doit
+tester cette correction et le stress borné, puis compiler l'EXE avec voix/GPU et
+sa recette de conservation des données. `main` n'est ni modifiée ni fusionnée.
+
+### Périmètre et risques restants
+
+Fichiers applicatifs concernés : stockage contextuel, cycles de vie des workers,
+entrée/fermeture App, transport/host/probe GPU ; nouvel outil opt-in de mesure.
+Tests/scripts/preuves et guides accompagnent ces modifications. Shaders, renderer,
+Canvas, Whisper/VAD, Piper, adaptateur Ollama, C1, constructeur de contexte,
+mémoire et dépendances sont inchangés par rapport à `19c003a`.
+
+Restent physiques : RTX 3070 + Ollama + voix, modèles installés, capture réelle,
+déconnexions, latence acoustique/Bluetooth, DPI multiécran, énergie, VRAM physique
+attribuable et stabilité de plusieurs heures. Reste architectural : les très
+grands historiques sont encore analysés/rendus synchroniquement ; la projection
+SQLite réduit leur coût sans constituer une pagination. Un processus qu'un pilote
+refuse de tuer reste signalé et possédé pour réessai, pas déclaré fermé.
+
+Procédure : [LOT-7-WINDOWS.md](LOT-7-WINDOWS.md). Transition proposée :
+[agent Windows et vision locale](NEXT-JALON-ARCHITECTURE.md), **documentation
+uniquement**, sans nouveau modèle, permission, capture ou outil système.

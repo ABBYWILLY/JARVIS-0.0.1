@@ -79,6 +79,24 @@ def metric_summary(rows):
             if (values := [row[key] for row in rows if key in row and finite(row[key])])}
 
 
+def observed_conditions(report):
+    """Normalize measurements already present in older metric-only heartbeats.
+
+    This never rewrites an old report or guesses a missing size from a profile.
+    Integrated GPU reports use internal_size, unlike some standalone reports.
+    """
+    result = dict(report.get("conditions", {}))
+    renderer = report.get("gpu_renderer", {})
+    if isinstance(renderer, dict):
+        resolution = renderer.get("resolution", {})
+        if isinstance(resolution, dict) and resolution:
+            result["gpu_render_size"] = (resolution.get("render_size") or resolution.get("main_size")
+                                         or resolution.get("internal_size"))
+            result["gpu_effective_scale"] = resolution.get("effective_scale")
+            result["gpu_adaptive_level"] = resolution.get("adaptive_level")
+    return result
+
+
 def comparison(before, after):
     """Compare only matching workload conditions; a delta is not a speedup claim."""
     keys = ("scenario", "model", "context", "max_tokens", "requested_size", "requested_tk_scaling",
@@ -88,8 +106,10 @@ def comparison(before, after):
             "software_gpu_explicitly_allowed", "reasoning_mode", "cognitive_mode",
             "gpu_render_size", "gpu_window_size", "gpu_dpi_scale", "sample_seconds_requested",
             "warmup_seconds", "input_preferences_sha256", "effective_voice_sha256",
-            "effective_canvas_sha256", "effective_gpu_sha256", "effective_settings_sha256")
-    mismatches = [key for key in keys if before.get("conditions", {}).get(key) != after.get("conditions", {}).get(key)]
+            "effective_canvas_sha256", "effective_gpu_sha256", "effective_settings_sha256",
+            "gpu_effective_scale", "gpu_adaptive_level")
+    observed_before, observed_after = observed_conditions(before), observed_conditions(after)
+    mismatches = [key for key in keys if observed_before.get(key) != observed_after.get(key)]
     for key in ("platform", "python", "renderer"):
         if before.get(key) != after.get(key):
             mismatches.append(key)
@@ -314,8 +334,9 @@ def _child(config_path, report_path):
                     actual_engine=app.presence.active_engine)
                 diagnostic = app.presence.gpu_diagnostics
                 resolution = diagnostic.get("resolution", {})
-                report["conditions"].update(gpu_render_size=resolution.get("render_size", resolution.get("main_size")),
-                    gpu_window_size=diagnostic.get("size"), gpu_dpi_scale=diagnostic.get("dpi_scale"))
+                report["conditions"].update(gpu_render_size=(resolution.get("render_size") or resolution.get("main_size") or resolution.get("internal_size")),
+                    gpu_window_size=diagnostic.get("size"), gpu_dpi_scale=diagnostic.get("dpi_scale"),
+                    gpu_effective_scale=resolution.get("effective_scale"), gpu_adaptive_level=resolution.get("adaptive_level"))
                 from dataclasses import asdict
                 for key, value in (("effective_voice_sha256", asdict(app.voice.settings)),
                                    ("effective_canvas_sha256", asdict(app.presence.settings)),
