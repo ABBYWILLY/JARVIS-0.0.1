@@ -1,7 +1,7 @@
 name: PRESENCE GPU prototype
 on:
   push:
-    branches: [feat/jalon-2-voice-presence]
+    branches: [feat/jalon-2-voice-presence, feat/jalon-3a-tools]
   pull_request:
   workflow_dispatch:
 permissions:

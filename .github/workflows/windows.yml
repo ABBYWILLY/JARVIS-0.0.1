@@ -1,7 +1,7 @@
 name: Windows Jarvis
 on:
   push:
-    branches: [main, work, feat/jalon-2-voice-presence]
+    branches: [main, work, feat/jalon-2-voice-presence, feat/jalon-3a-tools]
   pull_request:
   workflow_dispatch:
 permissions:
